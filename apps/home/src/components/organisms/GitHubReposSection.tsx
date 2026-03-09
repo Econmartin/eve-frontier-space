@@ -43,14 +43,14 @@ export function GitHubReposSection() {
             <Card className="group h-full p-6 text-base transition-all hover:ring-foreground/20 hover:shadow-md">
               <div className="flex items-center gap-3 mb-3">
                 <Github className="size-7 shrink-0 text-foreground/70" aria-hidden />
-                <h3 className="text-lg font-bold text-card-foreground group-hover:text-muted-foreground">
+                <h3 className="link-glitch text-lg font-bold text-card-foreground">
                   {repo.title}
                 </h3>
               </div>
               <p className="text-sm text-muted-foreground leading-relaxed flex-1">
                 {repo.description}
               </p>
-              <span className="mt-4 text-sm font-medium text-muted-foreground group-hover:text-foreground inline-flex items-center gap-1">
+              <span className="mt-4 text-sm font-medium text-muted-foreground inline-flex items-center gap-1">
                 View on GitHub →
               </span>
             </Card>
