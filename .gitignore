@@ -1,0 +1,42 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+*.local
+
+# Turborepo (cache + logs)
+.turbo/
+*.turbo*.log
+
+# Vite cache (in node_modules)
+.vite/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+*.swp
+*.swo
+*~
+
+# Editor / IDE
+.claude/
+.cursor/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
