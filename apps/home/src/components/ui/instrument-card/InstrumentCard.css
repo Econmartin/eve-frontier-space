@@ -1,0 +1,166 @@
+/* Instrument card — no width constraint so it fills grid cell */
+
+.instrument {
+  --bezel-top: #8a8e96;
+  --bezel-mid: #6b6f78;
+  --bezel-dark: #4a4d55;
+  --housing-top: #5c5f68;
+  --housing-mid: #3e4148;
+  --housing-bottom: #2c2e34;
+  --screw-face: #72757d;
+  --screw-slot: #44474e;
+  --btn-bg: #0c0c0f;
+
+  position: relative;
+  min-width: 0;
+  background:
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.008) 1px,
+      transparent 2px,
+      transparent 4px
+    ),
+    linear-gradient(
+      165deg,
+      var(--housing-top) 0%,
+      var(--housing-mid) 40%,
+      var(--housing-bottom) 100%
+    );
+  box-shadow:
+    0 16px 48px -8px rgba(0, 0, 0, 0.6),
+    0 4px 12px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.3),
+    inset 1px 0 0 rgba(255, 255, 255, 0.06),
+    inset -1px 0 0 rgba(0, 0, 0, 0.15);
+}
+
+.instrument:hover {
+  box-shadow:
+    0 24px 64px -8px rgba(0, 0, 0, 0.65),
+    0 8px 20px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.3),
+    inset 1px 0 0 rgba(255, 255, 255, 0.08),
+    inset -1px 0 0 rgba(0, 0, 0, 0.15);
+}
+
+.instrument:active .instrument__btn {
+  transform: scale(0.94);
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.4),
+    inset 0 3px 10px rgba(0, 0, 0, 0.7),
+    inset 0 1px 4px rgba(0, 0, 0, 0.4);
+}
+
+.instrument:active .instrument__btn-glare {
+  opacity: 0;
+}
+
+.instrument__screw {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  z-index: 10;
+  background:
+    radial-gradient(
+      circle at 40% 35%,
+      rgba(255, 255, 255, 0.2),
+      var(--screw-face) 40%,
+      var(--screw-slot) 100%
+    );
+  box-shadow:
+    inset 0 1px 2px rgba(255, 255, 255, 0.15),
+    inset 0 -1px 2px rgba(0, 0, 0, 0.3),
+    0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+.instrument__screw::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 25%;
+  width: 50%;
+  height: 1.5px;
+  background: var(--screw-slot);
+  transform: translateY(-50%) rotate(var(--slot-angle, 35deg));
+  border-radius: 1px;
+  box-shadow: 0 0.5px 0 rgba(255, 255, 255, 0.08);
+}
+
+.instrument__screw--tl { top: 14px; left: 14px; --slot-angle: 35deg; }
+.instrument__screw--tr { top: 14px; right: 14px; --slot-angle: -20deg; }
+.instrument__screw--bl { bottom: 14px; left: 14px; --slot-angle: 70deg; }
+.instrument__screw--br { bottom: 14px; right: 14px; --slot-angle: 10deg; }
+
+.instrument__bezel {
+  background: linear-gradient(
+    160deg,
+    var(--bezel-top) 0%,
+    var(--bezel-mid) 45%,
+    var(--bezel-dark) 100%
+  );
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.3),
+    0 0 0 3px rgba(0, 0, 0, 0.2);
+}
+
+.instrument__btn {
+  background:
+    radial-gradient(
+      ellipse at 50% 40%,
+      #141418 0%,
+      var(--btn-bg) 70%
+    );
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.6),
+    0 1px 3px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.instrument:hover .instrument__btn {
+  box-shadow:
+    0 6px 16px rgba(0, 0, 0, 0.65),
+    0 2px 6px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+@keyframes instrument-in {
+  from {
+    opacity: 0;
+    transform: translateY(30px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-instrument-in {
+  animation: instrument-in 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@media (max-width: 400px) {
+  .instrument__top {
+    padding-top: 2rem;
+    padding-bottom: 1rem;
+  }
+
+  .instrument__bezel {
+    width: 128px !important;
+    height: 128px !important;
+  }
+
+  .instrument__tick {
+    transform-origin: 50% 64px !important;
+  }
+
+  .instrument__btn {
+    width: 104px !important;
+    height: 104px !important;
+  }
+}
