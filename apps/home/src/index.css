@@ -285,3 +285,15 @@ h1, h2, h3, h4, h5, h6 {
 .header-learn-move:hover {
   background-color: var(--color-martian-500) !important;
 }
+
+/* Trigger link-glitch underline on parent group/card hover */
+.group\/card:hover .link-glitch::before {
+  transform-origin: 0% 50%;
+  transform: scale3d(1, 2, 1);
+  transition-timing-function: cubic-bezier(0.7, 0, 0.2, 1);
+}
+.group\/card:hover .link-glitch::after {
+  transform-origin: 0% 50%;
+  transform: scale3d(1, 1, 1);
+  transition-timing-function: cubic-bezier(0.7, 0, 0.2, 1);
+}
