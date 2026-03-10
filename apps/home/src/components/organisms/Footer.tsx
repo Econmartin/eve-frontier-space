@@ -42,13 +42,21 @@ export function Footer() {
         </p>
         <p>
           <a
-            href="https://www.flaticon.com/free-icons/spaceship"
+            href="https://icons8.com/icon/59881/rocket"
             target="_blank"
             rel="noopener noreferrer"
-            title="spaceship icons"
             className="text-slate-500 underline hover:text-slate-400 transition-colors"
           >
-            Spaceship icons created by Freepik - Flaticon
+            Spaceship
+          </a>
+          {' '}icon by{' '}
+          <a
+            href="https://icons8.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-slate-500 underline hover:text-slate-400 transition-colors"
+          >
+            Icons8
           </a>
         </p>
       </div>
