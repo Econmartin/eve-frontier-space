@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && cp public/.htaccess dist/.htaccess && cp -r public/vendor dist/vendor",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "update-compiler": "node -e \"const fs=require('fs'),src='node_modules/@zktx.io/sui-move-builder/dist/lite',dst='public/vendor/sui-move-builder';fs.mkdirSync(dst,{recursive:true});['index.js','sui_move_wasm.js','sui_move_wasm_bg.wasm'].forEach(f=>fs.copyFileSync(src+'/'+f,dst+'/'+f));console.log('Compiler updated.');\""
