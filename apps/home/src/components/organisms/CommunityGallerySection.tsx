@@ -1,8 +1,8 @@
 const CARDS = [
-  { title: 'Player submission 1', image: '/assets/mining_frigate.png' },
-  { title: 'Player submission 2', image: '/assets/omo.png' },
-  { title: 'Player submission 3', image: '/assets/rebus.png' },
-  { title: 'Player submission 4', image: '/assets/rider.png' },
+  { title: 'Player submission 1', image: '/assets/mining_frigate.webp' },
+  { title: 'Player submission 2', image: '/assets/omo.webp' },
+  { title: 'Player submission 3', image: '/assets/rebus.webp' },
+  { title: 'Player submission 4', image: '/assets/rider.webp' },
 ];
 
 export function CommunityGallerySection() {
@@ -21,8 +21,11 @@ export function CommunityGallerySection() {
             className="group relative rounded-2xl overflow-hidden min-h-[280px] md:min-h-[360px] flex flex-col justify-end"
           >
             <img
-              src={card.image}
+              src={card.image.replace('.webp', '-960w.webp')}
+              srcSet={`${card.image.replace('.webp', '-480w.webp')} 480w, ${card.image.replace('.webp', '-960w.webp')} 960w`}
+              sizes="(min-width: 768px) 25vw, 50vw"
               alt={card.title}
+              loading="lazy"
               className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />

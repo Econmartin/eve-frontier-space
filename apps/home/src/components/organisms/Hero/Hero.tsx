@@ -25,7 +25,7 @@ export function Hero() {
         className="hero-caption z-10 flex items-center justify-center overflow-hidden cursor-pointer text-black no-underline [grid-area:1/1]"
       >
         <span className="hero-caption__content flex items-center justify-center gap-2">
-          <img src="/assets/logo_solo.png" alt="Reapers logo" className="hero-caption__logo h-10 shrink-0" />
+          <img src="/assets/logo_solo-256w.webp" alt="Reapers logo" className="hero-caption__logo h-10 shrink-0" />
           <span className="hero-caption__text text-base md:text-lg font-semibold whitespace-nowrap">Join Reapers</span>
         </span>
       </a>

@@ -39,7 +39,7 @@ export function Header({ isHomePage = false }: HeaderProps) {
     >
       <a href="/" className="shrink-0 ml-6 flex flex-col items-center gap-0.5">
         <img
-          src="/assets/eve_frontier_transparent.png"
+          src="/assets/eve_frontier_transparent-256w.webp"
           alt="EVE Frontier"
           className="h-8 md:h-10"
         />
