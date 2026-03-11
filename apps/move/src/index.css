@@ -1,0 +1,138 @@
+@import 'tailwindcss';
+@plugin '@tailwindcss/typography';
+
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+  --color-bg: #050505;
+  --color-panel: #0a0a0a;
+  --color-panel-raised: #111111;
+  --color-border: #222222;
+  --color-border-glow: #3d1a00;
+  --color-cyan: #ff610a;
+  --color-cyan-dim: #cc3002;
+  --color-cyan-glow: rgba(255, 97, 10, 0.15);
+  --color-purple: #7c3aed;
+  --color-green: #22c55e;
+  --color-red: #ef4444;
+  --color-amber: #fbbf24;
+  --color-text: #e2e8f0;
+  --color-text-muted: #4a5568;
+  --color-text-dim: #2d3748;
+
+  --font-mono: 'Fira Code', 'Cascadia Code', 'JetBrains Mono', Consolas,
+    monospace;
+  --font-ui: 'Inter', system-ui, sans-serif;
+}
+
+/* Base styles */
+html {
+  height: 100%;
+  font-size: 16px;
+}
+
+body {
+  height: 100%;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-ui);
+  line-height: 1.5;
+  overflow: hidden;
+}
+
+#root {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Scrollbar styling */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 3px;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--color-border-glow);
+}
+
+/* CodeMirror 6 overrides */
+.cm-editor {
+  height: 100% !important;
+  font-family: var(--font-mono) !important;
+  font-size: 15px !important;
+  line-height: 1.65 !important;
+  background: #080808 !important;
+}
+
+.cm-editor .cm-content {
+  caret-color: var(--color-cyan);
+}
+
+.cm-editor .cm-cursor {
+  border-left: 2px solid var(--color-cyan);
+}
+
+.cm-editor .cm-gutters {
+  background: #080808;
+  border-right: 1px solid var(--color-border);
+  color: var(--color-text-dim);
+}
+
+.cm-editor .cm-activeLineGutter,
+.cm-editor .cm-activeLine {
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.cm-editor .cm-selectionBackground,
+.cm-editor .cm-focused .cm-selectionBackground {
+  background: rgba(255, 97, 10, 0.1) !important;
+}
+
+.cm-editor .cm-matchingBracket {
+  color: var(--color-cyan) !important;
+  border-bottom: 1px solid var(--color-cyan);
+  background: transparent;
+}
+
+/* Animations */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes btn-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.55);
+  }
+  60% {
+    box-shadow: 0 0 0 10px rgba(34, 197, 94, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.18s ease forwards;
+}
+
+.animate-pulse-green {
+  animation: btn-pulse 1.4s ease-out 2;
+}
