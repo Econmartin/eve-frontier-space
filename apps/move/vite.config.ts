@@ -9,7 +9,7 @@ import path from 'node:path';
  * layer. Required because the sui-move-builder WASM module fetches its
  * .wasm file via a relative URL and must be served as-is.
  */
-const BASE = '/move';
+const BASE = '/move/';
 
 function serveVendorPlugin() {
   return {

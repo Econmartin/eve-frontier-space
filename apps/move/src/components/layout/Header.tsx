@@ -15,7 +15,7 @@ export function Header() {
         className="shrink-0 flex flex-col items-center gap-0.5 hover:opacity-80 transition-opacity"
       >
         <img
-          src={`${import.meta.env.BASE_URL}assets/eve_frontier_transparent.png`}
+          src={`${import.meta.env.BASE_URL}assets/eve_frontier_transparent.webp`}
           alt="EVE Frontier"
           className="h-7"
         />
