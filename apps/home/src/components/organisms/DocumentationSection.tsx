@@ -3,7 +3,7 @@ import { Badge } from '@/components/ui/badge';
 const TAGS: { label: string; href: string; icon?: string }[] = [
   { label: 'Move', href: 'https://move-book.com/' },
   { label: 'Sui', href: 'https://docs.sui.io/concepts', icon: '/assets/sui_logo.svg' },
-  { label: 'EVE Frontier', href: 'https://docs.evefrontier.com/', icon: '/assets/eve_frontier_profile.jpg' },
+  { label: 'EVE Frontier', href: 'https://docs.evefrontier.com/', icon: '/assets/eve_frontier_profile-128w.webp' },
 ];
 
 export function DocumentationSection() {
@@ -20,7 +20,7 @@ export function DocumentationSection() {
                 className="no-underline"
               >
                 {tag.icon ? (
-                  <img src={tag.icon} alt="" className="size-5 shrink-0 rounded-full object-contain" aria-hidden />
+                  <img src={tag.icon} alt="" loading="lazy" className="size-5 shrink-0 rounded-full object-contain" aria-hidden />
                 ) : null}
                 {tag.label}
               </a>

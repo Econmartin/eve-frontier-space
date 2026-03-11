@@ -7,7 +7,7 @@ export function PlayCtaSection() {
         rel="noopener noreferrer"
         className="group relative rounded-2xl overflow-hidden min-h-[400px] md:min-h-[520px] flex items-end cursor-pointer no-underline"
       >
-        <div className="absolute inset-0 bg-[url(/assets/fabricator.png)] bg-cover bg-center bg-no-repeat transition-transform duration-500 ease-out group-hover:scale-110" />
+        <div className="absolute inset-0 bg-[url(/assets/fabricator-1920w.webp)] bg-cover bg-center bg-no-repeat transition-transform duration-500 ease-out group-hover:scale-110" />
         <div className="absolute inset-0 bg-black/30" />
 
         <div className="relative z-10 p-8 md:p-12">

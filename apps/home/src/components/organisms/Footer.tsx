@@ -1,7 +1,7 @@
 export function Footer() {
   return (
     <footer className="relative rounded-2xl overflow-hidden text-white p-8 md:p-12">
-      <div className="absolute inset-0 bg-[url(/assets/asteroid_debris_field.jpg)] bg-cover bg-center bg-no-repeat" />
+      <div className="absolute inset-0 bg-[url(/assets/asteroid_debris_field-1920w.webp)] bg-cover bg-center bg-no-repeat" />
       <div className="absolute inset-0 bg-slate-900/10" />
       <div className="relative z-10">
       <div className="flex flex-col sm:flex-row flex-wrap items-start justify-start gap-4 sm:gap-6 mb-6">

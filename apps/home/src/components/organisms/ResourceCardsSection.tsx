@@ -28,8 +28,11 @@ export function ResourceCardsSection() {
             <Card className="group h-full p-4 text-base transition-colors hover:ring-foreground/20">
               <div className="h-48 overflow-hidden rounded-xl">
                 <img
-                  src={card.image}
+                  src={card.image.replace('.webp', '-960w.webp')}
+                  srcSet={`${card.image.replace('.webp', '-480w.webp')} 480w, ${card.image.replace('.webp', '-960w.webp')} 960w`}
+                  sizes="(min-width: 768px) 33vw, 100vw"
                   alt={card.title}
+                  loading="lazy"
                   className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-110"
                 />
               </div>

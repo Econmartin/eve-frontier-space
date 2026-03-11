@@ -1,6 +1,6 @@
 {
   "name": "mysite",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "workspaces": [
     "apps/*"
@@ -12,9 +12,11 @@
     "build": "turbo run build",
     "build:move": "npm run build -w @mysite/move",
     "build:home": "npm run build -w @mysite/home",
-    "typecheck": "turbo run typecheck"
+    "typecheck": "turbo run typecheck",
+    "resize-images": "node packages/assets/resize.mjs"
   },
   "devDependencies": {
+    "sharp": "^0.34.5",
     "turbo": "^2.8.15"
   },
   "packageManager": "npm@10.9.2",

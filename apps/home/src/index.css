@@ -271,7 +271,7 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Image-clipped text effect for hero headings */
 .image-text-clip {
-  background-image: linear-gradient(var(--color-martian-500), var(--color-martian-500)), url(/assets/eve_frontier_keyart.png);
+  background-image: linear-gradient(var(--color-martian-500), var(--color-martian-500)), url(/assets/eve_frontier_keyart-1920w.webp);
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
