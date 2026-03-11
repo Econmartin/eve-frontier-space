@@ -1,13 +1,13 @@
-import { Link } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import { InstrumentCard } from '@/components/ui/instrument-card/InstrumentCard';
+import { MOVE_APP_HREF } from '@/config';
 
 const RESOURCE_CARDS = [
   {
     title: 'Learn Move',
     description: 'Resources and tutorials for the Move language. Your starting point for building on Sui.',
     image: '/assets/crude.webp',
-    href: '/move',
+    href: MOVE_APP_HREF,
     external: false,
   },
   {
@@ -51,9 +51,9 @@ export function ResourceCardsSection() {
               {content}
             </a>
           ) : (
-            <Link key={card.title} to={card.href} className="block w-full no-underline">
+            <a key={card.title} href={card.href} className="block w-full no-underline">
               {content}
-            </Link>
+            </a>
           );
         })}
 
