@@ -31,12 +31,12 @@ npm run build
 ```
 
 Outputs:
-- `apps/home/dist/` → deploy to `public_html/`
-- `apps/move/dist/` → deploy to `public_html/move/`
+- `apps/home/dist` → deploy to `public_html`
+- `apps/move/dist` → deploy to `public_html/move`
 
 ## Deployment (DreamHost shared hosting)
 
 1. Build: `npm run build`
-2. Upload `apps/home/dist/*` to `public_html/`
-3. Upload `apps/move/dist/*` to `public_html/move/`
-4. Add `.htaccess` in `move/` for SPA routing (see apps/move for details)
+2. Upload `apps/home/dist/*` to `public_html`
+3. Upload `apps/move/dist/*` to `public_html/move`
+4. Add `.htaccess` in `move` for SPA routing (see apps/move for details)
