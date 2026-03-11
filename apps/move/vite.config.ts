@@ -50,7 +50,7 @@ export default defineConfig({
   base: BASE,
   publicDir: '../../packages/assets',
   plugins: [react(), tailwindcss(), serveVendorPlugin()],
-  server: { port: 5174 },
+  server: { port: 5174, strictPort: true },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),

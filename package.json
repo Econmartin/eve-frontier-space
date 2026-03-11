@@ -9,7 +9,7 @@
     "dev": "turbo run dev",
     "dev:move": "npm run dev -w @mysite/move",
     "dev:home": "npm run dev -w @mysite/home",
-    "build": "turbo run build",
+    "build": "turbo run build && node scripts/combine-dist.mjs",
     "build:move": "npm run build -w @mysite/move",
     "build:home": "npm run build -w @mysite/home",
     "typecheck": "turbo run typecheck",
