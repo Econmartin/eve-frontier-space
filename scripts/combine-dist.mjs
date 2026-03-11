@@ -30,10 +30,8 @@ cpSync(moveDist, moveOut, { recursive: true });
 // - /*      → home app index
 writeFileSync(
   resolve(outDir, '_redirects'),
-  // /move    — bare URL, no trailing slash
-  // /move/*  — everything under /move/ (splat matches zero or more chars)
+  // /move/*  — all routes under /move/ → move SPA (CF serves /move and /move/ via directory index)
   // /*       — all other routes → home SPA
-  '/move    /move/index.html  200\n' +
   '/move/*  /move/index.html  200\n' +
   '/*       /index.html       200\n',
 );
