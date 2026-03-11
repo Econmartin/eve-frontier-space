@@ -22,7 +22,7 @@ export function Footer() {
           EVE Frontier Discord
         </a>
         <a
-          href="https://evefrontier.com/en?ref=A8EpsbMr"
+          href="https://evefrontier.com/en?ref=Space"
           target="_blank"
           rel="noopener noreferrer"
           className="link-glitch text-[var(--color-martian-500)] text-sm font-medium no-underline hover:text-white transition-colors"

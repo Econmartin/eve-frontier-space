@@ -33,7 +33,7 @@ export function DocumentationSection() {
         <p className="text-muted-foreground max-w-md">
           Just looking to play Frontier?{' '}
           <a
-            href="https://evefrontier.com/en?ref=A8EpsbMr"
+            href="https://evefrontier.com/en?ref=Space"
             target="_blank"
             rel="noopener noreferrer"
             className="link-glitch font-medium text-foreground no-underline hover:text-muted-foreground transition-colors"

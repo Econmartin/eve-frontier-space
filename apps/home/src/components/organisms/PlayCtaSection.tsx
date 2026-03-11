@@ -2,7 +2,7 @@ export function PlayCtaSection() {
   return (
     <section className="my-16">
       <a
-        href="https://evefrontier.com/en?ref=A8EpsbMr"
+        href="https://evefrontier.com/en?ref=Space"
         target="_blank"
         rel="noopener noreferrer"
         className="group relative rounded-2xl overflow-hidden min-h-[400px] md:min-h-[520px] flex items-end cursor-pointer no-underline"

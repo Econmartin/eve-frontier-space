@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
 import { Menu, X } from 'lucide-react';
+import { MOVE_APP_HREF } from '@/config';
 import { Button } from '@/components/ui/button';
 import {
   Sheet,
@@ -66,7 +66,7 @@ export function Header({ isHomePage = false }: HeaderProps) {
           asChild
           className="header-learn-move rounded-lg px-5 py-2 text-sm font-semibold text-black transition-colors bg-[var(--color-neutral)]"
         >
-          <Link to="/move">Learn Move</Link>
+          <a href={MOVE_APP_HREF} className="no-underline">Learn Move</a>
         </Button>
       </div>
 
@@ -104,7 +104,7 @@ export function Header({ isHomePage = false }: HeaderProps) {
               asChild
               className="header-learn-move w-full rounded-lg py-3 text-sm font-semibold text-black transition-colors bg-[var(--color-neutral)]"
             >
-              <Link to="/move">Learn Move</Link>
+              <a href={MOVE_APP_HREF} className="no-underline">Learn Move</a>
             </Button>
           </div>
         </SheetContent>
