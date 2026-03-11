@@ -5,7 +5,7 @@
  *   dist/move/       ← move app (serves /move/*)
  *   dist/_redirects  ← CF Pages SPA routing rules
  */
-import { cpSync, mkdirSync, writeFileSync, rmSync } from 'fs';
+import { cpSync, mkdirSync, rmSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -28,12 +28,6 @@ cpSync(moveDist, moveOut, { recursive: true });
 // Cloudflare Pages SPA routing:
 // - /move/* → move app index (200 = rewrite, not redirect)
 // - /*      → home app index
-writeFileSync(
-  resolve(outDir, '_redirects'),
-  // /move/*  — all routes under /move/ → move SPA (CF serves /move and /move/ via directory index)
-  // /*       — all other routes → home SPA
-  '/move/*  /move/index.html  200\n' +
-  '/*       /index.html       200\n',
-);
+// Routing is handled by worker.js — no _redirects needed.
 
 console.log('✓ Combined dist ready → dist/');
