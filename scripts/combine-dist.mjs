@@ -30,7 +30,12 @@ cpSync(moveDist, moveOut, { recursive: true });
 // - /*      → home app index
 writeFileSync(
   resolve(outDir, '_redirects'),
-  '/move/*  /move/index.html  200\n/*       /index.html       200\n',
+  // /move    — bare URL, no trailing slash
+  // /move/*  — everything under /move/ (splat matches zero or more chars)
+  // /*       — all other routes → home SPA
+  '/move    /move/index.html  200\n' +
+  '/move/*  /move/index.html  200\n' +
+  '/*       /index.html       200\n',
 );
 
 console.log('✓ Combined dist ready → dist/');
