@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import { COURSE } from '../../../content/curriculum';
 import type { Course } from '@/lib/types';
 
