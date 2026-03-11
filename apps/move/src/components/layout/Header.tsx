@@ -1,4 +1,4 @@
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation } from 'react-router';
 import { useCourse } from '@/hooks/useCourse';
 import { HOME_APP_HREF } from '@/config';
 
