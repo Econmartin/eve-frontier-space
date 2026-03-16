@@ -4,6 +4,7 @@ import {
   Hero,
   DocumentationSection,
   ResourceCardsSection,
+  VideoGallerySection,
   CommunityGallerySection,
   GitHubReposSection,
   PlayCtaSection,
@@ -19,6 +20,7 @@ export function HomePage() {
         <div className="px-4 sm:px-6 lg:px-8">
           <DocumentationSection />
           <ResourceCardsSection />
+          <VideoGallerySection />
           <CommunityGallerySection />
           <GitHubReposSection />
           <PlayCtaSection />
