@@ -1,3 +1,7 @@
+// TODO: When reviewing m3, make sure to introduce the `address` type properly here or in a dedicated lesson.
+// It was listed but not taught in m2 (2.2 covers integers & booleans only).
+// Address fits naturally with structs/objects since that's where students first need it.
+// Also ensure `vector` gets a proper intro in 3.2 — students have seen it listed but not used yet.
 import type { Lesson } from '../../src/lib/types';
 
 const lesson: Lesson = {

@@ -1,6 +1,6 @@
 import { useRef, useEffect, useCallback } from 'react';
 import { EditorView, keymap, lineNumbers } from '@codemirror/view';
-import { EditorState } from '@codemirror/state';
+import { EditorState, Prec } from '@codemirror/state';
 import { defaultKeymap, indentWithTab } from '@codemirror/commands';
 import { move } from './move-lang';
 import { moveDark } from './move-theme';
@@ -22,16 +22,17 @@ export function CodeEditor({ value, onChange, onRun }: CodeEditorProps) {
   useEffect(() => {
     if (!containerRef.current) return;
 
-    const runKeymap = keymap.of([
-      {
-        key: 'Ctrl-Enter',
-        mac: 'Cmd-Enter',
-        run: () => {
-          onRunRef.current?.();
-          return true;
+    const runKeymap = Prec.highest(
+      keymap.of([
+        {
+          key: 'Mod-Enter',
+          run: () => {
+            onRunRef.current?.();
+            return true;
+          },
         },
-      },
-    ]);
+      ]),
+    );
 
     const updateListener = EditorView.updateListener.of((update) => {
       if (update.docChanged) {
