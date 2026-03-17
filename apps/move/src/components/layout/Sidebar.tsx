@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useCourse } from '@/hooks/useCourse';
 import { pageKey } from '@/hooks/useProgress';
 
@@ -8,6 +8,16 @@ export function Sidebar() {
   const [expandedModules, setExpandedModules] = useState<Set<number>>(
     () => new Set([pos.m]),
   );
+
+  // Auto-expand the current module when navigating across modules
+  useEffect(() => {
+    setExpandedModules((prev) => {
+      if (prev.has(pos.m)) return prev;
+      const next = new Set(prev);
+      next.add(pos.m);
+      return next;
+    });
+  }, [pos.m]);
 
   const toggleModule = (mIdx: number) => {
     setExpandedModules((prev) => {
@@ -76,7 +86,7 @@ export function Sidebar() {
                           {lessonCompleted ? '✓' : '○'}
                         </span>
                         <span
-                          className={`text-xs whitespace-nowrap overflow-hidden text-ellipsis leading-relaxed transition-colors ${
+                          className={`text-xs leading-relaxed transition-colors ${
                             isActiveLesson ? 'text-cyan' : 'text-text'
                           }`}
                         >
@@ -109,7 +119,7 @@ export function Sidebar() {
                                   {pageDone ? '✓' : '·'}
                                 </span>
                                 <span
-                                  className={`text-[11px] whitespace-nowrap overflow-hidden text-ellipsis leading-relaxed ${
+                                  className={`text-[11px] leading-relaxed ${
                                     isActivePage ? 'text-cyan' : 'text-text-muted'
                                   }`}
                                 >

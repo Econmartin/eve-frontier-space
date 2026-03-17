@@ -6,7 +6,7 @@ import { ReviewView } from './ReviewView';
 import type { TaskPage } from '@/lib/types';
 
 export function LessonPage() {
-  const { currentPage, markCompleted } = useCourse();
+  const { currentPage, pos, markCompleted } = useCourse();
 
   // Auto-mark LEARN and REVIEW pages as completed when visited
   useEffect(() => {
@@ -15,13 +15,16 @@ export function LessonPage() {
     }
   }, [currentPage, markCompleted]);
 
+  // Key forces a full remount when position changes (ensures editor resets)
+  const posKey = `${pos.m}-${pos.l}-${pos.p}`;
+
   switch (currentPage.type) {
     case 'LEARN':
-      return <LearnView page={currentPage} />;
+      return <LearnView key={posKey} page={currentPage} />;
     case 'TASK':
-      return <TaskView page={currentPage as TaskPage} />;
+      return <TaskView key={posKey} page={currentPage as TaskPage} />;
     case 'REVIEW':
-      return <ReviewView page={currentPage} />;
+      return <ReviewView key={posKey} page={currentPage} />;
     default:
       return null;
   }

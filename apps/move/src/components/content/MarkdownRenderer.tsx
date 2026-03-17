@@ -1,5 +1,6 @@
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { MoveHighlight } from './MoveHighlight';
 
 interface MarkdownRendererProps {
   content: string;
@@ -41,7 +42,16 @@ export function MarkdownRenderer({ content, className = '' }: MarkdownRendererPr
           ),
           li: ({ children }) => <li className="mb-1">{children}</li>,
           code: ({ className, children, ...props }) => {
+            const isMove = className?.includes('language-move');
             const isBlock = className?.includes('language-');
+            if (isMove) {
+              const codeStr = String(children).replace(/\n$/, '');
+              return (
+                <code className="font-mono text-xs bg-transparent border-none p-0 rounded-none">
+                  <MoveHighlight code={codeStr} />
+                </code>
+              );
+            }
             if (isBlock) {
               return (
                 <code
@@ -70,6 +80,20 @@ export function MarkdownRenderer({ content, className = '' }: MarkdownRendererPr
             <a href={href} className="text-cyan no-underline hover:underline">
               {children}
             </a>
+          ),
+          table: ({ children }) => (
+            <div className="overflow-x-auto mb-3">
+              <table className="w-full text-sm border-collapse">{children}</table>
+            </div>
+          ),
+          thead: ({ children }) => (
+            <thead className="border-b border-border">{children}</thead>
+          ),
+          th: ({ children }) => (
+            <th className="text-left text-text font-semibold text-xs px-3 py-2">{children}</th>
+          ),
+          td: ({ children }) => (
+            <td className="text-left text-[#94a3b8] text-sm px-3 py-1.5 border-b border-border/50">{children}</td>
           ),
         }}
       >
