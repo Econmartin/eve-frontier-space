@@ -2,11 +2,11 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import {
   createBrowserRouter,
-  RouterProvider,
   createRoutesFromElements,
   Route,
   Navigate,
 } from 'react-router';
+import { RouterProvider } from 'react-router/dom';
 import { CourseProvider } from '@/hooks/useCourse';
 import { AppShell } from '@/components/layout/AppShell';
 import { HomePage } from '@/components/pages/HomePage';
