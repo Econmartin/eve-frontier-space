@@ -29,7 +29,19 @@
       from { opacity: 0 }
       to { opacity: 1 }
     }
+    /* Skip card entrance animations when arriving via view transition */
+    html[data-vt-inbound] .animate-instrument-in {
+      animation: none !important;
+    }
   </style>
+  <script>
+    // Detect if we arrived via a cross-document view transition (e.g. back from /move)
+    // and skip entrance animations so they don't flash on top of the page transition.
+    var nav = performance.getEntriesByType('navigation')[0];
+    if (nav && nav.type !== 'navigate') {
+      document.documentElement.setAttribute('data-vt-inbound', '');
+    }
+  </script>
 </head>
 <body>
   <div id="root"></div>
