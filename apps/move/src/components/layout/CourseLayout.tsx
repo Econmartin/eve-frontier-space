@@ -34,7 +34,7 @@ export function CourseLayout() {
 
   return (
     <div className="flex-1 grid grid-cols-[240px_1fr] overflow-hidden min-h-0 max-md:grid-cols-1">
-      <div className="max-md:hidden">
+      <div className="max-md:hidden overflow-hidden min-h-0">
         <Sidebar />
       </div>
       <div className="flex flex-col overflow-hidden min-w-0 min-h-0 flex-1">

@@ -7,7 +7,7 @@ export function Header() {
   const isCoursePage = location.pathname.startsWith('/learn');
 
   return (
-    <header className="h-[52px] shrink-0 flex items-center px-4 bg-black/95 backdrop-blur-md border-b border-border gap-3 z-50 relative">
+    <header className="shrink-0 flex items-center pl-[70px] pr-4 py-2 bg-black/95 backdrop-blur-md border-b border-border gap-3 z-50 relative">
       <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-cyan/20 to-transparent pointer-events-none" />
 
       <a
@@ -17,9 +17,9 @@ export function Header() {
         <img
           src={`${import.meta.env.BASE_URL}assets/eve_frontier_transparent.webp`}
           alt="EVE Frontier"
-          className="h-7"
+          className="h-8 md:h-10"
         />
-        <span className="text-white text-[0.45rem] whitespace-nowrap font-mono tracking-widest">
+        <span className="text-white text-[0.5rem] whitespace-nowrap font-mono tracking-widest">
           Community
         </span>
       </a>
@@ -30,6 +30,7 @@ export function Header() {
 
       <Link
         to="/"
+        viewTransition
         className="shrink-0 rounded-lg px-4 py-1.5 text-xs font-semibold text-black bg-[var(--color-cyan)] hover:bg-[var(--color-cyan-dim)] transition-colors no-underline"
       >
         Learn Move
@@ -43,6 +44,7 @@ function NavLinks() {
     <nav className="flex-1 flex items-center justify-center gap-6">
       <Link
         to="/learn"
+        viewTransition
         className="text-xs font-medium text-text-muted hover:text-cyan transition-colors no-underline"
       >
         Start Learning
