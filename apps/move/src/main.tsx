@@ -30,6 +30,6 @@ const router = createBrowserRouter(
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <RouterProvider router={router} />
+    <RouterProvider router={router} unstable_useTransitions={false} />
   </StrictMode>,
 );
