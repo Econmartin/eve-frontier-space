@@ -181,11 +181,6 @@ body {
   animation: btn-pulse 1.4s ease-out 2;
 }
 
-/* Cross-document view transitions (home ↔ move app) */
-@view-transition {
-  navigation: auto;
-}
-
 /* View Transitions API – page transitions */
 @supports (view-transition-name: none) {
   ::view-transition-old(root) {
