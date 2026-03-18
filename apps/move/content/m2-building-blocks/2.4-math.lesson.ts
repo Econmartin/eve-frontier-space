@@ -3,7 +3,7 @@ import type { Lesson } from '../../src/lib/types';
 const lesson: Lesson = {
   id: '2.4',
   title: 'Math & Comparisons',
-  time: '~20 min',
+  time: '~30 min',
   pages: [
     {
       type: 'LEARN',
@@ -241,6 +241,113 @@ fun test_critical() {
 Test result: OK. Total tests: 2; passed: 2; failed: 0`,
     },
     {
+      type: 'LEARN',
+      title: 'Bitwise Operations',
+      content: `Move supports **bitwise operators** that work on individual bits — the 1s and 0s that make up every number. These are useful for flags, permissions, and low-level data packing.
+
+| Operator | Name | What it does |
+|----------|------|-------------|
+| \`&\` | Bitwise AND | Keeps bits that are 1 in **both** values |
+| \`\\|\` | Bitwise OR | Keeps bits that are 1 in **either** value |
+| \`^\` | Bitwise XOR | Keeps bits that are 1 in **one but not both** |
+| \`<<\` | Left shift | Moves bits left (multiplies by powers of 2) |
+| \`>>\` | Right shift | Moves bits right (divides by powers of 2) |
+
+A practical example — using bit flags for ship status:
+
+\`\`\`move
+module frontier::flags;
+
+// Each flag is a power of 2 (one bit)
+const DOCKED: u8 = 1;      // bit 0: 0000_0001
+const SHIELDS_UP: u8 = 2;  // bit 1: 0000_0010
+const WEAPONS_HOT: u8 = 4; // bit 2: 0000_0100
+const CLOAKED: u8 = 8;     // bit 3: 0000_1000
+
+// Combine flags with OR
+fun combat_ready(): u8 {
+    SHIELDS_UP | WEAPONS_HOT  // 0000_0110 = 6
+}
+
+// Check a flag with AND
+fun is_cloaked(status: u8): bool {
+    (status & CLOAKED) != 0
+}
+\`\`\`
+
+**Shift operators** move bits left or right. The right-hand side must always be \`u8\`:
+
+\`\`\`move
+fun double(x: u64): u64 {
+    x << 1   // shift left by 1 = multiply by 2
+}
+
+fun halve(x: u64): u64 {
+    x >> 1   // shift right by 1 = divide by 2 (rounds down)
+}
+\`\`\`
+
+Key rules:
+- Both sides of \`&\`, \`|\`, \`^\` must be the same type
+- The shift amount (right side of \`<<\` and \`>>\`) must always be \`u8\`
+- Bitwise operations never abort — they can't overflow`,
+    },
+    {
+      type: 'TASK',
+      title: 'Status Flags',
+      content: `Use bitwise operators to manage ship status flags.`,
+      task: `Write two functions using bitwise operators:
+
+1. \`set_flag(status: u8, flag: u8): u8\` — turns on a flag using OR (\`|\`)
+2. \`has_flag(status: u8, flag: u8): bool\` — checks if a flag is set using AND (\`&\`)`,
+      hint: `\`\`\`move
+fun set_flag(status: u8, flag: u8): u8 {
+    status | flag
+}
+
+fun has_flag(status: u8, flag: u8): bool {
+    (status & flag) != 0
+}
+\`\`\``,
+      bonus: null,
+      starterCode: `module frontier::status;
+
+const DOCKED: u8 = 1;
+const SHIELDS_UP: u8 = 2;
+const WEAPONS_HOT: u8 = 4;
+
+// Write set_flag(status, flag) -> u8 — turn on a flag with |
+
+
+// Write has_flag(status, flag) -> bool — check a flag with &
+
+
+#[test]
+fun test_flags() {
+    let mut status = 0u8;
+    status = set_flag(status, DOCKED);
+    assert!(has_flag(status, DOCKED) == true, 0);
+    assert!(has_flag(status, SHIELDS_UP) == false, 1);
+
+    status = set_flag(status, SHIELDS_UP);
+    assert!(has_flag(status, DOCKED) == true, 2);
+    assert!(has_flag(status, SHIELDS_UP) == true, 3);
+}
+`,
+      checks: [
+        { test: code => /module\s+frontier\s*::\s*status\s*;/.test(code), errorMsg: 'Keep the module declaration: module frontier::status;' },
+        { test: code => /fun\s+set_flag\s*\(/.test(code), errorMsg: 'Write a function called set_flag.' },
+        { test: code => /fun\s+has_flag\s*\(/.test(code), errorMsg: 'Write a function called has_flag.' },
+        { test: code => /\|/.test(code), errorMsg: 'Use the | (OR) operator in set_flag.' },
+        { test: code => /&/.test(code), errorMsg: 'Use the & (AND) operator in has_flag.' },
+      ],
+      successOutput: `$ sui move test
+   Compiling frontier v0.0.1
+   Running tests...
+[ PASS ] frontier::status::test_flags
+Test result: OK. Total tests: 1; passed: 1; failed: 0`,
+    },
+    {
       type: 'REVIEW',
       title: 'Lesson 2.4 — Summary',
       content: `Here's what you've learned:
@@ -250,7 +357,10 @@ Test result: OK. Total tests: 2; passed: 2; failed: 0`,
 - **Overflow** (going above max) and **underflow** (going below 0) **abort** the program
 - Cast between types with \`as\`: \`(value as u8)\` — aborts if value doesn't fit
 - Comparison operators: \`==\`, \`!=\`, \`<\`, \`>\`, \`<=\`, \`>=\` — all return \`bool\`
-- Combine comparisons with \`&&\` and \`||\``,
+- Combine comparisons with \`&&\` and \`||\`
+- **Bitwise operators**: \`&\` (AND), \`|\` (OR), \`^\` (XOR) — work on individual bits
+- **Bit flags**: use powers of 2 and \`|\` to combine, \`&\` to check
+- **Shift operators**: \`<<\` (left) and \`>>\` (right) — shift amount must be \`u8\``,
     },
   ],
 };

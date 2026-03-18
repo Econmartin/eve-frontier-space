@@ -3,7 +3,7 @@ import type { Lesson } from '../../src/lib/types';
 const lesson: Lesson = {
   id: '2.5',
   title: 'Control Flow',
-  time: '~25 min',
+  time: '~35 min',
   pages: [
     {
       type: 'LEARN',
@@ -298,6 +298,128 @@ fun test_journey() {
 Test result: OK. Total tests: 3; passed: 3; failed: 0`,
     },
     {
+      type: 'LEARN',
+      title: 'Labeled Control Flow',
+      content: `When you have **nested loops**, sometimes you need to break out of the outer loop from inside the inner one. Move supports **labels** — you give a loop a name and then target it with \`break\` or \`continue\`.
+
+Labels start with a single quote: \`'label_name:\`
+
+\`\`\`move
+module frontier::navigation;
+
+fun find_target(sectors: &vector<vector<u64>>, target: u64): bool {
+    let mut i = 0;
+    let found = 'search: loop {
+        if (i >= sectors.length()) {
+            break 'search false
+        };
+        let sector = &sectors[i];
+        let mut j = 0;
+        while (j < sector.length()) {
+            if (sector[j] == target) {
+                break 'search true   // exits BOTH loops
+            };
+            j = j + 1;
+        };
+        i = i + 1;
+    };
+    found
+}
+\`\`\`
+
+Without labels, \`break\` only exits the **innermost** loop. With \`'search:\`, we can break all the way out to the outer loop.
+
+### \`loop\` can return values
+
+\`loop\` (unlike \`while\`) can produce a value via \`break\`:
+
+\`\`\`move
+let result = loop {
+    if (done) {
+        break 42   // the loop "returns" 42
+    };
+};
+\`\`\`
+
+### Labeled blocks
+
+You can also label a regular code block and use \`return\` to exit it early:
+
+\`\`\`move
+fun classify(n: u64): u64 {
+    let category = 'check: {
+        if (n == 0) { return 'check 0 };
+        if (n < 10) { return 'check 1 };
+        2
+    };
+    category
+}
+\`\`\`
+
+Key rules:
+- Labels use \`'name:\` syntax (single quote, then name, then colon)
+- Use \`break 'label\` and \`continue 'label\` with **loop labels**
+- Use \`return 'label\` with **block labels**
+- \`loop\` can return a value via \`break value\` or \`break 'label value\``,
+    },
+    {
+      type: 'TASK',
+      title: 'Sector Search',
+      content: `Use a labeled loop to sum values with a ceiling.`,
+      task: `Write a function \`count_until_limit\` that takes \`values: &vector<u64>\` and \`limit: u64\`.
+
+Use a \`'scan: loop\` to iterate through the vector and sum the values. If adding the next value would make the sum exceed \`limit\`, break out with the current sum. If you reach the end, break with the total sum.`,
+      hint: `\`\`\`move
+fun count_until_limit(values: &vector<u64>, limit: u64): u64 {
+    let mut sum = 0;
+    let mut i = 0;
+    'scan: loop {
+        if (i >= values.length()) {
+            break 'scan sum
+        };
+        if (sum + values[i] > limit) {
+            break 'scan sum
+        };
+        sum = sum + values[i];
+        i = i + 1;
+    }
+}
+\`\`\``,
+      bonus: null,
+      starterCode: `module frontier::scanner;
+
+// Write count_until_limit(values, limit) -> u64
+// Sum values until adding the next one would exceed limit
+// Use a labeled loop: 'scan: loop { ... break 'scan sum ... }
+
+
+#[test]
+fun test_count() {
+    let vals = vector[10u64, 20, 30, 40, 50];
+    assert!(count_until_limit(&vals, 55) == 30, 0);   // 10+20=30, adding 30 would be 60 > 55
+    assert!(count_until_limit(&vals, 1000) == 150, 1); // all values fit
+}
+
+#[test]
+fun test_empty() {
+    let empty: vector<u64> = vector[];
+    assert!(count_until_limit(&empty, 100) == 0, 0);
+}
+`,
+      checks: [
+        { test: code => /module\s+frontier\s*::\s*scanner\s*;/.test(code), errorMsg: 'Keep the module declaration: module frontier::scanner;' },
+        { test: code => /fun\s+count_until_limit\s*\(/.test(code), errorMsg: 'Write a function called count_until_limit.' },
+        { test: code => /'/.test(code), errorMsg: 'Use a label (starts with single quote) on your loop.' },
+        { test: code => /break/.test(code), errorMsg: 'Use break to exit the labeled loop with a value.' },
+      ],
+      successOutput: `$ sui move test
+   Compiling frontier v0.0.1
+   Running tests...
+[ PASS ] frontier::scanner::test_count
+[ PASS ] frontier::scanner::test_empty
+Test result: OK. Total tests: 2; passed: 2; failed: 0`,
+    },
+    {
       type: 'REVIEW',
       title: 'Lesson 2.5 — Summary',
       content: `Here's what you've learned:
@@ -308,6 +430,9 @@ Test result: OK. Total tests: 3; passed: 3; failed: 0`,
 - \`while (cond) { ... }\` repeats while true
 - \`for (i in 0..n) { ... }\` for counted loops (Move 2024)
 - \`break\` exits a loop, \`continue\` skips to next iteration
+- \`'label: loop/while\` — labels let you \`break\` or \`continue\` a specific loop in nested loops
+- \`loop\` can return a value via \`break value\`
+- \`'label: { ... }\` — labeled blocks with \`return 'label value\` for early exits
 - \`abort code\` halts execution and reverts all changes
 - \`assert!(condition, code)\` is shorthand for "abort if condition is false"
 - Use \`E\`-prefixed constants for error codes: \`const ENotFound: u64 = 0;\``,

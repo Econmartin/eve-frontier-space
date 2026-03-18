@@ -3,7 +3,7 @@ import type { Lesson } from '../../src/lib/types';
 const lesson: Lesson = {
   id: '2.2',
   title: 'Data Types',
-  time: '~20 min',
+  time: '~30 min',
   pages: [
     {
       type: 'LEARN',
@@ -196,6 +196,135 @@ fun test_ready() {
 Test result: OK. Total tests: 1; passed: 1; failed: 0`,
     },
     {
+      type: 'LEARN',
+      title: 'The Address Type',
+      content: `\`address\` is a 32-byte identifier that represents a **location** on the blockchain — a wallet, a package, or an object. Think of it like a unique ID in a galactic registry.
+
+Addresses are written with the \`@\` prefix:
+
+\`\`\`move
+module frontier::registry;
+
+fun headquarters(): address {
+    @0xCAFE
+}
+
+fun is_home_base(location: address): bool {
+    location == @0xCAFE
+}
+\`\`\`
+
+You've actually been using addresses all along — in \`module frontier::ships\`, the \`frontier\` part is a **named address** defined in the project's \`Move.toml\` file. Named addresses let you write \`@frontier\` instead of a long hex value.
+
+\`\`\`move
+let pkg = @frontier;      // named address — resolved at build time
+let admin = @0xDEADBEEF;  // hex literal address
+let zero = @0x0;          // the zero address
+\`\`\`
+
+Key things to know about addresses:
+- Compare with \`==\` and \`!=\` — but NOT \`<\`, \`>\`, \`<=\`, \`>=\`
+- You **cannot** do math on addresses — no \`+\`, \`-\`, etc.
+- They are **opaque** identifiers, not numbers, even though they look like hex values
+- Common addresses: \`@0x1\` (standard library), \`@0x2\` (Sui framework)`,
+    },
+    {
+      type: 'LEARN',
+      title: 'Tuples & Unit',
+      content: `### Returning multiple values
+
+Sometimes a function needs to return more than one thing. Move supports this with **tuples** — a group of values in parentheses:
+
+\`\`\`move
+module frontier::scanner;
+
+// Returns two values as a tuple
+fun ship_status(fuel: u64, shields: u64): (bool, bool) {
+    let fuel_ok = fuel > 0;
+    let shields_ok = shields > 50;
+    (fuel_ok, shields_ok)
+}
+
+// Unpack a tuple with let
+fun check_readiness(fuel: u64, shields: u64): bool {
+    let (fuel_ok, shields_ok) = ship_status(fuel, shields);
+    fuel_ok && shields_ok
+}
+\`\`\`
+
+You **unpack** (also called "destructure") tuples using \`let\` with matching parentheses. Use \`_\` to ignore a value you don't need:
+
+\`\`\`move
+let (_, shields_ok) = ship_status(100, 75);
+// we only care about shields_ok
+\`\`\`
+
+### Unit: the "nothing" type
+
+When a function has no return type, it actually returns \`()\` — the **unit** type (an empty tuple). These are all equivalent:
+
+\`\`\`move
+fun log_event() { }           // implicit ()
+fun log_event(): () { }       // explicit ()
+fun log_event(): () { () }    // very explicit ()
+\`\`\`
+
+### Tuple limitations
+
+Tuples in Move are **not** full values like in Python or Rust. They can only be used for multiple return values:
+- Cannot be stored in variables (only destructured immediately)
+- Cannot be stored in structs
+- Cannot be used as generic type arguments`,
+    },
+    {
+      type: 'TASK',
+      title: 'Multi-Return Scanner',
+      content: `Practice returning multiple values from a function.`,
+      task: `Write a function \`scan_target\` that takes \`distance: u64\` and \`mass: u64\` and returns \`(bool, u64)\`:
+- First value: \`true\` if distance is less than \`1000\` (in range), \`false\` otherwise
+- Second value: a threat rating calculated as \`mass / (distance + 1)\` (the +1 prevents divide-by-zero)`,
+      hint: `\`\`\`move
+fun scan_target(distance: u64, mass: u64): (bool, u64) {
+    let in_range = distance < 1000;
+    let threat = mass / (distance + 1);
+    (in_range, threat)
+}
+\`\`\``,
+      bonus: null,
+      starterCode: `module frontier::scanner;
+
+// Write scan_target(distance, mass) -> (bool, u64)
+// First: in_range (distance < 1000)
+// Second: threat = mass / (distance + 1)
+
+
+#[test]
+fun test_scan() {
+    let (in_range, threat) = scan_target(500, 2000);
+    assert!(in_range == true, 0);
+    assert!(threat == 3, 1);   // 2000 / 501 = 3
+}
+
+#[test]
+fun test_out_of_range() {
+    let (in_range, _threat) = scan_target(2000, 100);
+    assert!(in_range == false, 0);
+}
+`,
+      checks: [
+        { test: code => /module\s+frontier\s*::\s*scanner\s*;/.test(code), errorMsg: 'Keep the module declaration: module frontier::scanner;' },
+        { test: code => /fun\s+scan_target\s*\(/.test(code), errorMsg: 'Write a function called scan_target.' },
+        { test: code => /\(\s*bool\s*,\s*u64\s*\)/.test(code), errorMsg: 'Return type should be (bool, u64).' },
+        { test: code => /\(\s*\w+\s*,\s*\w+\s*\)/.test(code), errorMsg: 'Return a tuple: (in_range, threat)' },
+      ],
+      successOutput: `$ sui move test
+   Compiling frontier v0.0.1
+   Running tests...
+[ PASS ] frontier::scanner::test_scan
+[ PASS ] frontier::scanner::test_out_of_range
+Test result: OK. Total tests: 2; passed: 2; failed: 0`,
+    },
+    {
       type: 'REVIEW',
       title: 'Lesson 2.2 — Summary',
       content: `Here's what you've learned:
@@ -208,8 +337,11 @@ Test result: OK. Total tests: 1; passed: 1; failed: 0`,
 - \`bool\` is \`true\` or \`false\` — used with \`&&\`, \`||\`, \`!\`
 - **Comparisons** (\`==\`, \`!=\`, \`<\`, \`>\`, \`<=\`, \`>=\`) produce booleans
 - You can only compare values of the **same type**
+- \`address\` is a 32-byte identifier for wallets, packages, and objects — written with \`@\` prefix
+- **Tuples** let functions return multiple values: \`(bool, u64)\`
+- **Unit** \`()\` is the empty tuple — what functions return when they have no return type
 
-**Coming later:** \`address\` (with objects in m6), \`vector\` (in m3)`,
+**Coming later:** \`vector\` (in m3)`,
     },
   ],
 };
