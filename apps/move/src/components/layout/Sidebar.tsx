@@ -30,10 +30,10 @@ export function Sidebar() {
 
   return (
     <nav
-      className="h-full overflow-y-auto bg-panel border-r border-border flex flex-col"
+      className="h-full bg-panel border-r border-border flex flex-col"
       aria-label="Course navigation"
     >
-      <div className="py-2 flex flex-col">
+      <div className="py-2 flex flex-col flex-1 min-h-0 overflow-y-auto">
         {course.modules.map((mod, mIdx) => {
           const isExpanded = expandedModules.has(mIdx);
 
@@ -140,7 +140,7 @@ export function Sidebar() {
       </div>
 
       {/* Reset page & course */}
-      <div className="mt-auto pt-4 pb-3 px-3 border-t border-border flex flex-col gap-2">
+      <div className="shrink-0 pt-4 pb-3 px-3 border-t border-border flex flex-col gap-2">
         <button
           onClick={resetPage}
           className="w-full font-mono text-[10px] font-semibold tracking-wider px-2 py-1.5 rounded border border-border text-text-muted hover:border-amber/50 hover:text-amber transition-colors text-left"
