@@ -5,6 +5,11 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Cross-document view transitions (home ↔ move app, same-origin) */
+@view-transition {
+  navigation: auto;
+}
+
 @font-face {
   font-family: 'Favorit Mono Std';
   src: url('/fonts/FavoritMonoStd-Regular.woff2') format('woff2');
