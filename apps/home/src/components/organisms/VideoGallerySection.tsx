@@ -36,7 +36,7 @@ export function VideoGallerySection() {
             className="group relative rounded-2xl overflow-hidden min-h-[180px] md:min-h-[220px] flex flex-col justify-end text-left w-full"
           >
             <img
-              src={`https://img.youtube.com/vi/${video.id}/hqdefault.jpg`}
+              src="/assets/thumbnails/video-thumb.jpg"
               alt={video.title}
               loading="lazy"
               className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
@@ -44,7 +44,7 @@ export function VideoGallerySection() {
             <div className="absolute inset-0 bg-linear-to-t from-black/90 via-black/40 to-transparent" />
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="rounded-full bg-white/90 p-4 transition-all duration-300 group-hover:scale-110 group-hover:bg-white">
-                <Play className="size-8 text-foreground fill-foreground ml-0.5" />
+                <Play className="size-8 text-black fill-black ml-0.5" />
               </div>
             </div>
             <div className="relative z-10 p-5">

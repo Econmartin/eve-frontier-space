@@ -4,9 +4,32 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Move on Sui — Interactive Course</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="icon" type="image/png" href="/assets/favicon/favicon-96x96.png" sizes="96x96" />
+  <link rel="icon" type="image/svg+xml" href="/assets/favicon/favicon.svg" />
+  <link rel="shortcut icon" href="/assets/favicon/favicon.ico" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/assets/favicon/apple-touch-icon.png" />
+  <meta name="apple-mobile-web-app-title" content="EVE Frontier Community" />
+  <link rel="manifest" href="/assets/favicon/site.webmanifest" />
+  <!-- Cross-document view transitions (must be in HTML, not build-processed CSS) -->
+  <style>
+    @view-transition {
+      navigation: auto;
+    }
+    ::view-transition-old(root) {
+      animation: vt-fade-out 0.35s ease-out forwards;
+    }
+    ::view-transition-new(root) {
+      animation: vt-fade-in 0.35s ease-out forwards;
+    }
+    @keyframes vt-fade-out {
+      from { opacity: 1 }
+      to { opacity: 0 }
+    }
+    @keyframes vt-fade-in {
+      from { opacity: 0 }
+      to { opacity: 1 }
+    }
+  </style>
 </head>
 <body>
   <div id="root"></div>

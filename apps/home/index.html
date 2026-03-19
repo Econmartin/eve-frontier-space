@@ -10,11 +10,51 @@
   <link rel="apple-touch-icon" sizes="180x180" href="/assets/favicon/apple-touch-icon.png" />
   <meta name="apple-mobile-web-app-title" content="EVE Frontier Community" />
   <link rel="manifest" href="/assets/favicon/site.webmanifest" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <!-- Cross-document view transitions (must be in HTML, not build-processed CSS) -->
+  <style>
+    @view-transition {
+      navigation: auto;
+    }
+    ::view-transition-old(root) {
+      animation: vt-fade-out 0.35s ease-out forwards;
+    }
+    ::view-transition-new(root) {
+      animation: vt-fade-in 0.35s ease-out forwards;
+    }
+    @keyframes vt-fade-out {
+      from { opacity: 1 }
+      to { opacity: 0 }
+    }
+    @keyframes vt-fade-in {
+      from { opacity: 0 }
+      to { opacity: 1 }
+    }
+    /* Skip card entrance animations when arriving via view transition */
+    html[data-vt-inbound] .animate-instrument-in {
+      animation: none !important;
+    }
+  </style>
+  <script>
+    // Detect if we arrived via a cross-document view transition (e.g. back from /move)
+    // and skip entrance animations so they don't flash on top of the page transition.
+    var nav = performance.getEntriesByType('navigation')[0];
+    if (nav && nav.type !== 'navigate') {
+      document.documentElement.setAttribute('data-vt-inbound', '');
+    }
+  </script>
 </head>
 <body>
+  <script>
+    // Apply dark mode before first paint to prevent flash.
+    // Priority: localStorage override > system preference.
+    (function() {
+      var stored = localStorage.getItem('theme');
+      var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      if (stored === 'dark' || (!stored && prefersDark)) {
+        document.documentElement.classList.add('dark');
+      }
+    })();
+  </script>
   <div id="root"></div>
   <script type="module" src="/src/main.tsx"></script>
 </body>
