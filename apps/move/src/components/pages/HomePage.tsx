@@ -29,6 +29,7 @@ export function HomePage() {
         <div className="flex gap-4 relative">
           <Link
             to="/learn"
+            viewTransition
             className="font-mono text-sm font-semibold tracking-wider px-8 py-3 rounded-lg bg-cyan/15 border border-cyan-dim text-cyan hover:bg-cyan/25 hover:border-cyan hover:shadow-[0_0_24px_rgba(0,212,255,0.2)] transition-all no-underline"
           >
             Start Learning →
@@ -74,6 +75,7 @@ export function HomePage() {
             <Link
               key={mod.id}
               to={`/learn/${mod.id}/${mod.lessons[0].id}/0`}
+              viewTransition
               className="group bg-panel border border-border rounded-lg p-5 hover:border-border-glow hover:bg-panel-raised transition-all no-underline"
             >
               <div className="flex items-center gap-3 mb-3">
@@ -101,6 +103,7 @@ export function HomePage() {
         </p>
         <Link
           to="/learn"
+          viewTransition
           className="font-mono text-sm font-semibold tracking-wider px-8 py-3 rounded-lg bg-green/10 border border-green/50 text-green hover:bg-green/20 hover:border-green hover:shadow-[0_0_24px_rgba(34,197,94,0.2)] transition-all no-underline"
         >
           Begin the Course →

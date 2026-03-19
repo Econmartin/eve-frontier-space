@@ -3,6 +3,49 @@
 
 @custom-variant dark (&:is(.dark *));
 
+@font-face {
+  font-family: 'Favorit Mono Std';
+  src: url('/fonts/FavoritMonoStd-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Favorit Mono Std';
+  src: url('/fonts/FavoritMonoStd-Light.woff2') format('woff2');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Favorit Mono Std';
+  src: url('/fonts/FavoritMonoStd-Book.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Favorit Mono Std';
+  src: url('/fonts/FavoritMonoStd-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Disket Mono';
+  src: url('/fonts/Disket-Mono-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Disket Mono';
+  src: url('/fonts/Disket-Mono-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
 @theme {
   --color-bg: #050505;
   --color-panel: #0a0a0a;
@@ -20,9 +63,9 @@
   --color-text-muted: #4a5568;
   --color-text-dim: #2d3748;
 
-  --font-mono: 'Fira Code', 'Cascadia Code', 'JetBrains Mono', Consolas,
-    monospace;
-  --font-ui: 'Inter', system-ui, sans-serif;
+  --font-mono: 'Favorit Mono Std', monospace;
+  --font-ui: 'Favorit Mono Std', monospace;
+  --font-heading: 'Disket Mono', monospace;
 }
 
 /* Base styles */
@@ -33,7 +76,8 @@ html {
 
 body {
   height: 100%;
-  background: var(--color-bg);
+  background: radial-gradient(ellipse at 100% 0%, rgba(255, 97, 10, 0.06) 0%, transparent 85%),
+    var(--color-bg);
   color: var(--color-text);
   font-family: var(--font-ui);
   line-height: 1.5;
@@ -135,4 +179,35 @@ body {
 
 .animate-pulse-green {
   animation: btn-pulse 1.4s ease-out 2;
+}
+
+/* Cross-document view transitions (home ↔ move app, same-origin) */
+@view-transition {
+  navigation: auto;
+}
+
+/* View Transitions API – page transitions */
+@supports (view-transition-name: none) {
+  ::view-transition-old(root) {
+    animation: view-transition-fade-out 0.35s ease-out forwards;
+  }
+  ::view-transition-new(root) {
+    animation: view-transition-fade-in 0.35s ease-out forwards;
+  }
+}
+@keyframes view-transition-fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+@keyframes view-transition-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
