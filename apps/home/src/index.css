@@ -163,6 +163,7 @@ h1, h2, h3, h4, h5, h6 {
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.205 0 0);
   --card-foreground: oklch(0.985 0 0);
+  --color-neutral: #111111;
   --popover: oklch(0.205 0 0);
   --popover-foreground: oklch(0.985 0 0);
   --primary: oklch(0.87 0.00 0);
@@ -301,6 +302,10 @@ h1, h2, h3, h4, h5, h6 {
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
+}
+.dark .image-text-clip {
+  background-image: none;
+  color: var(--color-martian-600);
 }
 
 /* Header Learn Move: override Button default [a]:hover:bg-primary/80 so hover is orange */
