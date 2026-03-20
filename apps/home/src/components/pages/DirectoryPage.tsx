@@ -1,9 +1,7 @@
 import { Link } from 'react-router';
 import { PageWrapper } from '@/components/templates/index.ts';
 import { Header } from '@/components/organisms/index.ts';
-import { Card, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ExternalLink } from 'lucide-react';
 
 interface AppEntry {
   id: string;
@@ -25,6 +23,12 @@ const APPS: AppEntry[] = [
     description: 'A community tool for EVE Frontier players.',
     url: 'https://themop.dev/',
   },
+  {
+    id: 'flappy-frontier',
+    name: 'Flappy Frontier',
+    description: 'A fun Flappy Bird-style game set in the EVE Frontier universe.',
+    url: 'https://flappyfrontier.com/',
+  },
 ];
 
 export function DirectoryPage() {
@@ -36,24 +40,19 @@ export function DirectoryPage() {
         <p className="text-white/60 mb-8">Tools built by the EVE Frontier community.</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {APPS.map((app) => (
-            <Card key={app.id} className="bg-white/5 border-white/10 flex flex-col">
-              <CardHeader>
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="size-10 rounded-lg bg-white/10 flex items-center justify-center">
-                    <ExternalLink className="size-5 text-white/60" />
-                  </div>
-                  <CardTitle className="text-white">{app.name}</CardTitle>
-                </div>
-                <CardDescription className="text-white/60">{app.description}</CardDescription>
-              </CardHeader>
-              <CardFooter className="mt-auto">
+            <div key={app.id} className="rounded-xl bg-white/5 ring-1 ring-white/10 flex flex-col p-5 gap-4">
+              <div>
+                <h2 className="text-white font-semibold text-base mb-1">{app.name}</h2>
+                <p className="text-white/60 text-sm">{app.description}</p>
+              </div>
+              <div className="mt-auto">
                 <Button asChild className="w-full bg-[#FAFAE5] text-black hover:bg-[#FAFAE5]/90">
                   <Link to={`/directory/view?url=${encodeURIComponent(app.url)}`}>
-                    Open App
+                    Open {app.name}
                   </Link>
                 </Button>
-              </CardFooter>
-            </Card>
+              </div>
+            </div>
           ))}
         </div>
       </main>
