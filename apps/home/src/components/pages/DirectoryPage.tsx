@@ -25,10 +25,6 @@ function titleFromDomain(url: string) {
   return d.split('.')[0].replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 }
 
-function getInitials(title: string) {
-  return title.split(' ').map(w => w[0] ?? '').join('').slice(0, 2).toUpperCase();
-}
-
 async function fetchOG(url: string): Promise<OGData> {
   try {
     const res = await fetch(`https://api.microlink.io/?url=${encodeURIComponent(url)}`);
@@ -44,7 +40,7 @@ async function fetchOG(url: string): Promise<OGData> {
   }
 }
 
-// Seed-based deterministic hue for bokeh orbs (fallback when no OG image)
+// Deterministic hue from URL for bokeh fallback
 function hueFromUrl(url: string) {
   let h = 0;
   for (let i = 0; i < url.length; i++) h = (h * 31 + url.charCodeAt(i)) & 0xffffff;
@@ -54,78 +50,75 @@ function hueFromUrl(url: string) {
 function BokehFallback({ url }: { url: string }) {
   const hue = hueFromUrl(url);
   const orbs = [
-    { size: 80, x: 30, y: 40, opacity: 0.55 },
-    { size: 60, x: 65, y: 25, opacity: 0.40 },
-    { size: 55, x: 20, y: 65, opacity: 0.35 },
-    { size: 45, x: 72, y: 68, opacity: 0.30 },
+    { size: 90,  x: 30, y: 45, opacity: 0.55 },
+    { size: 70,  x: 68, y: 25, opacity: 0.40 },
+    { size: 60,  x: 18, y: 70, opacity: 0.35 },
+    { size: 50,  x: 75, y: 72, opacity: 0.30 },
   ];
   return (
-    <div className="absolute inset-0 overflow-hidden">
+    <>
       {orbs.map((o, i) => (
-        <div key={i} className="absolute rounded-full" style={{
+        <div key={i} className="absolute rounded-full pointer-events-none" style={{
           width: o.size, height: o.size,
           left: `${o.x}%`, top: `${o.y}%`,
           transform: 'translate(-50%,-50%)',
-          background: `radial-gradient(circle, hsl(${(hue + i * 25) % 360},70%,45%) 0%, transparent 70%)`,
+          background: `radial-gradient(circle, hsl(${(hue + i * 28) % 360},65%,42%) 0%, transparent 70%)`,
           opacity: o.opacity,
-          filter: 'blur(14px)',
+          filter: 'blur(16px)',
         }} />
       ))}
-    </div>
+    </>
   );
 }
 
 function AppCard({ app, og }: { app: AppEntry; og: OGData | undefined }) {
-  const [imgFailed, setImgFailed] = useState(false);
   const domain = getDomain(app.url);
   const title = og?.title ?? titleFromDomain(app.url);
   const description = og?.description;
   const image = og?.image;
-  const showImage = image && !imgFailed;
 
   return (
     <a
       href={app.url}
       className="dir-card group block no-underline text-inherit rounded-2xl overflow-hidden cursor-pointer relative transition-all duration-300 hover:-translate-y-0.5"
       style={{
-        background: '#111111',
-        border: '1px solid rgba(255,97,10,0.18)',
-        boxShadow: '0 0 0 0 rgba(255,97,10,0), 0 4px 24px rgba(0,0,0,0.5)',
+        background: 'var(--card)',
+        border: '1px solid rgba(255,97,10,0.2)',
+        boxShadow: '0 4px 24px rgba(0,0,0,0.5)',
       }}
       onMouseEnter={e => {
-        (e.currentTarget as HTMLElement).style.boxShadow =
-          '0 0 20px 2px rgba(255,97,10,0.12), 0 8px 32px rgba(0,0,0,0.6)';
-        (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,97,10,0.45)';
+        (e.currentTarget as HTMLElement).style.boxShadow = '0 0 24px 2px rgba(255,97,10,0.14), 0 8px 32px rgba(0,0,0,0.6)';
+        (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,97,10,0.5)';
       }}
       onMouseLeave={e => {
-        (e.currentTarget as HTMLElement).style.boxShadow =
-          '0 0 0 0 rgba(255,97,10,0), 0 4px 24px rgba(0,0,0,0.5)';
-        (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,97,10,0.18)';
+        (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 24px rgba(0,0,0,0.5)';
+        (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,97,10,0.2)';
       }}
     >
-      <div className="flex items-stretch" style={{ minHeight: 130 }}>
+      <div className="flex" style={{ minHeight: 130 }}>
 
-        {/* Left — OG image or bokeh orbs */}
-        <div className="flex-shrink-0 relative overflow-hidden rounded-l-2xl" style={{ width: '36%' }}>
-          <div className="absolute inset-0" style={{ background: '#1a1008' }} />
-          {showImage ? (
-            <img
-              src={image}
-              alt={title}
-              loading="lazy"
-              className="absolute inset-0 w-full h-full object-cover object-center opacity-80"
-              onError={() => setImgFailed(true)}
-            />
-          ) : (
-            <BokehFallback url={app.url} />
-          )}
+        {/* Left — image via background-image (covers reliably) or bokeh orbs */}
+        <div
+          className="flex-shrink-0 relative overflow-hidden"
+          style={{
+            width: '36%',
+            backgroundColor: 'oklch(0.12 0.015 30)',
+            ...(image ? {
+              backgroundImage: `url(${image})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+            } : {}),
+          }}
+        >
+          {!image && <BokehFallback url={app.url} />}
         </div>
 
         {/* Right — content */}
         <div className="flex-1 min-w-0 flex flex-col px-5 py-4">
+
           {/* Title + tags */}
-          <div className="flex items-start gap-2 mb-1.5">
-            <h3 className="flex-1 font-sans font-bold text-white leading-snug" style={{ fontSize: 16 }}>
+          <div className="flex items-start gap-2 mb-2">
+            <h3 className="flex-1 font-sans font-bold leading-snug" style={{ fontSize: 16, color: 'var(--card-foreground)' }}>
               {title}
             </h3>
             {app.tags.map(tag => (
@@ -143,7 +136,7 @@ function AppCard({ app, og }: { app: AppEntry; og: OGData | undefined }) {
           {/* Description */}
           {description ? (
             <p className="font-sans text-sm leading-relaxed flex-1" style={{
-              color: '#8a8a8a',
+              color: 'var(--muted-foreground)',
               display: '-webkit-box',
               WebkitLineClamp: 2,
               WebkitBoxOrient: 'vertical' as const,
@@ -156,21 +149,20 @@ function AppCard({ app, og }: { app: AppEntry; og: OGData | undefined }) {
           )}
 
           {/* Divider + footer */}
-          <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', marginTop: 10, paddingTop: 10 }}>
-            <div className="flex items-center justify-between">
-              <span className="font-mono text-sm" style={{ color: '#ff610a', letterSpacing: '0.02em' }}>
-                {domain}
-              </span>
-              <div className="flex items-center justify-center rounded-full transition-colors duration-200 group-hover:bg-[#ff610a]"
-                style={{ width: 28, height: 28, background: 'rgba(255,97,10,0.15)', border: '1px solid rgba(255,97,10,0.3)' }}>
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                  <path d="M2 10L10 2M10 2H5M10 2v5" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </div>
-            </div>
+          <div className="flex items-center justify-between mt-3 pt-3" style={{ borderTop: '1px solid var(--border)' }}>
+            <span className="font-mono text-sm transition-colors duration-200" style={{ color: '#ff610a', letterSpacing: '0.02em' }}>
+              {domain}
+            </span>
+            <svg
+              className="transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
+              style={{ color: 'var(--muted-foreground)' }}
+              width="14" height="14" viewBox="0 0 12 12" fill="none"
+            >
+              <path d="M2 10L10 2M10 2H5M10 2v5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
           </div>
-        </div>
 
+        </div>
       </div>
     </a>
   );
@@ -190,7 +182,6 @@ export function DirectoryPage() {
       .then((data: AppEntry[]) => {
         setApps(data);
         setLoading(false);
-        // Fetch OG data for all apps in parallel
         data.forEach(app => {
           fetchOG(app.url).then(og => {
             setOgMap(prev => ({ ...prev, [app.url]: og }));
@@ -221,16 +212,17 @@ export function DirectoryPage() {
   }, [apps, ogMap, query, activeFilter]);
 
   return (
-    <div className="directory-page">
+    // Force dark so all var(--card), var(--border) etc. resolve to dark-mode values
+    <div className="directory-page dark">
       <div className="relative z-10">
         <Header hideActions />
 
-        <div className="w-full px-4 pb-10 mx-auto" style={{ maxWidth: '100%' }}>
-          <div className="mx-auto" style={{ maxWidth: 800 }}>
+        <div className="w-full px-4 pb-10">
+          <div className="mx-auto" style={{ maxWidth: 860 }}>
 
             {/* Page title */}
-            <div className="py-5 mb-4" style={{ borderBottom: '1px solid #1a2a3a' }}>
-              <div className="font-mono text-[11px] mb-1" style={{ color: '#5a7a8a', letterSpacing: '0.06em' }}>
+            <div className="py-5 mb-4" style={{ borderBottom: '1px solid var(--border)' }}>
+              <div className="font-mono text-[11px] mb-1" style={{ color: 'var(--muted-foreground)', letterSpacing: '0.06em' }}>
                 // community-maintained app directory
               </div>
               <h1 className="font-heading text-xl font-bold text-white" style={{ letterSpacing: '0.08em' }}>
@@ -240,7 +232,8 @@ export function DirectoryPage() {
 
             {/* Search */}
             <div className="relative mb-3">
-              <svg className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: '#5a7a8a' }}
+              <svg className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+                style={{ color: 'var(--muted-foreground)' }}
                 width="14" height="14" viewBox="0 0 16 16" fill="none">
                 <circle cx="6.5" cy="6.5" r="4.5" stroke="currentColor" strokeWidth="1.5"/>
                 <path d="M10 10L13.5 13.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
@@ -254,15 +247,15 @@ export function DirectoryPage() {
                 spellCheck={false}
                 className="w-full font-mono text-sm outline-none transition-all duration-200"
                 style={{
-                  background: '#080d16',
-                  border: '1px solid #1e3a52',
-                  borderRadius: 6,
+                  background: 'var(--muted)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 8,
                   padding: '9px 12px 9px 36px',
-                  color: '#c8dce8',
+                  color: 'var(--foreground)',
                   fontSize: 13,
                 }}
                 onFocus={e => { e.target.style.borderColor = '#ff610a'; e.target.style.boxShadow = '0 0 0 3px rgba(255,97,10,0.12)'; }}
-                onBlur={e => { e.target.style.borderColor = '#1e3a52'; e.target.style.boxShadow = 'none'; }}
+                onBlur={e => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = 'none'; }}
               />
             </div>
 
@@ -275,8 +268,8 @@ export function DirectoryPage() {
                     style={{
                       letterSpacing: '0.06em',
                       background: activeFilter === f ? 'rgba(255,97,10,0.1)' : 'transparent',
-                      border: `1px solid ${activeFilter === f ? '#ff610a' : '#1e3a52'}`,
-                      color: activeFilter === f ? '#ff610a' : '#5a7a8a',
+                      border: `1px solid ${activeFilter === f ? '#ff610a' : 'var(--border)'}`,
+                      color: activeFilter === f ? '#ff610a' : 'var(--muted-foreground)',
                     }}>
                     {f}
                   </button>
@@ -284,31 +277,31 @@ export function DirectoryPage() {
               </div>
             )}
 
-            {/* Meta */}
+            {/* Meta count */}
             {!loading && !error && (
-              <div className="font-mono text-[11px] mb-3" style={{ color: '#3a5a6a', letterSpacing: '0.06em' }}>
+              <div className="font-mono text-[11px] mb-3" style={{ color: 'var(--muted-foreground)', letterSpacing: '0.06em' }}>
                 <span style={{ color: '#ff610a' }}>{filtered.length}</span> of {apps.length} apps
               </div>
             )}
 
             {loading && (
-              <div className="font-mono text-[12px] py-12 text-center" style={{ color: '#3a5a6a', letterSpacing: '0.06em' }}>
+              <div className="font-mono text-[12px] py-12 text-center" style={{ color: 'var(--muted-foreground)', letterSpacing: '0.06em' }}>
                 LOADING...
               </div>
             )}
             {error && (
-              <div className="font-mono text-[12px] py-12 text-center" style={{ color: '#3a5a6a', letterSpacing: '0.06em' }}>
+              <div className="font-mono text-[12px] py-12 text-center" style={{ color: 'var(--muted-foreground)', letterSpacing: '0.06em' }}>
                 FAILED TO LOAD // check network
               </div>
             )}
             {!loading && !error && filtered.length === 0 && (
-              <div className="text-center py-12" style={{ color: '#5a7a8a' }}>
+              <div className="text-center py-12" style={{ color: 'var(--muted-foreground)' }}>
                 <p className="font-mono text-[11px]" style={{ letterSpacing: '0.06em' }}>NO APPS FOUND // {query}</p>
               </div>
             )}
 
             {!loading && !error && (
-              <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))' }}>
+              <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))' }}>
                 {filtered.map(app => <AppCard key={app.url} app={app} og={ogMap[app.url]} />)}
               </div>
             )}
