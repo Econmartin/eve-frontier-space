@@ -44,77 +44,106 @@ async function fetchOG(url: string): Promise<OGData> {
   }
 }
 
+// Seed-based deterministic hue for bokeh orbs (fallback when no OG image)
+function hueFromUrl(url: string) {
+  let h = 0;
+  for (let i = 0; i < url.length; i++) h = (h * 31 + url.charCodeAt(i)) & 0xffffff;
+  return h % 360;
+}
+
+function BokehFallback({ url }: { url: string }) {
+  const hue = hueFromUrl(url);
+  const orbs = [
+    { size: 80, x: 30, y: 40, opacity: 0.55 },
+    { size: 60, x: 65, y: 25, opacity: 0.40 },
+    { size: 55, x: 20, y: 65, opacity: 0.35 },
+    { size: 45, x: 72, y: 68, opacity: 0.30 },
+  ];
+  return (
+    <div className="absolute inset-0 overflow-hidden">
+      {orbs.map((o, i) => (
+        <div key={i} className="absolute rounded-full" style={{
+          width: o.size, height: o.size,
+          left: `${o.x}%`, top: `${o.y}%`,
+          transform: 'translate(-50%,-50%)',
+          background: `radial-gradient(circle, hsl(${(hue + i * 25) % 360},70%,45%) 0%, transparent 70%)`,
+          opacity: o.opacity,
+          filter: 'blur(14px)',
+        }} />
+      ))}
+    </div>
+  );
+}
+
 function AppCard({ app, og }: { app: AppEntry; og: OGData | undefined }) {
   const [imgFailed, setImgFailed] = useState(false);
   const domain = getDomain(app.url);
   const title = og?.title ?? titleFromDomain(app.url);
   const description = og?.description;
   const image = og?.image;
+  const showImage = image && !imgFailed;
 
   return (
     <a
       href={app.url}
-      className="dir-card block no-underline text-inherit rounded-lg overflow-hidden cursor-pointer relative transition-all duration-200 hover:-translate-y-px group"
+      className="dir-card group block no-underline text-inherit rounded-2xl overflow-hidden cursor-pointer relative transition-all duration-300 hover:-translate-y-0.5"
       style={{
-        background: '#080d16',
-        border: '1px solid #1a2a3a',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
+        background: '#111111',
+        border: '1px solid rgba(255,97,10,0.18)',
+        boxShadow: '0 0 0 0 rgba(255,97,10,0), 0 4px 24px rgba(0,0,0,0.5)',
       }}
       onMouseEnter={e => {
-        (e.currentTarget as HTMLElement).style.borderColor = '#1e3a52';
-        (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 20px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,97,10,0.05)';
+        (e.currentTarget as HTMLElement).style.boxShadow =
+          '0 0 20px 2px rgba(255,97,10,0.12), 0 8px 32px rgba(0,0,0,0.6)';
+        (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,97,10,0.45)';
       }}
       onMouseLeave={e => {
-        (e.currentTarget as HTMLElement).style.borderColor = '#1a2a3a';
-        (e.currentTarget as HTMLElement).style.boxShadow = '0 2px 8px rgba(0,0,0,0.4)';
+        (e.currentTarget as HTMLElement).style.boxShadow =
+          '0 0 0 0 rgba(255,97,10,0), 0 4px 24px rgba(0,0,0,0.5)';
+        (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,97,10,0.18)';
       }}
     >
-      {/* hover glow */}
-      <div className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-        style={{ background: 'linear-gradient(135deg, rgba(255,97,10,0.06) 0%, transparent 60%)' }} />
+      <div className="flex items-stretch" style={{ minHeight: 130 }}>
 
-      <div className="flex items-stretch">
-        {/* Thumbnail */}
-        <div className="flex-shrink-0 relative overflow-hidden" style={{ width: 100, minHeight: 70, borderRight: '1px solid #1a2a3a' }}>
-          {image && !imgFailed ? (
+        {/* Left — OG image or bokeh orbs */}
+        <div className="flex-shrink-0 relative overflow-hidden rounded-l-2xl" style={{ width: '36%' }}>
+          <div className="absolute inset-0" style={{ background: '#1a1008' }} />
+          {showImage ? (
             <img
               src={image}
               alt={title}
               loading="lazy"
-              className="absolute inset-0 w-full h-full object-cover object-center"
+              className="absolute inset-0 w-full h-full object-cover object-center opacity-80"
               onError={() => setImgFailed(true)}
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center relative overflow-hidden" style={{ background: '#0d1520', minHeight: 70 }}>
-              <div className="absolute inset-0" style={{
-                backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 6px, rgba(255,97,10,0.04) 6px, rgba(255,97,10,0.04) 7px)',
-              }} />
-              <span className="relative z-10 font-heading text-xl font-bold" style={{ color: '#ff610a', opacity: 0.4, letterSpacing: '0.05em' }}>
-                {getInitials(title)}
-              </span>
-            </div>
+            <BokehFallback url={app.url} />
           )}
         </div>
 
-        {/* Body */}
-        <div className="flex-1 min-w-0 flex flex-col justify-center gap-0.5 px-3 py-2.5">
-          <div className="flex items-start justify-between gap-2">
-            <span className="font-heading font-semibold text-base text-white leading-snug" style={{ letterSpacing: '0.04em' }}>
+        {/* Right — content */}
+        <div className="flex-1 min-w-0 flex flex-col px-5 py-4">
+          {/* Title + tags */}
+          <div className="flex items-start gap-2 mb-1.5">
+            <h3 className="flex-1 font-sans font-bold text-white leading-snug" style={{ fontSize: 16 }}>
               {title}
-            </span>
-            <svg className="flex-shrink-0 mt-0.5 transition-colors duration-200 group-hover:text-[#ff610a]"
-              style={{ color: '#3a5a6a' }} width="14" height="14" viewBox="0 0 16 16" fill="none">
-              <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
+            </h3>
+            {app.tags.map(tag => (
+              <span key={tag} className="flex-shrink-0 font-mono text-[9px] uppercase px-1.5 py-px rounded-sm mt-0.5" style={{
+                letterSpacing: '0.08em',
+                background: tag === 'dapp' ? 'rgba(167,139,250,0.1)' : 'rgba(255,97,10,0.08)',
+                border: `1px solid ${tag === 'dapp' ? 'rgba(167,139,250,0.3)' : 'rgba(255,97,10,0.2)'}`,
+                color: tag === 'dapp' ? '#a78bfa' : '#ff610a',
+              }}>
+                {tag}
+              </span>
+            ))}
           </div>
 
-          <div className="font-mono text-[10px]" style={{ color: '#3a5a6a', letterSpacing: '0.03em' }}>
-            {domain}
-          </div>
-
-          {description && (
-            <p className="font-mono text-[11px] leading-snug mt-0.5" style={{
-              color: '#5a7a8a',
+          {/* Description */}
+          {description ? (
+            <p className="font-sans text-sm leading-relaxed flex-1" style={{
+              color: '#8a8a8a',
               display: '-webkit-box',
               WebkitLineClamp: 2,
               WebkitBoxOrient: 'vertical' as const,
@@ -122,23 +151,26 @@ function AppCard({ app, og }: { app: AppEntry; og: OGData | undefined }) {
             }}>
               {description}
             </p>
+          ) : (
+            <div className="flex-1" />
           )}
 
-          {app.tags.length > 0 && (
-            <div className="flex gap-1 flex-wrap mt-1">
-              {app.tags.map(tag => (
-                <span key={tag} className="font-mono text-[9px] uppercase px-1.5 py-px rounded-sm" style={{
-                  letterSpacing: '0.08em',
-                  background: tag === 'dapp' ? 'rgba(167,139,250,0.1)' : 'rgba(255,97,10,0.08)',
-                  border: `1px solid ${tag === 'dapp' ? 'rgba(167,139,250,0.3)' : 'rgba(255,97,10,0.2)'}`,
-                  color: tag === 'dapp' ? '#a78bfa' : '#ff610a',
-                }}>
-                  {tag}
-                </span>
-              ))}
+          {/* Divider + footer */}
+          <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', marginTop: 10, paddingTop: 10 }}>
+            <div className="flex items-center justify-between">
+              <span className="font-mono text-sm" style={{ color: '#ff610a', letterSpacing: '0.02em' }}>
+                {domain}
+              </span>
+              <div className="flex items-center justify-center rounded-full transition-colors duration-200 group-hover:bg-[#ff610a]"
+                style={{ width: 28, height: 28, background: 'rgba(255,97,10,0.15)', border: '1px solid rgba(255,97,10,0.3)' }}>
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                  <path d="M2 10L10 2M10 2H5M10 2v5" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </div>
             </div>
-          )}
+          </div>
         </div>
+
       </div>
     </a>
   );
@@ -191,7 +223,7 @@ export function DirectoryPage() {
   return (
     <div className="directory-page">
       <div className="relative z-10">
-        <Header />
+        <Header hideActions />
 
         <div className="w-full px-4 pb-10 mx-auto" style={{ maxWidth: '100%' }}>
           <div className="mx-auto" style={{ maxWidth: 800 }}>
