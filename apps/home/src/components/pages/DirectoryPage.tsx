@@ -29,6 +29,12 @@ const APPS: AppEntry[] = [
     description: 'A fun Flappy Bird-style game set in the EVE Frontier universe.',
     url: 'https://flappyfrontier.com/',
   },
+  {
+    id: 'cradle-os',
+    name: 'CradleOS',
+    description: 'A community tool built for the EVE Frontier Hackathon 2026.',
+    url: 'https://r4wf0d0g23.github.io/Reality_Anchor_Eve_Frontier_Hackathon_2026/',
+  },
 ];
 
 export function DirectoryPage() {
