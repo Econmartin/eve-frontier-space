@@ -50,9 +50,11 @@ function ThemeToggle({ className = '' }: { className?: string }) {
 interface HeaderProps {
   /** When true (e.g. homepage), header is transparent over hero until scroll; then sticky with black bg + rounded. When false, always sticky with black bg + rounded. */
   isHomePage?: boolean;
+  /** When true, hides the Learn Move button and theme toggle (e.g. directory page). */
+  hideActions?: boolean;
 }
 
-export function Header({ isHomePage = false }: HeaderProps) {
+export function Header({ isHomePage = false, hideActions = false }: HeaderProps) {
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
@@ -95,15 +97,17 @@ export function Header({ isHomePage = false }: HeaderProps) {
         ))}
       </nav>
 
-      <div className="hidden md:flex items-center gap-3 ml-auto">
-        <ThemeToggle />
-        <Button
-          asChild
-          className="header-learn-move rounded-lg px-5 py-2 text-sm font-semibold text-black transition-colors bg-[#FAFAE5]"
-        >
-          <a href={MOVE_APP_HREF} className="no-underline">Learn Move</a>
-        </Button>
-      </div>
+      {!hideActions && (
+        <div className="hidden md:flex items-center gap-3 ml-auto">
+          <ThemeToggle />
+          <Button
+            asChild
+            className="header-learn-move rounded-lg px-5 py-2 text-sm font-semibold text-black transition-colors bg-[#FAFAE5]"
+          >
+            <a href={MOVE_APP_HREF} className="no-underline">Learn Move</a>
+          </Button>
+        </div>
+      )}
 
       {/* Mobile hamburger — pushed right on mobile */}
       <div className="ml-auto md:ml-0">
@@ -134,18 +138,20 @@ export function Header({ isHomePage = false }: HeaderProps) {
               </a>
             ))}
           </nav>
-          <div className="flex flex-col gap-3 px-4 mt-4">
-            <Button
-              asChild
-              className="header-learn-move w-full rounded-lg py-3 text-sm font-semibold text-black transition-colors bg-[#FAFAE5]"
-            >
-              <a href={MOVE_APP_HREF} className="no-underline">Learn Move</a>
-            </Button>
-            <div className="flex items-center gap-3 mt-2">
-              <ThemeToggle />
-              <span className="text-white/50 text-sm">Theme</span>
+          {!hideActions && (
+            <div className="flex flex-col gap-3 px-4 mt-4">
+              <Button
+                asChild
+                className="header-learn-move w-full rounded-lg py-3 text-sm font-semibold text-black transition-colors bg-[#FAFAE5]"
+              >
+                <a href={MOVE_APP_HREF} className="no-underline">Learn Move</a>
+              </Button>
+              <div className="flex items-center gap-3 mt-2">
+                <ThemeToggle />
+                <span className="text-white/50 text-sm">Theme</span>
+              </div>
             </div>
-          </div>
+          )}
         </SheetContent>
         </Sheet>
       </div>
