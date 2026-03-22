@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCurrentAccount, useDAppKit } from '@mysten/dapp-kit-react';
 import { suiRpcClient } from '../suiRpcClient';
 import { buildBuyTicketTx } from '../transactions';
@@ -17,6 +17,7 @@ interface LotteryState {
 export function LotteryDashboard() {
   const account = useCurrentAccount();
   const dAppKit = useDAppKit();
+  const queryClient = useQueryClient();
   const { network } = useNetwork();
   const { formattedBalance, largestCoinId } = useEveBalance();
 
@@ -52,6 +53,7 @@ export function LotteryDashboard() {
         qty,
       );
       await dAppKit.signAndExecuteTransaction({ transaction: tx });
+      await queryClient.invalidateQueries();
       setStatus(`${qty} ticket${qty > 1 ? 's' : ''} purchased for ${formatEve(ticketPrice * BigInt(qty))} EVE. Good luck, pilot.`);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Purchase failed');

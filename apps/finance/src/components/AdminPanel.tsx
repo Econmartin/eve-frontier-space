@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useDAppKit } from '@mysten/dapp-kit-react';
 import { buildDrawLotteryTx, buildProcessDefaultTx } from '../transactions';
 import { suiRpcClient } from '../suiRpcClient';
@@ -15,6 +15,7 @@ interface Props {
 
 export function AdminPanel({ capId }: Props) {
   const dAppKit = useDAppKit();
+  const queryClient = useQueryClient();
   const { network } = useNetwork();
 
   const [winnerAddress, setWinnerAddress] = useState('');
@@ -43,6 +44,7 @@ export function AdminPanel({ capId }: Props) {
       await dAppKit.signAndExecuteTransaction({
         transaction: buildDrawLotteryTx(capId, network.lotterySystemId, winnerAddress, overrides),
       });
+      await queryClient.invalidateQueries();
       setStatus(`Lottery drawn — winnings sent to ${winnerAddress.slice(0, 10)}…`);
       setWinnerAddress('');
     } catch (e) {
@@ -97,6 +99,7 @@ export function AdminPanel({ capId }: Props) {
           overrides,
         ),
       });
+      await queryClient.invalidateQueries();
       setStatus('Default processed — reserve applied to pool.');
       setDefaultLoanId('');
     } catch (e) {

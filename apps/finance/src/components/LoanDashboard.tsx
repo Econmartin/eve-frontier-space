@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useCurrentAccount, useDAppKit } from '@mysten/dapp-kit-react';
 import { buildBorrowTx, buildRepayTx } from '../transactions';
 import { useEveBalance } from '../hooks/useEveBalance';
@@ -9,6 +10,7 @@ import { EVE_SCALE } from '../constants';
 export function LoanDashboard() {
   const account = useCurrentAccount();
   const dAppKit = useDAppKit();
+  const queryClient = useQueryClient();
   const { network } = useNetwork();
 
   const { formattedBalance, largestCoinId } = useEveBalance();
@@ -26,6 +28,7 @@ export function LoanDashboard() {
     try {
       const amountMist = BigInt(Math.floor(Number(borrowAmount))) * EVE_SCALE;
       await dAppKit.signAndExecuteTransaction({ transaction: buildBorrowTx(network.loanProductId, amountMist, overrides) });
+      await queryClient.invalidateQueries();
       setStatus(`Borrowed ${borrowAmount} EVE — ActiveLoan issued.`);
       setBorrowAmount('');
     } catch (e) {
@@ -38,6 +41,7 @@ export function LoanDashboard() {
     setStatus(null); setError(null);
     try {
       await dAppKit.signAndExecuteTransaction({ transaction: buildRepayTx(loanId, largestCoinId, BigInt(amountDue), overrides) });
+      await queryClient.invalidateQueries();
       setStatus('Loan repaid — interest credited to pool.');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Repayment failed');
