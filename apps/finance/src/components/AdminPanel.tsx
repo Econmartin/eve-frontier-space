@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useSignAndExecuteTransaction } from '@mysten/dapp-kit';
+import { useDAppKit } from '@mysten/dapp-kit-react';
 import { buildDrawLotteryTx, buildProcessDefaultTx } from '../transactions';
 import { useNetwork } from '../contexts/NetworkContext';
 
@@ -8,7 +8,7 @@ interface Props {
 }
 
 export function AdminPanel({ capId }: Props) {
-  const { mutateAsync: signAndExecute } = useSignAndExecuteTransaction();
+  const dAppKit = useDAppKit();
   const { network } = useNetwork();
 
   const [winnerAddress, setWinnerAddress] = useState('');
@@ -21,7 +21,7 @@ export function AdminPanel({ capId }: Props) {
   async function handleDrawLottery() {
     setStatus(null); setError(null);
     try {
-      await signAndExecute({
+      await dAppKit.signAndExecuteTransaction({
         transaction: buildDrawLotteryTx(capId, network.lotterySystemId, winnerAddress, overrides),
       });
       setStatus(`Lottery drawn — winnings sent to ${winnerAddress.slice(0, 10)}…`);
@@ -34,7 +34,7 @@ export function AdminPanel({ capId }: Props) {
   async function handleProcessDefault() {
     setStatus(null); setError(null);
     try {
-      await signAndExecute({
+      await dAppKit.signAndExecuteTransaction({
         transaction: buildProcessDefaultTx(
           capId,
           network.centralBankId,

@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { useCurrentAccount, useSignAndExecuteTransaction, useSuiClientQuery } from '@mysten/dapp-kit';
+import { useQuery } from '@tanstack/react-query';
+import { useCurrentAccount, useCurrentClient, useDAppKit } from '@mysten/dapp-kit-react';
 import { buildBuyTicketTx } from '../transactions';
 import { useEveBalance } from '../hooks/useEveBalance';
 import { useNetwork } from '../contexts/NetworkContext';
@@ -14,17 +15,18 @@ interface LotteryState {
 
 export function LotteryDashboard() {
   const account = useCurrentAccount();
-  const { mutateAsync: signAndExecute } = useSignAndExecuteTransaction();
+  const client = useCurrentClient();
+  const dAppKit = useDAppKit();
   const { network } = useNetwork();
   const { formattedBalance, largestCoinId } = useEveBalance();
 
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError]   = useState<string | null>(null);
 
-  const { data: lotteryObj, isLoading: lotteryLoading } = useSuiClientQuery(
-    'getObject',
-    { id: network.lotterySystemId, options: { showContent: true } },
-  );
+  const { data: lotteryObj, isLoading: lotteryLoading } = useQuery({
+    queryKey: ['getObject', network.lotterySystemId],
+    queryFn: () => client.getObject({ id: network.lotterySystemId, options: { showContent: true } }),
+  });
 
   const lotteryFields =
     lotteryObj?.data?.content?.dataType === 'moveObject'
@@ -47,7 +49,7 @@ export function LotteryDashboard() {
         ticketPrice,
         { eveCoinType: network.eveCoinType, sender: account.address },
       );
-      await signAndExecute({ transaction: tx });
+      await dAppKit.signAndExecuteTransaction({ transaction: tx });
       setStatus(`Ticket purchased for ${formatEve(ticketPrice)} EVE. Good luck, pilot.`);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Purchase failed');
@@ -103,17 +105,18 @@ export function LotteryDashboard() {
 
 function OwnedTickets() {
   const account = useCurrentAccount();
+  const client = useCurrentClient();
   const LOTTERY_TICKET_TYPE = `${PACKAGE_ID}::bank::LotteryTicket`;
 
-  const { data, isPending } = useSuiClientQuery(
-    'getOwnedObjects',
-    {
-      owner:   account?.address ?? '',
+  const { data, isPending } = useQuery({
+    queryKey: ['getOwnedObjects', account?.address, LOTTERY_TICKET_TYPE],
+    queryFn: () => client.getOwnedObjects({
+      owner:   account!.address,
       filter:  { StructType: LOTTERY_TICKET_TYPE },
       options: { showType: true },
-    },
-    { enabled: !!account?.address },
-  );
+    }),
+    enabled: !!account?.address,
+  });
 
   const tickets = data?.data ?? [];
   if (isPending || tickets.length === 0) return null;

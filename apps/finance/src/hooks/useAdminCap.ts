@@ -1,23 +1,21 @@
-import { useSuiClientQuery, useCurrentAccount } from '@mysten/dapp-kit';
+import { useQuery } from '@tanstack/react-query';
+import { useCurrentAccount, useCurrentClient } from '@mysten/dapp-kit-react';
 import { PACKAGE_ID } from '../constants';
 
-/**
- * Returns the AdminCap object ID if the connected wallet holds one,
- * otherwise null. Used to gate the admin panel UI.
- */
 export function useAdminCap(): { capId: string | null; isLoading: boolean } {
   const account = useCurrentAccount();
+  const client = useCurrentClient();
   const ADMIN_CAP_TYPE = `${PACKAGE_ID}::bank::AdminCap`;
 
-  const { data, isPending } = useSuiClientQuery(
-    'getOwnedObjects',
-    {
-      owner:   account?.address ?? '',
+  const { data, isPending } = useQuery({
+    queryKey: ['getOwnedObjects', account?.address, ADMIN_CAP_TYPE],
+    queryFn: () => client.getOwnedObjects({
+      owner:   account!.address,
       filter:  { StructType: ADMIN_CAP_TYPE },
       options: { showType: true },
-    },
-    { enabled: !!account?.address },
-  );
+    }),
+    enabled: !!account?.address,
+  });
 
   const capId = data?.data[0]?.data?.objectId ?? null;
   return { capId, isLoading: isPending };

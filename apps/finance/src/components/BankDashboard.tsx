@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useCurrentAccount, useSignAndExecuteTransaction } from '@mysten/dapp-kit';
+import { useCurrentAccount, useDAppKit } from '@mysten/dapp-kit-react';
 import { buildDepositTx, buildWithdrawTx } from '../transactions';
 import { useEveBalance } from '../hooks/useEveBalance';
 import { useBankShares } from '../hooks/useBankShares';
@@ -8,7 +8,7 @@ import { EVE_SCALE } from '../constants';
 
 export function BankDashboard() {
   const account = useCurrentAccount();
-  const { mutateAsync: signAndExecute } = useSignAndExecuteTransaction();
+  const dAppKit = useDAppKit();
   const { network } = useNetwork();
 
   const { formattedBalance, largestCoinId, isLoading: balanceLoading } = useEveBalance();
@@ -25,7 +25,7 @@ export function BankDashboard() {
     setStatus(null); setError(null);
     try {
       const amountMist = BigInt(Math.floor(Number(depositAmount))) * EVE_SCALE;
-      await signAndExecute({ transaction: buildDepositTx(largestCoinId, amountMist, overrides) });
+      await dAppKit.signAndExecuteTransaction({ transaction: buildDepositTx(largestCoinId, amountMist, overrides) });
       setStatus(`Deposited ${depositAmount} EVE — BankShare minted.`);
       setDepositAmount('');
     } catch (e) {
@@ -37,7 +37,7 @@ export function BankDashboard() {
     if (!account) return;
     setStatus(null); setError(null);
     try {
-      await signAndExecute({ transaction: buildWithdrawTx(shareId, overrides) });
+      await dAppKit.signAndExecuteTransaction({ transaction: buildWithdrawTx(shareId, overrides) });
       setStatus('Withdrawal complete — EVE returned to wallet.');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Withdrawal failed');

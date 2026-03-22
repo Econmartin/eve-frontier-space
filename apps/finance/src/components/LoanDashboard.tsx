@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useCurrentAccount, useSignAndExecuteTransaction } from '@mysten/dapp-kit';
+import { useCurrentAccount, useDAppKit } from '@mysten/dapp-kit-react';
 import { buildBorrowTx, buildRepayTx } from '../transactions';
 import { useEveBalance } from '../hooks/useEveBalance';
 import { useActiveLoans } from '../hooks/useActiveLoans';
@@ -8,7 +8,7 @@ import { EVE_SCALE } from '../constants';
 
 export function LoanDashboard() {
   const account = useCurrentAccount();
-  const { mutateAsync: signAndExecute } = useSignAndExecuteTransaction();
+  const dAppKit = useDAppKit();
   const { network } = useNetwork();
 
   const { formattedBalance, largestCoinId } = useEveBalance();
@@ -25,7 +25,7 @@ export function LoanDashboard() {
     setStatus(null); setError(null);
     try {
       const amountMist = BigInt(Math.floor(Number(borrowAmount))) * EVE_SCALE;
-      await signAndExecute({ transaction: buildBorrowTx(network.loanProductId, amountMist, overrides) });
+      await dAppKit.signAndExecuteTransaction({ transaction: buildBorrowTx(network.loanProductId, amountMist, overrides) });
       setStatus(`Borrowed ${borrowAmount} EVE — ActiveLoan issued.`);
       setBorrowAmount('');
     } catch (e) {
@@ -37,7 +37,7 @@ export function LoanDashboard() {
     if (!account || !largestCoinId) return;
     setStatus(null); setError(null);
     try {
-      await signAndExecute({ transaction: buildRepayTx(loanId, largestCoinId, BigInt(amountDue), overrides) });
+      await dAppKit.signAndExecuteTransaction({ transaction: buildRepayTx(loanId, largestCoinId, BigInt(amountDue), overrides) });
       setStatus('Loan repaid — interest credited to pool.');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Repayment failed');
