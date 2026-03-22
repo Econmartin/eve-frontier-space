@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useSearchParams } from 'react-router';
 import { Header } from '@/components/organisms/index.ts';
 
 const APPS_JSON_URL =
@@ -169,6 +170,9 @@ function AppCard({ app, og }: { app: AppEntry; og: OGData | undefined }) {
 }
 
 export function DirectoryPage() {
+  const [searchParams] = useSearchParams();
+  const objectId = searchParams.get('objectId');
+
   const [apps, setApps] = useState<AppEntry[]>([]);
   const [ogMap, setOgMap] = useState<Record<string, OGData>>({});
   const [loading, setLoading] = useState(true);
@@ -228,6 +232,11 @@ export function DirectoryPage() {
               <h1 className="font-heading text-xl font-bold text-white" style={{ letterSpacing: '0.08em' }}>
                 EVE FRONTIER <span style={{ color: '#ff610a' }}>APPS</span>
               </h1>
+              {objectId && (
+                <div className="font-mono text-[11px] mt-1" style={{ color: 'var(--muted-foreground)', letterSpacing: '0.06em' }}>
+                  Current Assembly: <span style={{ color: '#ff610a' }}>{objectId}</span>
+                </div>
+              )}
             </div>
 
             {/* Search */}
