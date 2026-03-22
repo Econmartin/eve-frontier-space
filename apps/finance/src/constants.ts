@@ -1,7 +1,14 @@
-// ─── Package (same for all networks — single deployed contract) ─────────────
+// ─── Package ─────────────────────────────────────────────────────────────────
+// Original deploy address — used for object type filters (types always reference the original ID).
 export const PACKAGE_ID =
   (import.meta.env.VITE_PACKAGE_ID as string) ??
   '0x894e36203b6f1f00cf351ee518cfb442a228700df71443b18544c61021dc0b59';
+
+// Latest upgraded package — used for transaction function calls.
+// Fixed u128 overflow in deposit/withdraw muldiv (upgraded 2026-03-22).
+export const LATEST_PACKAGE_ID =
+  (import.meta.env.VITE_LATEST_PACKAGE_ID as string) ??
+  '0xbce507d59941f89f20b8f08641c6ad4da27076285bdbc2d62d5b8763bc54373e';
 
 // ─── Network configs ─────────────────────────────────────────────────────────
 export type NetworkId = 'utopia' | 'stillness';
