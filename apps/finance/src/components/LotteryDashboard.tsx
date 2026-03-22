@@ -10,8 +10,8 @@ import { PACKAGE_ID, EVE_SCALE } from '../constants';
 interface LotteryState {
   ticket_price:      string;
   house_edge_bps:    string;
-  lottery_pool:      { value: string };
-  insurance_reserve: { value: string };
+  lottery_pool:      string;
+  insurance_reserve: string;
 }
 
 export function LotteryDashboard() {
@@ -20,6 +20,7 @@ export function LotteryDashboard() {
   const { network } = useNetwork();
   const { formattedBalance, largestCoinId } = useEveBalance();
 
+  const [qty, setQty]       = useState(1);
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError]   = useState<string | null>(null);
 
@@ -48,9 +49,10 @@ export function LotteryDashboard() {
         largestCoinId,
         ticketPrice,
         { eveCoinType: network.eveCoinType, sender: account.address },
+        qty,
       );
       await dAppKit.signAndExecuteTransaction({ transaction: tx });
-      setStatus(`Ticket purchased for ${formatEve(ticketPrice)} EVE. Good luck, pilot.`);
+      setStatus(`${qty} ticket${qty > 1 ? 's' : ''} purchased for ${formatEve(ticketPrice * BigInt(qty))} EVE. Good luck, pilot.`);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Purchase failed');
     }
@@ -63,11 +65,10 @@ export function LotteryDashboard() {
         <span className="text-eve-gold font-mono font-bold text-lg">{formattedBalance} EVE</span>
       </div>
 
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 gap-3">
         {[
-          { label: 'TICKET PRICE',       value: lotteryLoading ? '…' : `${formatEve(ticketPrice)} EVE` },
-          { label: 'PRIZE POOL',         value: lotteryLoading ? '…' : `${formatEve(lotteryFields?.lottery_pool.value ?? '0')} EVE` },
-          { label: 'INSURANCE RESERVE',  value: lotteryLoading ? '…' : `${formatEve(lotteryFields?.insurance_reserve.value ?? '0')} EVE` },
+          { label: 'TICKET PRICE', value: lotteryLoading ? '…' : `${formatEve(ticketPrice)} EVE` },
+          { label: 'PRIZE POOL',   value: lotteryLoading ? '…' : `${formatEve(lotteryFields?.lottery_pool ?? '0')} EVE` },
         ].map(({ label, value }) => (
           <div key={label} className="bg-eve-surface border border-eve-border rounded-lg px-4 py-3">
             <p className="text-eve-muted font-mono text-xs mb-1">{label}</p>
@@ -83,13 +84,21 @@ export function LotteryDashboard() {
           depositors from loan defaults. The remaining {100 - houseEdgePct}% goes
           to the lucky winner.
         </p>
-        <button
-          onClick={handleBuyTicket}
-          disabled={!account || !largestCoinId}
-          className="w-full py-3 bg-gradient-to-r from-eve-gold to-eve-gold-dim text-eve-bg font-bold rounded-lg hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed tracking-widest"
-        >
-          {account ? `BUY TICKET — ${formatEve(ticketPrice)} EVE` : 'CONNECT WALLET'}
-        </button>
+        <div className="flex gap-3">
+          <input
+            type="number" min="1" max="20" step="1"
+            value={qty}
+            onChange={(e) => setQty(Math.max(1, Math.min(20, parseInt(e.target.value) || 1)))}
+            className="w-20 bg-eve-bg border border-eve-border rounded px-3 py-2 text-white font-mono text-sm text-center focus:outline-none focus:border-eve-gold"
+          />
+          <button
+            onClick={handleBuyTicket}
+            disabled={!account || !largestCoinId}
+            className="flex-1 py-3 bg-gradient-to-r from-eve-gold to-eve-gold-dim text-eve-bg font-bold rounded-lg hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed tracking-widest"
+          >
+            {account ? `BUY ${qty > 1 ? `${qty}x ` : ''}TICKET${qty > 1 ? 'S' : ''} — ${formatEve(ticketPrice * BigInt(qty))} EVE` : 'CONNECT WALLET'}
+          </button>
+        </div>
       </div>
 
       <OwnedTickets />

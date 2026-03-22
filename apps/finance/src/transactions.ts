@@ -25,7 +25,7 @@ export interface TxOverrides {
   sender?:         string;
 }
 
-const GAS_BUDGET = 20_000_000n; // 0.02 SUI — well above actual cost (~2-5M MIST)
+const GAS_BUDGET = 20_000_000; // 0.02 SUI — well above actual cost (~2-5M MIST)
 
 // ─── Phase 1: Pool ───────────────────────────────────────────────────────────
 
@@ -154,17 +154,21 @@ export function buildBuyTicketTx(
   eveCoinId:        string,
   ticketPriceMist:  bigint,
   overrides:        TxOverrides = {},
+  count:            number = 1,
 ): Transaction {
   const pkg      = overrides.packageId  ?? PACKAGE_ID;
   const coinType = overrides.eveCoinType ?? _defaultNet.eveCoinType;
   const tx = new Transaction();
-  const [split] = tx.splitCoins(tx.object(eveCoinId), [tx.pure.u64(ticketPriceMist)]);
-  const ticket = tx.moveCall({
-    target:        `${pkg}::bank::buy_ticket`,
-    typeArguments: [coinType],
-    arguments:     [tx.object(lotteryId), split],
-  });
-  if (overrides.sender) tx.transferObjects([ticket], tx.pure.address(overrides.sender));
+  const amounts = Array.from({ length: count }, () => tx.pure.u64(ticketPriceMist));
+  const splits  = tx.splitCoins(tx.object(eveCoinId), amounts);
+  const tickets = Array.from({ length: count }, (_, i) =>
+    tx.moveCall({
+      target:        `${pkg}::bank::buy_ticket`,
+      typeArguments: [coinType],
+      arguments:     [tx.object(lotteryId), splits[i]],
+    }),
+  );
+  if (overrides.sender) tx.transferObjects(tickets, tx.pure.address(overrides.sender));
   tx.setGasBudget(GAS_BUDGET);
   return tx;
 }
