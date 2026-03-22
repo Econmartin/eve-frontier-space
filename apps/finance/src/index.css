@@ -1,6 +1,17 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
+
+@theme inline {
+  --color-eve-bg:       #0a0c10;
+  --color-eve-surface:  #111318;
+  --color-eve-border:   #1e2229;
+  --color-eve-gold:     #c8a84b;
+  --color-eve-gold-dim: #7a6530;
+  --color-eve-red:      #e03c3c;
+  --color-eve-green:    #3ce058;
+  --color-eve-blue:     #3c8fe0;
+  --color-eve-muted:    #5a6070;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+}
 
 @layer base {
   html {
