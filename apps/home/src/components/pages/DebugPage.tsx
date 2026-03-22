@@ -1,61 +1,87 @@
 import { useState, useEffect } from 'react';
 
-const TIMEOUT_MS = 5000;
-
-// JSON-RPC introspection + EVE-specific method names
+// ---------------------------------------------------------
+// RPC method names to try — camelCase and snake_case variants
+// Python backends typically use snake_case
+// ---------------------------------------------------------
 const RPC_METHODS = [
-  // Introspection — may list all valid methods
-  'system.listMethods', 'rpc.discover', 'help', 'list', 'methods',
-  // EVE Frontier guesses
-  'getSmartAssembly', 'getCurrentAssembly', 'getActiveAssembly',
-  'getCharacterInfo', 'getActiveCharacter',
-  'getContext', 'context', 'state', 'getState',
+  // snake_case (Python style)
+  'get_assembly', 'get_current_assembly', 'get_active_assembly', 'get_assembly_id',
+  'get_character', 'get_active_character', 'get_character_id',
+  'get_context', 'get_state', 'get_location', 'get_solar_system',
+  'get_item_id', 'get_object_id', 'get_wallet_address',
+  // prefixed variants
+  'eve_getAssembly', 'eve_getContext', 'eve_getCharacter',
+  'frontier_getContext', 'frontier_getAssembly',
+  // short/simple
+  'ping', 'version', 'info',
 ];
 
-// Direct ccpPython.pythonCall(objname, funcname, args) attempts
-// _eveFrontierRpcRequest uses ("", "_eveFrontierRpcRequest") — what else is on ""?
-// Also try named objects that might exist in the game client
-const PYTHON_DIRECT: { obj: string; fn: string; args: unknown[] }[] = [
-  { obj: '',            fn: 'listServices',          args: [] },
-  { obj: '',            fn: 'listMethods',            args: [] },
-  { obj: '',            fn: 'help',                   args: [] },
-  { obj: 'igb',         fn: 'GetContext',             args: [] },
-  { obj: 'igb',         fn: 'getContext',             args: [] },
-  { obj: 'igb',         fn: 'GetActiveAssembly',      args: [] },
-  { obj: 'sm',          fn: 'GetService',             args: ['viewState'] },
-  { obj: 'assembly',    fn: 'GetCurrentAssembly',     args: [] },
-  { obj: 'assembly',    fn: 'getCurrentAssembly',     args: [] },
-  { obj: 'character',   fn: 'GetActiveCharacter',     args: [] },
-  { obj: 'dapp',        fn: 'GetContext',             args: [] },
-  { obj: 'dapp',        fn: 'getAssemblyId',          args: [] },
-  { obj: 'frontier',    fn: 'GetContext',             args: [] },
-  { obj: 'eve',         fn: 'GetContext',             args: [] },
+// callWallet — try wallet-specific method names
+const WALLET_METHODS = [
+  'get_address', 'getAddress', 'get_account', 'getAccount',
+  'get_wallet', 'sign', 'connect', 'wallet_getAddress',
+  'sui_getAddress', 'get_public_key', 'getPublicKey',
 ];
 
-type Status = 'ok' | 'error' | 'timeout';
+type Status = 'ok' | 'error' | 'timeout' | 'pending';
+
 interface Result { label: string; status: Status; value: string }
 
-function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
-  return Promise.race([
-    p,
-    new Promise<never>((_, reject) => setTimeout(() => reject(new Error(`timeout`)), ms)),
-  ]);
+// Manual poll of _eveFrontierRpcRequest(requestId, request)
+// Returns up to maxPolls intermediate responses so we can see the shape
+async function pollRaw(request: unknown, maxPolls = 3, intervalMs = 500): Promise<Result[]> {
+  const fn = (window as Record<string, unknown>)._eveFrontierRpcRequest as ((...a: unknown[]) => Promise<unknown>) | undefined;
+  if (typeof fn !== 'function') return [{ label: 'raw poll', status: 'error', value: '_eveFrontierRpcRequest not available' }];
+
+  const results: Result[] = [];
+  let requestId: unknown = null;
+
+  for (let i = 0; i < maxPolls; i++) {
+    try {
+      const response = await Promise.race([
+        fn(requestId, request),
+        new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000)),
+      ]) as { id?: unknown; status?: string; response?: unknown };
+
+      results.push({
+        label: `poll #${i + 1} (id=${JSON.stringify(requestId)})`,
+        status: response?.status === 'done' ? 'ok' : response?.status === 'failed' ? 'error' : 'pending',
+        value: JSON.stringify(response, null, 2),
+      });
+
+      if (requestId === null && response?.id !== undefined) requestId = response.id;
+      if (response?.status === 'done' || response?.status === 'failed') break;
+
+      await new Promise(r => setTimeout(r, intervalMs));
+    } catch (e) {
+      results.push({ label: `poll #${i + 1}`, status: 'error', value: (e as Error).message });
+      break;
+    }
+  }
+  return results;
 }
 
-async function callFn(fn: unknown, args: unknown[], label: string): Promise<Result> {
-  if (typeof fn !== 'function') return { label, status: 'error', value: 'not a function' };
+async function rpcCall(fn: unknown, method: string, params: unknown[] = []): Promise<Result> {
+  if (typeof fn !== 'function') return { label: method, status: 'error', value: 'not available' };
   try {
-    const raw = (fn as (...a: unknown[]) => unknown)(...args);
-    const result = await withTimeout(raw instanceof Promise ? raw : Promise.resolve(raw), TIMEOUT_MS);
-    return { label, status: 'ok', value: JSON.stringify(result, null, 2) };
+    const raw = (fn as (...a: unknown[]) => unknown)({ jsonrpc: '2.0', id: 1, method, params });
+    const result = await Promise.race([
+      raw instanceof Promise ? raw : Promise.resolve(raw),
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), 5000)),
+    ]);
+    return { label: method, status: 'ok', value: JSON.stringify(result, null, 2) };
   } catch (e) {
-    const msg = (e as Error).message ?? String(e);
-    return { label, status: msg === 'timeout' ? 'timeout' : 'error', value: msg };
+    const msg = (e as Error).message;
+    return { label: method, status: msg === 'timeout' ? 'timeout' : 'error', value: msg };
   }
 }
 
 function statusColor(s: Status) {
-  return s === 'ok' ? '#ff610a' : s === 'timeout' ? '#f87171' : '#facc15';
+  if (s === 'ok') return '#ff610a';
+  if (s === 'pending') return '#a78bfa';
+  if (s === 'timeout') return '#f87171';
+  return '#facc15';
 }
 
 function Row({ label, value, color }: { label: string; value: string; color?: string }) {
@@ -76,37 +102,41 @@ function SectionHeader({ text }: { text: string }) {
 }
 
 export function DebugPage() {
+  const [rawPolls, setRawPolls] = useState<Result[]>([]);
   const [rpcResults, setRpcResults] = useState<Result[]>([]);
   const [rpcDone, setRpcDone] = useState(false);
-  const [pyResults, setPyResults] = useState<Result[]>([]);
-  const [pyDone, setPyDone] = useState(false);
+  const [walletResults, setWalletResults] = useState<Result[]>([]);
+  const [walletDone, setWalletDone] = useState(false);
 
   useEffect(() => {
     const w = window as Record<string, unknown>;
-    const ccp = w.ccpPython as Record<string, unknown> | undefined;
-    const pythonCall = ccp?.pythonCall as ((...a: unknown[]) => unknown) | undefined;
 
-    // --- eveFrontierRpcRequest JSON-RPC probe (runs in parallel with python probe) ---
+    // --- Raw poll: call _eveFrontierRpcRequest directly to see response shape ---
+    (async () => {
+      const polls = await pollRaw({ jsonrpc: '2.0', id: 1, method: 'get_context', params: [] });
+      setRawPolls(polls);
+    })();
+
+    // --- eveFrontierRpcRequest: snake_case + prefixed method names ---
     (async () => {
       const fn = w.eveFrontierRpcRequest;
       for (const method of RPC_METHODS) {
-        const r = await callFn(fn, [{ jsonrpc: '2.0', id: 1, method, params: [] }], method);
+        const r = await rpcCall(fn, method);
         setRpcResults(prev => [...prev, r]);
         if (r.status === 'ok' && !r.value.includes('"error"')) break;
       }
       setRpcDone(true);
     })();
 
-    // --- Direct ccpPython.pythonCall(obj, fn, args) probe ---
+    // --- callWallet: wallet method names ---
     (async () => {
-      for (const attempt of PYTHON_DIRECT) {
-        const label = `("${attempt.obj}", "${attempt.fn}", ${JSON.stringify(attempt.args)})`;
-        const r = await callFn(pythonCall, [attempt.obj, attempt.fn, attempt.args], label);
-        setPyResults(prev => [...prev, r]);
-        // Stop if we get a real non-error result
-        if (r.status === 'ok' && r.value !== 'null' && r.value !== 'undefined') break;
+      const fn = w.callWallet;
+      for (const method of WALLET_METHODS) {
+        const r = await rpcCall(fn, method);
+        setWalletResults(prev => [...prev, r]);
+        if (r.status === 'ok' && !r.value.includes('"error"')) break;
       }
-      setPyDone(true);
+      setWalletDone(true);
     })();
   }, []);
 
@@ -115,31 +145,32 @@ export function DebugPage() {
       <div className="mx-auto px-6 py-10" style={{ maxWidth: 960 }}>
 
         <div className="mb-6" style={{ borderBottom: '1px solid var(--border)', paddingBottom: 20 }}>
-          <div className="font-mono text-[11px] mb-1" style={{ color: 'var(--muted-foreground)', letterSpacing: '0.06em' }}>// igb bridge probe — v5</div>
+          <div className="font-mono text-[11px] mb-1" style={{ color: 'var(--muted-foreground)', letterSpacing: '0.06em' }}>// igb bridge probe — v6</div>
           <h1 className="font-heading text-xl font-bold text-white" style={{ letterSpacing: '0.08em' }}>
             EVE FRONTIER <span style={{ color: '#ff610a' }}>DEBUG</span>
           </h1>
           <div className="font-mono text-[11px] mt-1" style={{ color: 'var(--muted-foreground)', opacity: 0.5 }}>{window.location.href}</div>
-          <div className="font-mono text-[11px] mt-0.5" style={{ color: 'var(--muted-foreground)', opacity: 0.4 }}>
-            // both probes run in parallel — {TIMEOUT_MS / 1000}s timeout per call
-          </div>
         </div>
 
-        {/* eveFrontierRpcRequest — introspection + method names */}
-        <SectionHeader text={`// eveFrontierRpcRequest — JSON-RPC ${rpcDone ? '(done)' : '(running...)'}`} />
-        {rpcResults.length === 0 && <Row label="waiting..." value="" />}
-        {rpcResults.map((r, i) => (
-          <Row key={i} label={`method: "${r.label}"`} value={`[${r.status.toUpperCase()}] ${r.value}`} color={statusColor(r.status)} />
+        {/* Raw _eveFrontierRpcRequest poll — see the full response shape */}
+        <SectionHeader text="// _eveFrontierRpcRequest — raw poll (see response shape)" />
+        <div className="font-mono text-[10px] mb-2" style={{ color: 'var(--muted-foreground)', opacity: 0.5 }}>
+          calling directly with get_context — captures id + status even while pending
+        </div>
+        {rawPolls.length === 0 ? <Row label="polling..." value="" /> : rawPolls.map((r, i) => (
+          <Row key={i} label={r.label} value={`[${r.status.toUpperCase()}] ${r.value}`} color={statusColor(r.status)} />
         ))}
 
-        {/* ccpPython.pythonCall direct probe */}
-        <SectionHeader text={`// ccpPython.pythonCall — direct python object probe ${pyDone ? '(done)' : '(running...)'}`} />
-        <div className="font-mono text-[10px] mb-3" style={{ color: 'var(--muted-foreground)', opacity: 0.5 }}>
-          format: (objname, funcname, args) — _eveFrontierRpcRequest uses ("", "_eveFrontierRpcRequest", ...)
-        </div>
-        {pyResults.length === 0 && <Row label="waiting..." value="" />}
-        {pyResults.map((r, i) => (
-          <Row key={i} label={r.label} value={`[${r.status.toUpperCase()}] ${r.value}`} color={statusColor(r.status)} />
+        {/* eveFrontierRpcRequest — snake_case + prefixed methods */}
+        <SectionHeader text={`// eveFrontierRpcRequest — snake_case + prefixed methods ${rpcDone ? '(done)' : '(running...)'}`} />
+        {rpcResults.map((r, i) => (
+          <Row key={i} label={`"${r.label}"`} value={`[${r.status.toUpperCase()}] ${r.value}`} color={statusColor(r.status)} />
+        ))}
+
+        {/* callWallet */}
+        <SectionHeader text={`// callWallet — wallet methods ${walletDone ? '(done)' : '(running...)'}`} />
+        {walletResults.map((r, i) => (
+          <Row key={i} label={`"${r.label}"`} value={`[${r.status.toUpperCase()}] ${r.value}`} color={statusColor(r.status)} />
         ))}
 
       </div>
