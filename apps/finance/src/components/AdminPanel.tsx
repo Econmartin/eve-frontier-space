@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { useDAppKit } from '@mysten/dapp-kit-react';
+import { useDAppKit, useCurrentClient } from '@mysten/dapp-kit-react';
 import { buildDrawLotteryTx, buildProcessDefaultTx } from '../transactions';
 import { useNetwork } from '../contexts/NetworkContext';
+import { PACKAGE_ID } from '../constants';
 
 interface Props {
   capId: string;
@@ -9,12 +10,14 @@ interface Props {
 
 export function AdminPanel({ capId }: Props) {
   const dAppKit = useDAppKit();
+  const client = useCurrentClient();
   const { network } = useNetwork();
 
   const [winnerAddress, setWinnerAddress] = useState('');
   const [defaultLoanId, setDefaultLoanId] = useState('');
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError]   = useState<string | null>(null);
+  const [pickingWinner, setPickingWinner] = useState(false);
 
   const overrides = { eveCoinType: network.eveCoinType };
 
@@ -28,6 +31,41 @@ export function AdminPanel({ capId }: Props) {
       setWinnerAddress('');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Draw failed');
+    }
+  }
+
+  async function pickRandomWinner() {
+    setPickingWinner(true);
+    setError(null);
+    try {
+      // Collect all buy_ticket senders, paginating up to 200 txs
+      let cursor: string | null | undefined = undefined;
+      const senders: string[] = [];
+      do {
+        const page = await client.queryTransactionBlocks({
+          filter: { MoveFunction: { package: PACKAGE_ID, module: 'bank', function: 'buy_ticket' } },
+          options: { showInput: true },
+          limit: 50,
+          cursor,
+        });
+        for (const tx of page.data) {
+          const sender = tx.transaction?.sender;
+          if (sender) senders.push(sender);
+        }
+        cursor = page.nextCursor ?? undefined;
+        if (!page.hasNextPage) break;
+      } while (senders.length < 200);
+
+      if (senders.length === 0) {
+        setError('No ticket purchases found.');
+        return;
+      }
+      // Each tx = one ticket entry; weight is automatic
+      setWinnerAddress(senders[Math.floor(Math.random() * senders.length)]);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to fetch ticket holders');
+    } finally {
+      setPickingWinner(false);
     }
   }
 
@@ -65,13 +103,23 @@ export function AdminPanel({ capId }: Props) {
           Closes the current round, sends {100 - 20}% of the pool to the winner and
           20% to the insurance reserve. Network: <span className="text-eve-gold">{network.label}</span>
         </p>
-        <input
-          type="text"
-          value={winnerAddress}
-          onChange={(e) => setWinnerAddress(e.target.value)}
-          placeholder="Winner address (0x…)"
-          className="w-full bg-eve-bg border border-eve-border rounded px-3 py-2 text-white font-mono text-sm placeholder:text-eve-muted focus:outline-none focus:border-eve-gold"
-        />
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={winnerAddress}
+            onChange={(e) => setWinnerAddress(e.target.value)}
+            placeholder="Winner address (0x…)"
+            className="flex-1 bg-eve-bg border border-eve-border rounded px-3 py-2 text-white font-mono text-sm placeholder:text-eve-muted focus:outline-none focus:border-eve-gold"
+          />
+          <button
+            onClick={pickRandomWinner}
+            disabled={pickingWinner}
+            title="Query all ticket buyers and pick one at random (weighted by number of tickets)"
+            className="px-3 py-2 border border-eve-gold/60 text-eve-gold text-xs font-mono rounded hover:bg-eve-gold/10 transition-colors disabled:opacity-40 whitespace-nowrap"
+          >
+            {pickingWinner ? '…' : '🎲 RANDOM'}
+          </button>
+        </div>
         <button
           onClick={handleDrawLottery}
           disabled={!winnerAddress || winnerAddress.length < 10}
