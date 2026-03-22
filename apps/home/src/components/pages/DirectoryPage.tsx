@@ -267,9 +267,11 @@ export function DirectoryPage() {
               </h1>
               {/* ---------------------------------------------------------------------------
                   Assembly ID block — only rendered when ?itemId= is present in the URL.
+                  The EVE Frontier game client injects ?itemId=&tenant= when it opens a
+                  dapp that is registered on-chain against a smart assembly.
                   Shows the in-game ID immediately; chain object ID loads async.
                   --------------------------------------------------------------------------- */}
-              {itemId && (
+              {itemId ? (
                 <div className="mt-2 flex flex-col gap-0.5">
                   <div className="font-mono text-[11px]" style={{ color: 'var(--muted-foreground)', letterSpacing: '0.06em' }}>
                     In-game ID: <span style={{ color: '#ff610a' }}>{itemId}</span>
@@ -278,12 +280,13 @@ export function DirectoryPage() {
                   <div className="font-mono text-[11px]" style={{ color: 'var(--muted-foreground)', letterSpacing: '0.06em' }}>
                     Chain ID:{' '}
                     {chainIdLoading && <span style={{ opacity: 0.5 }}>deriving...</span>}
-                    {chainIdError && <span style={{ color: '#ef4444' }}>could not derive — check env vars</span>}
+                    {chainIdError && <span style={{ color: '#ef4444' }}>could not derive</span>}
                     {chainObjectId && <span style={{ color: '#ff610a' }}>{chainObjectId}</span>}
-                    {!chainIdLoading && !chainIdError && !chainObjectId && (
-                      <span style={{ opacity: 0.5 }}>set VITE_EVE_WORLD_PACKAGE_ID + VITE_SUI_GRAPHQL_ENDPOINT</span>
-                    )}
                   </div>
+                </div>
+              ) : (
+                <div className="font-mono text-[11px] mt-1" style={{ color: 'var(--muted-foreground)', opacity: 0.4, letterSpacing: '0.06em' }}>
+                  // no assembly params in url: {window.location.search || '(none)'}
                 </div>
               )}
             </div>
