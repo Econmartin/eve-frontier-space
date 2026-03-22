@@ -1,20 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useSearchParams } from 'react-router';
 import { Header } from '@/components/organisms/index.ts';
-import { deriveChainObjectId } from '@/lib/assemblyId';
-
-// ---------------------------------------------------------------------------
-// Assembly ID config
-// Defaults are hardcoded (these are public values, not secrets) so derivation
-// works in production without any extra build config. Override via env vars if needed.
-// ---------------------------------------------------------------------------
-const WORLD_PKG_ID: string =
-  import.meta.env.VITE_EVE_WORLD_PACKAGE_ID ||
-  '0xd12a70c74c1e759445d6f209b01d43d860e97fcf2ef72ccbbd00afd828043f75';
-
-const GRAPHQL_ENDPOINT: string =
-  import.meta.env.VITE_SUI_GRAPHQL_ENDPOINT ||
-  'https://graphql.testnet.sui.io/graphql';
 
 const APPS_JSON_URL =
   'https://raw.githubusercontent.com/Econmartin/eve-frontier-apps/refs/heads/main/urls.json';
@@ -184,28 +169,6 @@ function AppCard({ app, og }: { app: AppEntry; og: OGData | undefined }) {
 }
 
 export function DirectoryPage() {
-  // ---------------------------------------------------------------------------
-  // Assembly ID — read from URL params injected by the EVE Frontier game client
-  // The game appends ?itemId=<in-game integer>&tenant=<tenant> when opening a dapp.
-  // We display the in-game ID immediately, then derive the chain object ID async.
-  // ---------------------------------------------------------------------------
-  const [searchParams] = useSearchParams();
-  const itemId = searchParams.get('itemId');
-  const tenant = searchParams.get('tenant') ?? 'testevenet';
-
-  const [chainObjectId, setChainObjectId] = useState<string | null>(null);
-  const [chainIdLoading, setChainIdLoading] = useState(false);
-  const [chainIdError, setChainIdError] = useState(false);
-
-  useEffect(() => {
-    if (!itemId || !WORLD_PKG_ID || !GRAPHQL_ENDPOINT) return;
-    setChainIdLoading(true);
-    setChainIdError(false);
-    deriveChainObjectId(itemId, tenant, WORLD_PKG_ID, GRAPHQL_ENDPOINT)
-      .then(id => { setChainObjectId(id); setChainIdLoading(false); })
-      .catch(() => { setChainIdError(true); setChainIdLoading(false); });
-  }, [itemId, tenant]);
-
   const [apps, setApps] = useState<AppEntry[]>([]);
   const [ogMap, setOgMap] = useState<Record<string, OGData>>({});
   const [loading, setLoading] = useState(true);
@@ -265,30 +228,6 @@ export function DirectoryPage() {
               <h1 className="font-heading text-xl font-bold text-white" style={{ letterSpacing: '0.08em' }}>
                 EVE FRONTIER <span style={{ color: '#ff610a' }}>APPS</span>
               </h1>
-              {/* ---------------------------------------------------------------------------
-                  Assembly ID block — only rendered when ?itemId= is present in the URL.
-                  The EVE Frontier game client injects ?itemId=&tenant= when it opens a
-                  dapp that is registered on-chain against a smart assembly.
-                  Shows the in-game ID immediately; chain object ID loads async.
-                  --------------------------------------------------------------------------- */}
-              {itemId ? (
-                <div className="mt-2 flex flex-col gap-0.5">
-                  <div className="font-mono text-[11px]" style={{ color: 'var(--muted-foreground)', letterSpacing: '0.06em' }}>
-                    In-game ID: <span style={{ color: '#ff610a' }}>{itemId}</span>
-                    <span className="ml-2" style={{ opacity: 0.5 }}>({tenant})</span>
-                  </div>
-                  <div className="font-mono text-[11px]" style={{ color: 'var(--muted-foreground)', letterSpacing: '0.06em' }}>
-                    Chain ID:{' '}
-                    {chainIdLoading && <span style={{ opacity: 0.5 }}>deriving...</span>}
-                    {chainIdError && <span style={{ color: '#ef4444' }}>could not derive</span>}
-                    {chainObjectId && <span style={{ color: '#ff610a' }}>{chainObjectId}</span>}
-                  </div>
-                </div>
-              ) : (
-                <div className="font-mono text-[11px] mt-1" style={{ color: 'var(--muted-foreground)', opacity: 0.4, letterSpacing: '0.06em' }}>
-                  // no assembly params in url: {window.location.search || '(none)'}
-                </div>
-              )}
             </div>
 
             {/* Search */}
