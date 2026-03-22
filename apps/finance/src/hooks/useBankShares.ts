@@ -1,4 +1,5 @@
-import { useSuiClientQuery, useCurrentAccount } from '@mysten/dapp-kit';
+import { useQuery } from '@tanstack/react-query';
+import { useCurrentAccount, useCurrentClient } from '@mysten/dapp-kit-react';
 import { PACKAGE_ID } from '../constants';
 
 export interface BankShareObject {
@@ -6,21 +7,20 @@ export interface BankShareObject {
   shares:   string;
 }
 
-// BankShare is the same struct type regardless of network — the coin type
-// is baked into the CentralBank, not the share itself.
 export function useBankShares(): { shares: BankShareObject[]; isLoading: boolean } {
   const account = useCurrentAccount();
+  const client = useCurrentClient();
   const BANK_SHARE_TYPE = `${PACKAGE_ID}::bank::BankShare`;
 
-  const { data, isPending } = useSuiClientQuery(
-    'getOwnedObjects',
-    {
-      owner:   account?.address ?? '',
+  const { data, isPending } = useQuery({
+    queryKey: ['getOwnedObjects', account?.address, BANK_SHARE_TYPE],
+    queryFn: () => client.getOwnedObjects({
+      owner:   account!.address,
       filter:  { StructType: BANK_SHARE_TYPE },
       options: { showContent: true },
-    },
-    { enabled: !!account?.address },
-  );
+    }),
+    enabled: !!account?.address,
+  });
 
   const shares: BankShareObject[] = (data?.data ?? []).map((obj) => {
     const content = obj.data?.content;

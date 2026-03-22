@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { ConnectButton, useCurrentAccount } from '@mysten/dapp-kit';
+import { useCurrentAccount } from '@mysten/dapp-kit-react';
+import { useConnection, abbreviateAddress } from '@evefrontier/dapp-kit';
 import { BankDashboard } from './components/BankDashboard';
 import { LoanDashboard } from './components/LoanDashboard';
 import { LotteryDashboard } from './components/LotteryDashboard';
@@ -20,6 +21,7 @@ const NETWORK_IDS = Object.keys(NETWORKS) as NetworkId[];
 
 export default function App() {
   const account = useCurrentAccount();
+  const { isConnected, handleConnect, handleDisconnect } = useConnection();
   const [activeTab, setActiveTab] = useState<Tab>('bank');
   const { networkId, setNetworkId } = useNetwork();
   const { capId } = useAdminCap();
@@ -51,7 +53,12 @@ export default function App() {
             ))}
           </div>
         </div>
-        <ConnectButton />
+        <button
+          onClick={isConnected ? handleDisconnect : handleConnect}
+          className="px-4 py-2 text-sm font-bold font-mono tracking-wider border rounded transition-colors bg-eve-surface border-eve-border text-eve-gold hover:bg-eve-gold hover:text-eve-bg"
+        >
+          {isConnected && account ? abbreviateAddress(account.address) : 'CONNECT WALLET'}
+        </button>
       </header>
 
       <main className="max-w-2xl mx-auto px-4 py-8 space-y-6">
