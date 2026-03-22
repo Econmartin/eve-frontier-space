@@ -16,7 +16,11 @@ interface OGData {
 }
 
 function getDomain(url: string) {
-  try { return new URL(url).hostname.replace('www.', ''); }
+  try {
+    const u = new URL(url);
+    const host = u.hostname.replace('www.', '');
+    return u.pathname && u.pathname !== '/' ? `${host}${u.pathname}` : host;
+  }
   catch { return url; }
 }
 
