@@ -25,6 +25,8 @@ export interface TxOverrides {
   sender?:         string;
 }
 
+const GAS_BUDGET = 20_000_000n; // 0.02 SUI — well above actual cost (~2-5M MIST)
+
 // ─── Phase 1: Pool ───────────────────────────────────────────────────────────
 
 export function buildDepositTx(
@@ -42,6 +44,7 @@ export function buildDepositTx(
     typeArguments: [coinType],
     arguments:     [tx.object(bank), split],
   });
+  tx.setGasBudget(GAS_BUDGET);
   return tx;
 }
 
@@ -59,6 +62,7 @@ export function buildWithdrawTx(
     arguments:     [tx.object(bank), tx.object(shareCoinId)],
   });
   if (overrides.sender) tx.transferObjects([coin], tx.pure.address(overrides.sender));
+  tx.setGasBudget(GAS_BUDGET);
   return tx;
 }
 
@@ -79,6 +83,7 @@ export function buildBorrowTx(
     arguments:     [tx.object(bank), tx.object(loanProductId), tx.pure.u64(amountMist)],
   });
   if (overrides.sender) tx.transferObjects([coin], tx.pure.address(overrides.sender));
+  tx.setGasBudget(GAS_BUDGET);
   return tx;
 }
 
@@ -98,6 +103,7 @@ export function buildRepayTx(
     typeArguments: [coinType],
     arguments:     [tx.object(bank), tx.object(loanId), split],
   });
+  tx.setGasBudget(GAS_BUDGET);
   return tx;
 }
 
@@ -117,6 +123,7 @@ export function buildDrawLotteryTx(
     typeArguments: [coinType],
     arguments:     [tx.object(adminCapId), tx.object(lotteryId), tx.pure.address(winnerAddress)],
   });
+  tx.setGasBudget(GAS_BUDGET);
   return tx;
 }
 
@@ -136,6 +143,7 @@ export function buildProcessDefaultTx(
     typeArguments: [coinType],
     arguments:     [tx.object(adminCapId), tx.object(bankId), tx.object(lotteryId), tx.object(loanId)],
   });
+  tx.setGasBudget(GAS_BUDGET);
   return tx;
 }
 
@@ -157,5 +165,6 @@ export function buildBuyTicketTx(
     arguments:     [tx.object(lotteryId), split],
   });
   if (overrides.sender) tx.transferObjects([ticket], tx.pure.address(overrides.sender));
+  tx.setGasBudget(GAS_BUDGET);
   return tx;
 }
