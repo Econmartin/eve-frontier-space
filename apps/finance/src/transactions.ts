@@ -149,6 +149,63 @@ export function buildProcessDefaultTx(
 
 
 
+// ─── Phase 1: Partial / full withdrawal ──────────────────────────────────────
+
+interface ShareRef { objectId: string; shares: string; }
+
+/**
+ * Withdraw `withdrawAmountMist` of EVE by merging all owned shares,
+ * optionally splitting the exact portion, then calling withdraw.
+ * Pass bankDeposits / bankTotalShares from the on-chain CentralBank object
+ * so we can convert EVE → shares correctly.
+ */
+export function buildWithdrawAmountTx(
+  shares:             ShareRef[],
+  withdrawAmountMist: bigint,
+  bankDeposits:       bigint,
+  bankTotalShares:    bigint,
+  overrides:          TxOverrides = {},
+): Transaction {
+  const pkg      = overrides.packageId    ?? LATEST_PACKAGE_ID;
+  const bank     = overrides.centralBankId ?? _defaultNet.centralBankId;
+  const coinType = overrides.eveCoinType   ?? _defaultNet.eveCoinType;
+
+  const totalOwnedShares = shares.reduce((s, sh) => s + BigInt(sh.shares), 0n);
+  // Convert requested EVE amount → shares (floor division)
+  const sharesToWithdraw = bankDeposits > 0n
+    ? withdrawAmountMist * bankTotalShares / bankDeposits
+    : totalOwnedShares;
+  const isFullWithdraw = sharesToWithdraw >= totalOwnedShares;
+
+  const tx = new Transaction();
+
+  // Merge shares[1..n] into shares[0]
+  for (let i = 1; i < shares.length; i++) {
+    tx.moveCall({
+      target:    `${pkg}::bank::merge_shares`,
+      arguments: [tx.object(shares[0].objectId), tx.object(shares[i].objectId)],
+    });
+  }
+
+  // Either take the merged share whole or split out the exact portion
+  const shareArg = isFullWithdraw
+    ? tx.object(shares[0].objectId)
+    : tx.moveCall({
+        target:    `${pkg}::bank::split_share`,
+        arguments: [tx.object(shares[0].objectId), tx.pure.u64(sharesToWithdraw)],
+      });
+
+  const coin = tx.moveCall({
+    target:        `${pkg}::bank::withdraw`,
+    typeArguments: [coinType],
+    arguments:     [tx.object(bank), shareArg],
+  });
+
+  if (overrides.sender) tx.transferObjects([coin], tx.pure.address(overrides.sender));
+  tx.setGasBudget(GAS_BUDGET);
+  return tx;
+}
+
 export function buildBuyTicketTx(
   lotteryId:        string,
   eveCoinId:        string,
@@ -169,6 +226,26 @@ export function buildBuyTicketTx(
     }),
   );
   if (overrides.sender) tx.transferObjects(tickets, tx.pure.address(overrides.sender));
+  tx.setGasBudget(GAS_BUDGET);
+  return tx;
+}
+
+// Burn a batch of expired tickets in one PTB (reclaims storage rebate).
+export function buildBurnExpiredTicketsTx(
+  lotteryId: string,
+  ticketIds:  string[],
+  overrides:  TxOverrides = {},
+): Transaction {
+  const pkg      = overrides.packageId  ?? LATEST_PACKAGE_ID;
+  const coinType = overrides.eveCoinType ?? _defaultNet.eveCoinType;
+  const tx = new Transaction();
+  for (const ticketId of ticketIds) {
+    tx.moveCall({
+      target:        `${pkg}::bank::burn_expired_ticket`,
+      typeArguments: [coinType],
+      arguments:     [tx.object(lotteryId), tx.object(ticketId)],
+    });
+  }
   tx.setGasBudget(GAS_BUDGET);
   return tx;
 }

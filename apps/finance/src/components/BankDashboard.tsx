@@ -1,11 +1,14 @@
 import { useState } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCurrentAccount, useDAppKit } from '@mysten/dapp-kit-react';
-import { buildDepositTx, buildWithdrawTx } from '../transactions';
+import { buildDepositTx, buildWithdrawAmountTx } from '../transactions';
 import { useEveBalance } from '../hooks/useEveBalance';
 import { useBankShares } from '../hooks/useBankShares';
 import { useNetwork } from '../contexts/NetworkContext';
+import { suiRpcClient } from '../suiRpcClient';
 import { EVE_SCALE } from '../constants';
+
+interface BankFields { deposits: string; total_shares: string; }
 
 export function BankDashboard() {
   const account = useCurrentAccount();
@@ -16,11 +19,31 @@ export function BankDashboard() {
   const { formattedBalance, largestCoinId, isLoading: balanceLoading } = useEveBalance();
   const { shares, isLoading: sharesLoading } = useBankShares();
 
-  const [depositAmount, setDepositAmount] = useState('');
-  const [status, setStatus]   = useState<string | null>(null);
-  const [error, setError]     = useState<string | null>(null);
+  const [depositAmount,  setDepositAmount]  = useState('');
+  const [withdrawAmount, setWithdrawAmount] = useState('');
+  const [status, setStatus] = useState<string | null>(null);
+  const [error,  setError]  = useState<string | null>(null);
 
   const overrides = { centralBankId: network.centralBankId, eveCoinType: network.eveCoinType, sender: account?.address };
+
+  // Fetch pool state so we can convert EVE ↔ shares
+  const { data: bankObj } = useQuery({
+    queryKey: ['getObject', network.centralBankId],
+    queryFn:  () => suiRpcClient.getObject({ id: network.centralBankId, options: { showContent: true } }),
+  });
+  const bankFields = bankObj?.data?.content?.dataType === 'moveObject'
+    ? (bankObj.data.content.fields as unknown as BankFields)
+    : null;
+
+  const bankDeposits    = BigInt(bankFields?.deposits    ?? '0');
+  const bankTotalShares = BigInt(bankFields?.total_shares ?? '0');
+
+  // Compute combined position value in MIST
+  const totalOwnedShares = shares.reduce((s, sh) => s + BigInt(sh.shares), 0n);
+  const positionMist = bankTotalShares > 0n
+    ? totalOwnedShares * bankDeposits / bankTotalShares
+    : 0n;
+  const positionEve = (Number(positionMist) / Number(EVE_SCALE)).toLocaleString(undefined, { maximumFractionDigits: 4 });
 
   async function handleDeposit() {
     if (!account || !largestCoinId) return;
@@ -36,13 +59,18 @@ export function BankDashboard() {
     }
   }
 
-  async function handleWithdraw(shareId: string) {
-    if (!account) return;
+  async function handleWithdraw() {
+    if (!account || shares.length === 0) return;
     setStatus(null); setError(null);
     try {
-      await dAppKit.signAndExecuteTransaction({ transaction: buildWithdrawTx(shareId, overrides) });
+      const requestedMist = BigInt(Math.floor(Number(withdrawAmount) * Number(EVE_SCALE)));
+      const capMist = positionMist < requestedMist ? positionMist : requestedMist;
+      await dAppKit.signAndExecuteTransaction({
+        transaction: buildWithdrawAmountTx(shares, capMist, bankDeposits, bankTotalShares, overrides),
+      });
       await queryClient.invalidateQueries();
       setStatus('Withdrawal complete — EVE returned to wallet.');
+      setWithdrawAmount('');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Withdrawal failed');
     }
@@ -80,26 +108,42 @@ export function BankDashboard() {
         </p>
       </div>
 
-      <div className="bg-eve-surface border border-eve-border rounded-lg p-5 space-y-3">
-        <h3 className="text-white font-semibold tracking-wide">YOUR POSITIONS</h3>
-        {sharesLoading && <p className="text-eve-muted text-sm font-mono">Loading shares…</p>}
+      <div className="bg-eve-surface border border-eve-border rounded-lg p-5 space-y-4">
+        <div className="flex items-baseline justify-between">
+          <h3 className="text-white font-semibold tracking-wide">YOUR POSITION</h3>
+          {!sharesLoading && shares.length > 0 && (
+            <span className="text-eve-gold font-mono font-bold text-lg">{positionEve} EVE</span>
+          )}
+        </div>
+
+        {sharesLoading && <p className="text-eve-muted text-sm font-mono">Loading…</p>}
         {!sharesLoading && shares.length === 0 && (
-          <p className="text-eve-muted text-sm font-mono">No active positions.</p>
+          <p className="text-eve-muted text-sm font-mono">No active position.</p>
         )}
-        {shares.map((share) => (
-          <div key={share.objectId} className="flex items-center justify-between bg-eve-bg border border-eve-border rounded px-4 py-3">
-            <div>
-              <p className="text-white font-mono text-sm">{Number(share.shares).toLocaleString()} shares</p>
-              <p className="text-eve-muted font-mono text-xs truncate w-64">{share.objectId}</p>
-            </div>
+        {!sharesLoading && shares.length > 0 && (
+          <div className="flex gap-3">
+            <input
+              type="number" min="0" step="0.0001"
+              value={withdrawAmount}
+              onChange={(e) => setWithdrawAmount(e.target.value)}
+              placeholder="Amount to withdraw in EVE"
+              className="flex-1 bg-eve-bg border border-eve-border rounded px-3 py-2 text-white font-mono text-sm placeholder:text-eve-muted focus:outline-none focus:border-eve-gold"
+            />
             <button
-              onClick={() => handleWithdraw(share.objectId)}
-              className="px-4 py-1.5 border border-eve-gold text-eve-gold text-sm font-mono rounded hover:bg-eve-gold hover:text-eve-bg transition-colors"
+              onClick={() => setWithdrawAmount((Number(positionMist) / Number(EVE_SCALE)).toFixed(4))}
+              className="px-3 py-2 border border-eve-gold/60 text-eve-gold text-xs font-mono rounded hover:bg-eve-gold/10 transition-colors whitespace-nowrap"
+            >
+              MAX
+            </button>
+            <button
+              onClick={handleWithdraw}
+              disabled={!withdrawAmount || Number(withdrawAmount) <= 0}
+              className="px-5 py-2 border border-eve-gold text-eve-gold font-bold rounded hover:bg-eve-gold hover:text-eve-bg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
               Withdraw
             </button>
           </div>
-        ))}
+        )}
       </div>
 
       <StatusBar status={status} error={error} />

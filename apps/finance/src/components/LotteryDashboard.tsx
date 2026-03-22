@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCurrentAccount, useDAppKit } from '@mysten/dapp-kit-react';
 import { suiRpcClient } from '../suiRpcClient';
-import { buildBuyTicketTx } from '../transactions';
+import { buildBuyTicketTx, buildBurnExpiredTicketsTx } from '../transactions';
 import { useEveBalance } from '../hooks/useEveBalance';
 import { useNetwork } from '../contexts/NetworkContext';
 import { PACKAGE_ID, EVE_SCALE } from '../constants';
@@ -12,6 +12,7 @@ interface LotteryState {
   house_edge_bps:    string;
   lottery_pool:      string;
   insurance_reserve: string;
+  current_round:     string;
 }
 
 export function LotteryDashboard() {
@@ -35,8 +36,9 @@ export function LotteryDashboard() {
       ? (lotteryObj.data.content.fields as unknown as LotteryState)
       : null;
 
-  const ticketPrice = lotteryFields ? BigInt(lotteryFields.ticket_price) : 1n * EVE_SCALE;
-  const houseEdgePct = lotteryFields ? Number(lotteryFields.house_edge_bps) / 100 : 20;
+  const ticketPrice   = lotteryFields ? BigInt(lotteryFields.ticket_price) : 1n * EVE_SCALE;
+  const houseEdgePct  = lotteryFields ? Number(lotteryFields.house_edge_bps) / 100 : 20;
+  const currentRound  = lotteryFields ? Number(lotteryFields.current_round) : null;
 
   const formatEve = (mist: string | bigint) =>
     (Number(mist) / Number(EVE_SCALE)).toLocaleString(undefined, { maximumFractionDigits: 2 });
@@ -62,9 +64,15 @@ export function LotteryDashboard() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between bg-eve-surface border border-eve-border rounded-lg px-4 py-3">
-        <span className="text-eve-muted text-sm font-mono">WALLET BALANCE</span>
-        <span className="text-eve-gold font-mono font-bold text-lg">{formattedBalance} EVE</span>
+      <div className="grid grid-cols-2 gap-3">
+        <div className="flex items-center justify-between bg-eve-surface border border-eve-border rounded-lg px-4 py-3">
+          <span className="text-eve-muted text-sm font-mono">WALLET BALANCE</span>
+          <span className="text-eve-gold font-mono font-bold">{formattedBalance} EVE</span>
+        </div>
+        <div className="flex items-center justify-between bg-eve-surface border border-eve-border rounded-lg px-4 py-3">
+          <span className="text-eve-muted text-sm font-mono">ROUND</span>
+          <span className="text-white font-mono font-bold">{lotteryLoading ? '…' : `#${currentRound ?? '—'}`}</span>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
@@ -103,7 +111,16 @@ export function LotteryDashboard() {
         </div>
       </div>
 
-      <OwnedTickets />
+      {currentRound !== null && (
+        <OwnedTickets
+          currentRound={currentRound}
+          lotteryId={network.lotterySystemId}
+          eveCoinType={network.eveCoinType}
+          onBurned={(msg) => { setStatus(msg); queryClient.invalidateQueries(); }}
+          onError={(msg) => setError(msg)}
+          dAppKit={dAppKit}
+        />
+      )}
 
       {(status || error) && (
         <div className={`rounded-lg px-4 py-3 font-mono text-sm ${error ? 'bg-eve-red/10 border border-eve-red text-eve-red' : 'bg-eve-green/10 border border-eve-green text-eve-green'}`}>
@@ -114,8 +131,18 @@ export function LotteryDashboard() {
   );
 }
 
-function OwnedTickets() {
+interface OwnedTicketsProps {
+  currentRound: number;
+  lotteryId:    string;
+  eveCoinType:  string;
+  dAppKit:      ReturnType<typeof import('@mysten/dapp-kit-react').useDAppKit>;
+  onBurned:     (msg: string) => void;
+  onError:      (msg: string) => void;
+}
+
+function OwnedTickets({ currentRound, lotteryId, eveCoinType, dAppKit, onBurned, onError }: OwnedTicketsProps) {
   const account = useCurrentAccount();
+  const [burning, setBurning] = useState(false);
   const LOTTERY_TICKET_TYPE = `${PACKAGE_ID}::bank::LotteryTicket`;
 
   const { data, isPending } = useQuery({
@@ -123,22 +150,76 @@ function OwnedTickets() {
     queryFn: () => suiRpcClient.getOwnedObjects({
       owner:   account!.address,
       filter:  { StructType: LOTTERY_TICKET_TYPE },
-      options: { showType: true },
+      options: { showContent: true },
     }),
     enabled: !!account?.address,
   });
 
-  const tickets = data?.data ?? [];
+  const tickets = (data?.data ?? []).map((t) => {
+    const fields = t.data?.content?.dataType === 'moveObject'
+      ? (t.data.content.fields as Record<string, string>)
+      : {};
+    return { objectId: t.data?.objectId ?? '', round: Number(fields['round'] ?? 0) };
+  });
+
+  const active  = tickets.filter((t) => t.round === currentRound);
+  const expired = tickets.filter((t) => t.round < currentRound);
+
   if (isPending || tickets.length === 0) return null;
 
+  async function handleBurnExpired() {
+    if (expired.length === 0) return;
+    setBurning(true);
+    try {
+      await dAppKit.signAndExecuteTransaction({
+        transaction: buildBurnExpiredTicketsTx(
+          lotteryId,
+          expired.map((t) => t.objectId),
+          { eveCoinType },
+        ),
+      });
+      onBurned(`Burned ${expired.length} expired ticket${expired.length > 1 ? 's' : ''} — storage rebate claimed.`);
+    } catch (e) {
+      onError(e instanceof Error ? e.message : 'Burn failed');
+    } finally {
+      setBurning(false);
+    }
+  }
+
   return (
-    <div className="bg-eve-surface border border-eve-border rounded-lg p-5 space-y-2">
-      <h3 className="text-white font-semibold tracking-wide">YOUR TICKETS ({tickets.length})</h3>
-      {tickets.map((t) => (
-        <p key={t.data?.objectId} className="text-eve-muted font-mono text-xs truncate">
-          {t.data?.objectId}
-        </p>
-      ))}
+    <div className="bg-eve-surface border border-eve-border rounded-lg p-5 space-y-3">
+      {active.length > 0 && (
+        <div className="space-y-2">
+          <h3 className="text-white font-semibold tracking-wide">
+            ROUND #{currentRound} TICKETS ({active.length})
+          </h3>
+          {active.map((t) => (
+            <p key={t.objectId} className="text-eve-muted font-mono text-xs truncate">{t.objectId}</p>
+          ))}
+        </div>
+      )}
+
+      {expired.length > 0 && (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <h3 className="text-eve-muted font-semibold tracking-wide text-sm">
+              EXPIRED TICKETS ({expired.length})
+            </h3>
+            <button
+              onClick={handleBurnExpired}
+              disabled={burning}
+              className="px-3 py-1 border border-eve-muted/40 text-eve-muted text-xs font-mono rounded hover:border-eve-red hover:text-eve-red transition-colors disabled:opacity-40"
+            >
+              {burning ? '…' : 'BURN ALL'}
+            </button>
+          </div>
+          {expired.map((t) => (
+            <p key={t.objectId} className="text-eve-muted/50 font-mono text-xs truncate line-through">
+              {t.objectId}
+            </p>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
