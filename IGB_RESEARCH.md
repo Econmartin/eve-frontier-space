@@ -4,47 +4,88 @@ Notes on the undocumented JavaScript bridge functions injected by the game clien
 
 ---
 
+## Architecture
+
+```
+eveFrontierRpcRequest(request)          — JS wrapper, polls until done
+  └─ _eveFrontierRpcRequest(id, req)    — calls ccpPython.pythonCall("", "_eveFrontierRpcRequest", args)
+       └─ ccpPython.pythonCall(obj, fn, args)  — calls __pythonCall (native)
+            └─ __pythonCall()           — [native code] — actual Python bridge
+```
+
+`pythonReply(idx, err, reply)` is called by the native layer to resolve/reject pending promises.
+
+---
+
+## Function Sources
+
+### `eveFrontierRpcRequest(request, interval=10, timeout=30000)`
+Polls `_eveFrontierRpcRequest` until response status is `done`, `failed`, or times out.
+Response shape: `{ id, status: 'pending'|'done'|'failed', response }`.
+Is a **JSON-RPC 2.0** endpoint — request format: `{ jsonrpc: "2.0", id, method, params }`.
+
+### `_eveFrontierRpcRequest()`
+```js
+function() { return ccpPython.pythonCall("", "_eveFrontierRpcRequest", Array.prototype.slice.call(arguments)); }
+```
+Direct Python call with empty object name. Args are passed as array.
+
+### `callWallet(request, interval=10, timeout=30000)`
+Identical source to `eveFrontierRpcRequest` — same polling wrapper. Likely points to a different Python endpoint.
+
+### `ccpPython.pythonCall(objname, funcname, args)`
+```js
+function(objname, funcname, args) {
+    return new Promise(function(resolve, reject) {
+        pending[callId] = { resolve, reject };
+        __pythonCall(objname, funcname, callId, JSON.stringify(args));
+        ++callId;
+    });
+}
+```
+Core bridge: calls `__pythonCall(objname, funcname, callId, JSON.stringify(args))`.
+Returns a Promise resolved by `pythonReply`.
+
+### `ccpPython.pythonReply(idx, err, reply)`
+```js
+function(idx, err, reply) {
+    if (pending.hasOwnProperty(idx)) {
+        if (err.length) pending[idx].reject(JSON.parse(err));
+        else pending[idx].resolve(JSON.parse(reply));
+        delete pending[idx];
+    }
+}
+```
+Called by the native layer to resolve/reject a pending `pythonCall` promise.
+
+### `__pythonCall()` — `[native code]`
+### `captureEvents()` — `[native code]`
+### `releaseEvents()` — `[native code]`
+
+---
+
 ## Known Globals on `window`
 
 | Name | Type | Notes |
 |------|------|-------|
-| `eveFrontierRpcRequest` | function | JSON-RPC 2.0 endpoint — main one to use |
-| `_eveFrontierRpcRequest` | function | Raw/internal version — all calls timeout |
-| `callWallet` | function | Wallet bridge — errors without args |
-| `ccpPython` | object | Has `pythonCall` and `pythonReply` methods |
-| `__pythonCall` | function | Low-level Python bridge |
-| `captureEvents` | function | Browser event bridge |
-| `releaseEvents` | function | Browser event bridge |
+| `eveFrontierRpcRequest` | function | JSON-RPC 2.0 polling wrapper |
+| `_eveFrontierRpcRequest` | function | Raw Python bridge for RPC |
+| `callWallet` | function | Same shape as eveFrontierRpcRequest, wallet endpoint |
+| `ccpPython` | object | `pythonCall(objname, funcname, args)` + `pythonReply` |
+| `__pythonCall` | function | Native Python bridge |
+| `captureEvents` | function | Native — browser event bridge |
+| `releaseEvents` | function | Native — browser event bridge |
 | `WALLET_API_CHAIN` | string | `"sui:testnet"` |
 | `ongotpointercapture` | object | Pointer capture event |
 | `onlostpointercapture` | object | Pointer capture event |
 
 ---
 
-## `eveFrontierRpcRequest`
-
-- Speaks **JSON-RPC 2.0** — requires `{ jsonrpc: "2.0", id, method, params }`
-- Calling with `{}` returns a response (id 4, error -32603, message `"method"`) — server is alive
-- Tried method names: `getContext`, `getCharacter`, `getAssembly`, `getSmartObject`, `getObjectId`, `getPlayer`, `getSolarSystem`, `getLocation`, `getItemId`, `getAssemblyId` — all return **method not found**
-- Correct method names unknown — need to find the right ones
-
-## `ccpPython`
-
-- Is an **object** (not a function)
-- Has two methods: `pythonCall` (function), `pythonReply` (function)
-- Likely a bridge into the game client's Python runtime (CCP uses Python extensively)
-- Calling convention unknown — investigating
-
-## `WALLET_API_CHAIN`
-
-- Value: `"sui:testnet"`
-- Confirms the game is running on Sui testnet
-
----
-
 ## Open Questions
 
-- What are the valid JSON-RPC method names for `eveFrontierRpcRequest`?
-- What does `ccpPython.pythonCall` accept as arguments?
-- What does `callWallet` do / what args does it need?
-- Are assembly/character IDs accessible via any of these?
+- What are the valid JSON-RPC method names for `eveFrontierRpcRequest`? (tried ~20, all "method not found")
+  - `system.listMethods` / `rpc.discover` may enumerate them
+- What Python object names does `ccpPython.pythonCall` accept?
+  - `_eveFrontierRpcRequest` uses `""` as objname — what others exist?
+- `callWallet` — same source as `eveFrontierRpcRequest`, different Python endpoint?
+- Can we get assembly/character IDs via any of these?
