@@ -4,11 +4,17 @@ import { Header } from '@/components/organisms/index.ts';
 import { deriveChainObjectId } from '@/lib/assemblyId';
 
 // ---------------------------------------------------------------------------
-// Assembly ID config — read from Vite env vars
-// These must be set in .env.development (or .env) for chain ID derivation.
+// Assembly ID config
+// Defaults are hardcoded (these are public values, not secrets) so derivation
+// works in production without any extra build config. Override via env vars if needed.
 // ---------------------------------------------------------------------------
-const WORLD_PKG_ID = import.meta.env.VITE_EVE_WORLD_PACKAGE_ID as string | undefined;
-const GRAPHQL_ENDPOINT = import.meta.env.VITE_SUI_GRAPHQL_ENDPOINT as string | undefined;
+const WORLD_PKG_ID: string =
+  import.meta.env.VITE_EVE_WORLD_PACKAGE_ID ||
+  '0xd12a70c74c1e759445d6f209b01d43d860e97fcf2ef72ccbbd00afd828043f75';
+
+const GRAPHQL_ENDPOINT: string =
+  import.meta.env.VITE_SUI_GRAPHQL_ENDPOINT ||
+  'https://graphql.testnet.sui.io/graphql';
 
 const APPS_JSON_URL =
   'https://raw.githubusercontent.com/Econmartin/eve-frontier-apps/refs/heads/main/urls.json';
