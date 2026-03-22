@@ -41,7 +41,7 @@ export default function App() {
         body: JSON.stringify({ FixedAmountRequest: { recipient: account.address } }),
       });
       const body = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(`Faucet ${res.status}: ${body?.error ?? res.statusText}`);
+      if (res.status === 429) throw new Error('Rate limited — request SUI via the Sui Discord faucet channel instead');
       if (body?.error) throw new Error(body.error);
       setFaucetMsg('✓ SUI incoming — allow ~10s');
       setTimeout(() => { refetchGas(); setFaucetMsg(null); }, 10000);
@@ -101,7 +101,19 @@ export default function App() {
 
       {faucetMsg && (
         <div className={`px-6 py-2 text-xs font-mono text-center ${faucetMsg.startsWith('⚠') ? 'bg-eve-red/10 text-eve-red' : 'bg-eve-green/10 text-eve-green'}`}>
-          {faucetMsg}
+          {faucetMsg.includes('Discord') ? (
+            <>
+              ⚠ Rate limited —{' '}
+              <a
+                href="https://discord.com/channels/916379725201563759/971488439931392130"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline"
+              >
+                request SUI in the Sui Discord #testnet-faucet
+              </a>
+            </>
+          ) : faucetMsg}
         </div>
       )}
 
