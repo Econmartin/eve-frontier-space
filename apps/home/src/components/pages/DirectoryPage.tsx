@@ -1,6 +1,14 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router';
 import { Header } from '@/components/organisms/index.ts';
+import { deriveChainObjectId } from '@/lib/assemblyId';
+
+// ---------------------------------------------------------------------------
+// Assembly ID config — read from Vite env vars
+// These must be set in .env.development (or .env) for chain ID derivation.
+// ---------------------------------------------------------------------------
+const WORLD_PKG_ID = import.meta.env.VITE_EVE_WORLD_PACKAGE_ID as string | undefined;
+const GRAPHQL_ENDPOINT = import.meta.env.VITE_SUI_GRAPHQL_ENDPOINT as string | undefined;
 
 const APPS_JSON_URL =
   'https://raw.githubusercontent.com/Econmartin/eve-frontier-apps/refs/heads/main/urls.json';
@@ -170,8 +178,27 @@ function AppCard({ app, og }: { app: AppEntry; og: OGData | undefined }) {
 }
 
 export function DirectoryPage() {
+  // ---------------------------------------------------------------------------
+  // Assembly ID — read from URL params injected by the EVE Frontier game client
+  // The game appends ?itemId=<in-game integer>&tenant=<tenant> when opening a dapp.
+  // We display the in-game ID immediately, then derive the chain object ID async.
+  // ---------------------------------------------------------------------------
   const [searchParams] = useSearchParams();
-  const objectId = searchParams.get('objectId');
+  const itemId = searchParams.get('itemId');
+  const tenant = searchParams.get('tenant') ?? 'testevenet';
+
+  const [chainObjectId, setChainObjectId] = useState<string | null>(null);
+  const [chainIdLoading, setChainIdLoading] = useState(false);
+  const [chainIdError, setChainIdError] = useState(false);
+
+  useEffect(() => {
+    if (!itemId || !WORLD_PKG_ID || !GRAPHQL_ENDPOINT) return;
+    setChainIdLoading(true);
+    setChainIdError(false);
+    deriveChainObjectId(itemId, tenant, WORLD_PKG_ID, GRAPHQL_ENDPOINT)
+      .then(id => { setChainObjectId(id); setChainIdLoading(false); })
+      .catch(() => { setChainIdError(true); setChainIdLoading(false); });
+  }, [itemId, tenant]);
 
   const [apps, setApps] = useState<AppEntry[]>([]);
   const [ogMap, setOgMap] = useState<Record<string, OGData>>({});
@@ -232,9 +259,25 @@ export function DirectoryPage() {
               <h1 className="font-heading text-xl font-bold text-white" style={{ letterSpacing: '0.08em' }}>
                 EVE FRONTIER <span style={{ color: '#ff610a' }}>APPS</span>
               </h1>
-              {objectId && (
-                <div className="font-mono text-[11px] mt-1" style={{ color: 'var(--muted-foreground)', letterSpacing: '0.06em' }}>
-                  Current Assembly: <span style={{ color: '#ff610a' }}>{objectId}</span>
+              {/* ---------------------------------------------------------------------------
+                  Assembly ID block — only rendered when ?itemId= is present in the URL.
+                  Shows the in-game ID immediately; chain object ID loads async.
+                  --------------------------------------------------------------------------- */}
+              {itemId && (
+                <div className="mt-2 flex flex-col gap-0.5">
+                  <div className="font-mono text-[11px]" style={{ color: 'var(--muted-foreground)', letterSpacing: '0.06em' }}>
+                    In-game ID: <span style={{ color: '#ff610a' }}>{itemId}</span>
+                    <span className="ml-2" style={{ opacity: 0.5 }}>({tenant})</span>
+                  </div>
+                  <div className="font-mono text-[11px]" style={{ color: 'var(--muted-foreground)', letterSpacing: '0.06em' }}>
+                    Chain ID:{' '}
+                    {chainIdLoading && <span style={{ opacity: 0.5 }}>deriving...</span>}
+                    {chainIdError && <span style={{ color: '#ef4444' }}>could not derive — check env vars</span>}
+                    {chainObjectId && <span style={{ color: '#ff610a' }}>{chainObjectId}</span>}
+                    {!chainIdLoading && !chainIdError && !chainObjectId && (
+                      <span style={{ opacity: 0.5 }}>set VITE_EVE_WORLD_PACKAGE_ID + VITE_SUI_GRAPHQL_ENDPOINT</span>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
