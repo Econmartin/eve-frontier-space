@@ -9,7 +9,7 @@
  */
 import { Transaction } from '@mysten/sui/transactions';
 import {
-  PACKAGE_ID,
+  LATEST_PACKAGE_ID,
   NETWORKS,
   DEFAULT_NETWORK,
 } from './constants';
@@ -34,7 +34,7 @@ export function buildDepositTx(
   amountMist: bigint,
   overrides:  TxOverrides = {},
 ): Transaction {
-  const pkg      = overrides.packageId    ?? PACKAGE_ID;
+  const pkg      = overrides.packageId    ?? LATEST_PACKAGE_ID;
   const bank     = overrides.centralBankId ?? _defaultNet.centralBankId;
   const coinType = overrides.eveCoinType   ?? _defaultNet.eveCoinType;
   const tx = new Transaction();
@@ -52,7 +52,7 @@ export function buildWithdrawTx(
   shareCoinId: string,
   overrides:   TxOverrides = {},
 ): Transaction {
-  const pkg      = overrides.packageId    ?? PACKAGE_ID;
+  const pkg      = overrides.packageId    ?? LATEST_PACKAGE_ID;
   const bank     = overrides.centralBankId ?? _defaultNet.centralBankId;
   const coinType = overrides.eveCoinType   ?? _defaultNet.eveCoinType;
   const tx = new Transaction();
@@ -73,7 +73,7 @@ export function buildBorrowTx(
   amountMist:    bigint,
   overrides:     TxOverrides = {},
 ): Transaction {
-  const pkg      = overrides.packageId    ?? PACKAGE_ID;
+  const pkg      = overrides.packageId    ?? LATEST_PACKAGE_ID;
   const bank     = overrides.centralBankId ?? _defaultNet.centralBankId;
   const coinType = overrides.eveCoinType   ?? _defaultNet.eveCoinType;
   const tx = new Transaction();
@@ -93,7 +93,7 @@ export function buildRepayTx(
   amountMist: bigint,
   overrides:  TxOverrides = {},
 ): Transaction {
-  const pkg      = overrides.packageId    ?? PACKAGE_ID;
+  const pkg      = overrides.packageId    ?? LATEST_PACKAGE_ID;
   const bank     = overrides.centralBankId ?? _defaultNet.centralBankId;
   const coinType = overrides.eveCoinType   ?? _defaultNet.eveCoinType;
   const tx = new Transaction();
@@ -115,7 +115,7 @@ export function buildDrawLotteryTx(
   winnerAddress: string,
   overrides:     TxOverrides = {},
 ): Transaction {
-  const pkg      = overrides.packageId  ?? PACKAGE_ID;
+  const pkg      = overrides.packageId  ?? LATEST_PACKAGE_ID;
   const coinType = overrides.eveCoinType ?? _defaultNet.eveCoinType;
   const tx = new Transaction();
   tx.moveCall({
@@ -135,7 +135,7 @@ export function buildProcessDefaultTx(
   loanId:     string,
   overrides:  TxOverrides = {},
 ): Transaction {
-  const pkg      = overrides.packageId  ?? PACKAGE_ID;
+  const pkg      = overrides.packageId  ?? LATEST_PACKAGE_ID;
   const coinType = overrides.eveCoinType ?? _defaultNet.eveCoinType;
   const tx = new Transaction();
   tx.moveCall({
@@ -156,7 +156,7 @@ export function buildBuyTicketTx(
   overrides:        TxOverrides = {},
   count:            number = 1,
 ): Transaction {
-  const pkg      = overrides.packageId  ?? PACKAGE_ID;
+  const pkg      = overrides.packageId  ?? LATEST_PACKAGE_ID;
   const coinType = overrides.eveCoinType ?? _defaultNet.eveCoinType;
   const tx = new Transaction();
   const amounts = Array.from({ length: count }, () => tx.pure.u64(ticketPriceMist));
