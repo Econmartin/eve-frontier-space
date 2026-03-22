@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useCurrentAccount } from '@mysten/dapp-kit-react';
 import { useConnection, abbreviateAddress } from '@evefrontier/dapp-kit';
+import { useSuiBalance } from './hooks/useSuiBalance';
 import { BankDashboard } from './components/BankDashboard';
 import { LoanDashboard } from './components/LoanDashboard';
 import { LotteryDashboard } from './components/LotteryDashboard';
@@ -22,9 +23,33 @@ const NETWORK_IDS = Object.keys(NETWORKS) as NetworkId[];
 export default function App() {
   const account = useCurrentAccount();
   const { isConnected, handleConnect, handleDisconnect } = useConnection();
+  const { isLow: gasLow, refetch: refetchGas } = useSuiBalance();
+  const [faucetLoading, setFaucetLoading] = useState(false);
+  const [faucetMsg, setFaucetMsg] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<Tab>('bank');
   const { networkId, setNetworkId } = useNetwork();
   const { capId } = useAdminCap();
+
+  async function requestGas() {
+    if (!account) return;
+    setFaucetLoading(true);
+    setFaucetMsg(null);
+    try {
+      const res = await fetch('https://faucet.testnet.sui.io/v1/gas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ FixedAmountRequest: { recipient: account.address } }),
+      });
+      if (!res.ok) throw new Error(`Faucet error ${res.status}`);
+      setFaucetMsg('1 SUI sent — check back in a moment.');
+      setTimeout(() => { refetchGas(); setFaucetMsg(null); }, 4000);
+    } catch (e) {
+      setFaucetMsg(e instanceof Error ? e.message : 'Faucet request failed');
+      setTimeout(() => setFaucetMsg(null), 4000);
+    } finally {
+      setFaucetLoading(false);
+    }
+  }
 
   const tabs = capId
     ? [...USER_TABS, { id: 'admin' as Tab, label: 'ADMIN' }]
@@ -53,12 +78,24 @@ export default function App() {
             ))}
           </div>
         </div>
-        <button
-          onClick={isConnected ? handleDisconnect : handleConnect}
-          className="px-4 py-2 text-sm font-bold font-mono tracking-wider border rounded transition-colors bg-eve-surface border-eve-border text-eve-gold hover:bg-eve-gold hover:text-eve-bg"
-        >
-          {isConnected && account ? abbreviateAddress(account.address) : 'CONNECT WALLET'}
-        </button>
+        <div className="flex items-center gap-2">
+          {account && gasLow && (
+            <button
+              onClick={requestGas}
+              disabled={faucetLoading}
+              title={faucetMsg ?? 'SUI gas low — request testnet tokens'}
+              className="px-3 py-2 text-xs font-bold font-mono tracking-wider border rounded transition-colors border-eve-red text-eve-red hover:bg-eve-red hover:text-white disabled:opacity-50"
+            >
+              {faucetMsg ? '✓' : faucetLoading ? '…' : '⛽ GAS'}
+            </button>
+          )}
+          <button
+            onClick={isConnected ? handleDisconnect : handleConnect}
+            className="px-4 py-2 text-sm font-bold font-mono tracking-wider border rounded transition-colors bg-eve-surface border-eve-border text-eve-gold hover:bg-eve-gold hover:text-eve-bg"
+          >
+            {isConnected && account ? abbreviateAddress(account.address) : 'CONNECT WALLET'}
+          </button>
+        </div>
       </header>
 
       <main className="max-w-2xl mx-auto px-4 py-8 space-y-6">
