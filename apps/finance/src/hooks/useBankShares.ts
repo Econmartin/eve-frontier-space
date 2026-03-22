@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
-import { useCurrentAccount, useCurrentClient } from '@mysten/dapp-kit-react';
+import { useCurrentAccount } from '@mysten/dapp-kit-react';
 import { PACKAGE_ID } from '../constants';
+import { suiRpcClient } from '../suiRpcClient';
 
 export interface BankShareObject {
   objectId: string;
@@ -9,12 +10,11 @@ export interface BankShareObject {
 
 export function useBankShares(): { shares: BankShareObject[]; isLoading: boolean } {
   const account = useCurrentAccount();
-  const client = useCurrentClient();
   const BANK_SHARE_TYPE = `${PACKAGE_ID}::bank::BankShare`;
 
   const { data, isPending } = useQuery({
     queryKey: ['getOwnedObjects', account?.address, BANK_SHARE_TYPE],
-    queryFn: () => client.getOwnedObjects({
+    queryFn: () => suiRpcClient.getOwnedObjects({
       owner:   account!.address,
       filter:  { StructType: BANK_SHARE_TYPE },
       options: { showContent: true },

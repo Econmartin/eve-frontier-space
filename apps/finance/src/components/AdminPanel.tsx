@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { useDAppKit, useCurrentClient } from '@mysten/dapp-kit-react';
+import { useDAppKit } from '@mysten/dapp-kit-react';
 import { buildDrawLotteryTx, buildProcessDefaultTx } from '../transactions';
+import { suiRpcClient } from '../suiRpcClient';
 import { useNetwork } from '../contexts/NetworkContext';
 import { PACKAGE_ID } from '../constants';
 
@@ -10,7 +11,6 @@ interface Props {
 
 export function AdminPanel({ capId }: Props) {
   const dAppKit = useDAppKit();
-  const client = useCurrentClient();
   const { network } = useNetwork();
 
   const [winnerAddress, setWinnerAddress] = useState('');
@@ -42,7 +42,7 @@ export function AdminPanel({ capId }: Props) {
       let cursor: string | null | undefined = undefined;
       const senders: string[] = [];
       do {
-        const page = await client.queryTransactionBlocks({
+        const page = await suiRpcClient.queryTransactionBlocks({
           filter: { MoveFunction: { package: PACKAGE_ID, module: 'bank', function: 'buy_ticket' } },
           options: { showInput: true },
           limit: 50,

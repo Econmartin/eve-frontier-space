@@ -1,7 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
-import { useCurrentAccount, useCurrentClient } from '@mysten/dapp-kit-react';
+import { useCurrentAccount } from '@mysten/dapp-kit-react';
 import { useNetwork } from '../contexts/NetworkContext';
 import { EVE_SCALE } from '../constants';
+import { suiRpcClient } from '../suiRpcClient';
 
 export interface EveBalance {
   coins:            Array<{ coinObjectId: string; balance: string }>;
@@ -14,12 +15,11 @@ export interface EveBalance {
 
 export function useEveBalance(): EveBalance {
   const account = useCurrentAccount();
-  const client = useCurrentClient();
   const { network } = useNetwork();
 
   const { data, isPending, error } = useQuery({
     queryKey: ['getCoins', account?.address, network.eveCoinType],
-    queryFn: () => client.getCoins({ owner: account!.address, coinType: network.eveCoinType }),
+    queryFn: () => suiRpcClient.getCoins({ owner: account!.address, coinType: network.eveCoinType }),
     enabled: !!account?.address,
   });
 

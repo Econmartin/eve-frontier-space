@@ -1,15 +1,15 @@
 import { useQuery } from '@tanstack/react-query';
-import { useCurrentAccount, useCurrentClient } from '@mysten/dapp-kit-react';
+import { useCurrentAccount } from '@mysten/dapp-kit-react';
 import { PACKAGE_ID } from '../constants';
+import { suiRpcClient } from '../suiRpcClient';
 
 export function useAdminCap(): { capId: string | null; isLoading: boolean } {
   const account = useCurrentAccount();
-  const client = useCurrentClient();
   const ADMIN_CAP_TYPE = `${PACKAGE_ID}::bank::AdminCap`;
 
   const { data, isPending } = useQuery({
     queryKey: ['getOwnedObjects', account?.address, ADMIN_CAP_TYPE],
-    queryFn: () => client.getOwnedObjects({
+    queryFn: () => suiRpcClient.getOwnedObjects({
       owner:   account!.address,
       filter:  { StructType: ADMIN_CAP_TYPE },
       options: { showType: true },

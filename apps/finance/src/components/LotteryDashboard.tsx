@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useCurrentAccount, useCurrentClient, useDAppKit } from '@mysten/dapp-kit-react';
+import { useCurrentAccount, useDAppKit } from '@mysten/dapp-kit-react';
+import { suiRpcClient } from '../suiRpcClient';
 import { buildBuyTicketTx } from '../transactions';
 import { useEveBalance } from '../hooks/useEveBalance';
 import { useNetwork } from '../contexts/NetworkContext';
@@ -15,7 +16,6 @@ interface LotteryState {
 
 export function LotteryDashboard() {
   const account = useCurrentAccount();
-  const client = useCurrentClient();
   const dAppKit = useDAppKit();
   const { network } = useNetwork();
   const { formattedBalance, largestCoinId } = useEveBalance();
@@ -25,7 +25,7 @@ export function LotteryDashboard() {
 
   const { data: lotteryObj, isLoading: lotteryLoading } = useQuery({
     queryKey: ['getObject', network.lotterySystemId],
-    queryFn: () => client.getObject({ id: network.lotterySystemId, options: { showContent: true } }),
+    queryFn: () => suiRpcClient.getObject({ id: network.lotterySystemId, options: { showContent: true } }),
   });
 
   const lotteryFields =
@@ -105,12 +105,11 @@ export function LotteryDashboard() {
 
 function OwnedTickets() {
   const account = useCurrentAccount();
-  const client = useCurrentClient();
   const LOTTERY_TICKET_TYPE = `${PACKAGE_ID}::bank::LotteryTicket`;
 
   const { data, isPending } = useQuery({
     queryKey: ['getOwnedObjects', account?.address, LOTTERY_TICKET_TYPE],
-    queryFn: () => client.getOwnedObjects({
+    queryFn: () => suiRpcClient.getOwnedObjects({
       owner:   account!.address,
       filter:  { StructType: LOTTERY_TICKET_TYPE },
       options: { showType: true },

@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
-import { useCurrentAccount, useCurrentClient } from '@mysten/dapp-kit-react';
+import { useCurrentAccount } from '@mysten/dapp-kit-react';
+import { suiRpcClient } from '../suiRpcClient';
 
 const SUI_COIN_TYPE = '0x2::sui::SUI';
 
@@ -8,19 +9,19 @@ const GAS_LOW_THRESHOLD = 100_000_000n;
 
 export function useSuiBalance() {
   const account = useCurrentAccount();
-  const client = useCurrentClient();
 
-  const { data, isPending, refetch } = useQuery({
+  const { data, isPending, isError, refetch } = useQuery({
     queryKey: ['suiBalance', account?.address],
-    queryFn: () => client.getBalance({ owner: account!.address, coinType: SUI_COIN_TYPE }),
+    queryFn: () => suiRpcClient.getBalance({ owner: account!.address, coinType: SUI_COIN_TYPE }),
     enabled: !!account?.address,
   });
 
   const balance = BigInt(data?.totalBalance ?? '0');
+  const known = !isPending && !isError;
 
   return {
     balance,
-    isLow: balance < GAS_LOW_THRESHOLD,
+    isLow: known && balance < GAS_LOW_THRESHOLD,
     isPending,
     refetch,
   };
