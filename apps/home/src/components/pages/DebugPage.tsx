@@ -1,208 +1,192 @@
 import { useState, useEffect } from 'react';
 
-const IGB_FUNCTIONS = [
-  'eveFrontierRpcRequest',
-  '_eveFrontierRpcRequest',
-  'callWallet',
-  'ccpPython',
-  '__pythonCall',
-] as const;
+const TIMEOUT_MS = 4000;
 
-const CALL_ATTEMPTS = [
-  { label: 'no args',        args: [] },
-  { label: 'empty object',   args: [{}] },
-  { label: '"getContext"',   args: ['getContext'] },
-  { label: '"getAssembly"',  args: ['getAssembly'] },
-  { label: '"getCharacter"', args: ['getCharacter'] },
-  { label: '{ method }',     args: [{ method: 'getContext' }] },
+// JSON-RPC 2.0 method names to try on eveFrontierRpcRequest
+const RPC_METHODS = [
+  'getContext',
+  'getCharacter',
+  'getAssembly',
+  'getSmartObject',
+  'getObjectId',
+  'getPlayer',
+  'getSolarSystem',
+  'getLocation',
+  'getItemId',
+  'getAssemblyId',
 ];
 
-const CALL_TIMEOUT_MS = 3000;
+type Status = 'pending' | 'ok' | 'error' | 'timeout';
 
-type CallStatus = 'pending' | 'ok' | 'error' | 'timeout';
-
-interface CallResult {
+interface Result {
   label: string;
-  status: CallStatus;
+  status: Status;
   value: string;
 }
 
-interface FnReport {
-  name: string;
-  exists: boolean;
-  type: string;
-  calls: CallResult[];
-  done: boolean;
+function timeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error(`timeout after ${ms / 1000}s — ${label}`)), ms),
+    ),
+  ]);
 }
 
-/** Calls fn(...args) and races against a timeout. Returns a CallResult. */
-async function probeCall(
-  fn: (...a: unknown[]) => unknown,
-  attempt: { label: string; args: unknown[] },
-): Promise<CallResult> {
-  const timeout = new Promise<CallResult>(resolve =>
-    setTimeout(() => resolve({ label: attempt.label, status: 'timeout', value: `no response after ${CALL_TIMEOUT_MS / 1000}s` }), CALL_TIMEOUT_MS),
-  );
+async function rpcCall(method: string): Promise<Result> {
+  const fn = (window as Record<string, unknown>).eveFrontierRpcRequest as ((...a: unknown[]) => unknown) | undefined;
+  if (typeof fn !== 'function') return { label: method, status: 'error', value: 'not available' };
 
-  const call = new Promise<CallResult>(resolve => {
-    try {
-      const raw = fn(...attempt.args);
-      // Handle promises returned by the function
-      if (raw instanceof Promise) {
-        raw
-          .then(v => resolve({ label: attempt.label, status: 'ok', value: JSON.stringify(v) }))
-          .catch(e => resolve({ label: attempt.label, status: 'error', value: e?.message ?? String(e) }));
-      } else {
-        resolve({ label: attempt.label, status: 'ok', value: JSON.stringify(raw) });
-      }
-    } catch (e) {
-      resolve({ label: attempt.label, status: 'error', value: (e as Error)?.message ?? String(e) });
+  try {
+    const raw = fn({ jsonrpc: '2.0', id: 1, method, params: [] });
+    const result = await timeout(
+      raw instanceof Promise ? raw : Promise.resolve(raw),
+      TIMEOUT_MS,
+      method,
+    );
+    return { label: method, status: 'ok', value: JSON.stringify(result, null, 2) };
+  } catch (e) {
+    const msg = (e as Error).message ?? String(e);
+    const isTimeout = msg.startsWith('timeout');
+    return { label: method, status: isTimeout ? 'timeout' : 'error', value: msg };
+  }
+}
+
+// Enumerate all keys on an object, including prototype methods
+function enumerateObject(obj: unknown): string[] {
+  const keys = new Set<string>();
+  try {
+    for (const k in (obj as object)) keys.add(k);
+    Object.getOwnPropertyNames(obj as object).forEach(k => keys.add(k));
+    const proto = Object.getPrototypeOf(obj as object);
+    if (proto && proto !== Object.prototype) {
+      Object.getOwnPropertyNames(proto).forEach(k => keys.add(k));
     }
-  });
-
-  return Promise.race([call, timeout]);
+  } catch { /* ignore */ }
+  return Array.from(keys).filter(k => k !== 'constructor');
 }
 
-function statusColor(s: CallStatus) {
+function statusColor(s: Status) {
   if (s === 'ok') return '#ff610a';
   if (s === 'error') return '#facc15';
   if (s === 'timeout') return '#f87171';
   return 'var(--muted-foreground)';
 }
 
-function Row({ label, value, color }: { label: string; value: string; color?: string }) {
+function Row({ label, value, color, mono = true }: { label: string; value: string; color?: string; mono?: boolean }) {
   return (
-    <div className="flex gap-3 font-mono text-[11px]" style={{ letterSpacing: '0.04em' }}>
-      <span style={{ color: 'var(--muted-foreground)', minWidth: 160, flexShrink: 0 }}>{label}</span>
-      <span style={{ color: color ?? 'var(--muted-foreground)', wordBreak: 'break-all' }}>{value}</span>
+    <div className="flex gap-3 text-[11px]" style={{ letterSpacing: '0.04em', fontFamily: mono ? 'monospace' : undefined }}>
+      <span style={{ color: 'var(--muted-foreground)', minWidth: 200, flexShrink: 0 }}>{label}</span>
+      <span style={{ color: color ?? 'var(--muted-foreground)', wordBreak: 'break-all', whiteSpace: 'pre-wrap' }}>{value}</span>
     </div>
   );
 }
 
-function FnCard({ report }: { report: FnReport }) {
-  const borderColor = !report.exists
-    ? 'var(--border)'
-    : report.calls.some(c => c.status === 'ok' && c.value !== 'null' && c.value !== 'undefined')
-      ? '#ff610a'
-      : report.calls.some(c => c.status === 'timeout')
-        ? '#f87171'
-        : 'var(--border)';
-
+function SectionHeader({ text }: { text: string }) {
   return (
-    <div style={{ borderLeft: `2px solid ${borderColor}`, paddingLeft: 16 }}>
-      <div className="font-mono font-bold mb-2 flex items-center gap-3" style={{ fontSize: 13 }}>
-        <span style={{ color: report.exists ? '#ff610a' : 'var(--muted-foreground)' }}>
-          window.{report.name}
-        </span>
-        <span className="font-normal text-[11px]" style={{ color: 'var(--muted-foreground)' }}>
-          {!report.exists ? 'NOT PRESENT' : `type: ${report.type}`}
-          {!report.done && report.exists && ' — probing...'}
-        </span>
-      </div>
-
-      {report.calls.map((c, i) => (
-        <Row
-          key={i}
-          label={`call(${c.label})`}
-          value={`[${c.status.toUpperCase()}] ${c.value}`}
-          color={statusColor(c.status)}
-        />
-      ))}
+    <div className="font-mono text-[11px] mt-8 mb-3 pt-6" style={{ color: 'var(--muted-foreground)', letterSpacing: '0.06em', borderTop: '1px solid var(--border)' }}>
+      {text}
     </div>
   );
 }
 
 export function DebugPage() {
-  const [reports, setReports] = useState<FnReport[]>(() =>
-    IGB_FUNCTIONS.map(name => ({ name, exists: false, type: 'unknown', calls: [], done: false })),
-  );
-  const [eveGlobals, setEveGlobals] = useState<Record<string, string>>({});
+  const [rpcResults, setRpcResults] = useState<Result[]>([]);
+  const [rpcDone, setRpcDone] = useState(false);
+  const [walletChain, setWalletChain] = useState<string>('reading...');
+  const [ccpPythonKeys, setCcpPythonKeys] = useState<string[]>([]);
+  const [otherGlobals, setOtherGlobals] = useState<Record<string, string>>({});
 
-  // Probe each function sequentially so a hang in one doesn't block the render of others.
   useEffect(() => {
-    // Scan window for other EVE/CCP globals immediately (sync)
+    const w = window as Record<string, unknown>;
+
+    // --- Sync reads (instant) ---
+
+    // WALLET_API_CHAIN — probably a string constant
+    try {
+      setWalletChain(JSON.stringify(w.WALLET_API_CHAIN) ?? 'undefined');
+    } catch {
+      setWalletChain('error reading');
+    }
+
+    // ccpPython — enumerate its keys/methods since it's an object
+    try {
+      const keys = enumerateObject(w.ccpPython);
+      setCcpPythonKeys(keys);
+    } catch (e) {
+      setCcpPythonKeys([`error: ${(e as Error).message}`]);
+    }
+
+    // All EVE/CCP globals on window
     const globals: Record<string, string> = {};
     try {
-      for (const key of Object.keys(window)) {
-        if (/eve|ccp|igb|frontier|rpc|wallet|python/i.test(key)) {
-          globals[key] = typeof (window as Record<string, unknown>)[key];
+      for (const key of Object.keys(w)) {
+        if (/eve|ccp|igb|frontier|rpc|wallet|python|capture|release/i.test(key)) {
+          globals[key] = typeof w[key];
         }
       }
     } catch { /* ignore */ }
-    setEveGlobals(globals);
+    setOtherGlobals(globals);
 
-    // Probe functions one at a time
+    // --- Async: JSON-RPC method probe ---
     (async () => {
-      for (const name of IGB_FUNCTIONS) {
-        const fn = (window as Record<string, unknown>)[name];
-        const exists = fn !== undefined;
-        const type = typeof fn;
-
-        // Update card to show it's being probed
-        setReports(prev => prev.map(r => r.name === name ? { ...r, exists, type } : r));
-
-        const calls: CallResult[] = [];
-
-        if (typeof fn === 'function') {
-          for (const attempt of CALL_ATTEMPTS) {
-            const result = await probeCall(fn as (...a: unknown[]) => unknown, attempt);
-            calls.push(result);
-
-            // Update card incrementally after each call
-            setReports(prev => prev.map(r => r.name === name ? { ...r, calls: [...calls] } : r));
-
-            // If we got a real value back, stop trying more arg patterns
-            if (result.status === 'ok' && result.value !== 'null' && result.value !== 'undefined') break;
-          }
-        }
-
-        // Mark this function as fully done
-        setReports(prev => prev.map(r => r.name === name ? { ...r, calls, done: true } : r));
+      for (const method of RPC_METHODS) {
+        const result = await rpcCall(method);
+        setRpcResults(prev => [...prev, result]);
+        // If we get a real non-error response, stop — we found something
+        if (result.status === 'ok' && !result.value.includes('"error"')) break;
       }
+      setRpcDone(true);
     })();
   }, []);
 
-  const allDone = reports.every(r => r.done || !r.exists);
-
   return (
     <div className="dark min-h-screen" style={{ background: 'var(--background)', color: 'var(--foreground)' }}>
-      <div className="mx-auto px-6 py-10" style={{ maxWidth: 860 }}>
+      <div className="mx-auto px-6 py-10" style={{ maxWidth: 900 }}>
 
-        <div className="mb-8" style={{ borderBottom: '1px solid var(--border)', paddingBottom: 20 }}>
+        {/* Header */}
+        <div className="mb-6" style={{ borderBottom: '1px solid var(--border)', paddingBottom: 20 }}>
           <div className="font-mono text-[11px] mb-1" style={{ color: 'var(--muted-foreground)', letterSpacing: '0.06em' }}>
-            // igb bridge function probe
+            // igb bridge probe — v2
           </div>
           <h1 className="font-heading text-xl font-bold text-white" style={{ letterSpacing: '0.08em' }}>
             EVE FRONTIER <span style={{ color: '#ff610a' }}>DEBUG</span>
           </h1>
-          <div className="font-mono text-[11px] mt-1" style={{ color: 'var(--muted-foreground)', letterSpacing: '0.04em' }}>
-            url: <span style={{ color: '#ff610a' }}>{window.location.href}</span>
-          </div>
-          <div className="font-mono text-[11px] mt-0.5" style={{ color: 'var(--muted-foreground)', letterSpacing: '0.04em', opacity: 0.5 }}>
-            {allDone ? '// probe complete' : `// probing — each call times out after ${CALL_TIMEOUT_MS / 1000}s`}
+          <div className="font-mono text-[11px] mt-1" style={{ color: 'var(--muted-foreground)', opacity: 0.6 }}>
+            url: {window.location.href}
           </div>
         </div>
 
-        {/* IGB function probe — one card per function, updates live */}
-        <section className="mb-8 flex flex-col gap-6">
-          {reports.map(r => <FnCard key={r.name} report={r} />)}
-        </section>
+        {/* WALLET_API_CHAIN */}
+        <SectionHeader text="// WALLET_API_CHAIN" />
+        <Row label="value" value={walletChain} color="#ff610a" />
 
-        {/* Other EVE-related globals */}
-        <section>
-          <div className="font-mono text-[11px] mb-3" style={{ color: 'var(--muted-foreground)', letterSpacing: '0.06em' }}>
-            // other eve/ccp/igb globals on window
-          </div>
-          {Object.keys(eveGlobals).length === 0 ? (
-            <div className="font-mono text-[11px]" style={{ color: 'var(--muted-foreground)', opacity: 0.4 }}>none found</div>
-          ) : (
-            <div className="flex flex-col gap-1">
-              {Object.entries(eveGlobals).map(([k, v]) => (
-                <Row key={k} label={k} value={v} color="#ff610a" />
-              ))}
-            </div>
-          )}
-        </section>
+        {/* ccpPython object keys */}
+        <SectionHeader text="// ccpPython — object keys / methods" />
+        {ccpPythonKeys.length === 0
+          ? <Row label="(none found)" value="" />
+          : ccpPythonKeys.map(k => {
+              const type = typeof (window as Record<string, unknown>).ccpPython === 'object'
+                ? typeof ((window as Record<string, Record<string, unknown>>).ccpPython ?? {})[k]
+                : '?';
+              return <Row key={k} label={k} value={type} color={type === 'function' ? '#ff610a' : 'var(--muted-foreground)'} />;
+            })
+        }
+
+        {/* eveFrontierRpcRequest — JSON-RPC method probe */}
+        <SectionHeader text={`// eveFrontierRpcRequest — JSON-RPC method probe ${rpcDone ? '(done)' : '(running...)'}`} />
+        {rpcResults.length === 0 && (
+          <Row label="waiting..." value="" />
+        )}
+        {rpcResults.map((r, i) => (
+          <Row key={i} label={`method: "${r.label}"`} value={`[${r.status.toUpperCase()}] ${r.value}`} color={statusColor(r.status)} />
+        ))}
+
+        {/* All EVE/CCP globals */}
+        <SectionHeader text="// all eve/ccp globals on window" />
+        {Object.entries(otherGlobals).map(([k, v]) => (
+          <Row key={k} label={k} value={v} color={v === 'function' ? '#ff610a' : v === 'object' ? '#a78bfa' : 'var(--muted-foreground)'} />
+        ))}
 
       </div>
     </div>
