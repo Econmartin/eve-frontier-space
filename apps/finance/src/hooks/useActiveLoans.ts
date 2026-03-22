@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
-import { useCurrentAccount, useCurrentClient } from '@mysten/dapp-kit-react';
+import { useCurrentAccount } from '@mysten/dapp-kit-react';
 import { PACKAGE_ID } from '../constants';
+import { suiRpcClient } from '../suiRpcClient';
 
 export interface ActiveLoanObject {
   objectId:  string;
@@ -10,12 +11,11 @@ export interface ActiveLoanObject {
 
 export function useActiveLoans(): { loans: ActiveLoanObject[]; isLoading: boolean } {
   const account = useCurrentAccount();
-  const client = useCurrentClient();
   const ACTIVE_LOAN_TYPE = `${PACKAGE_ID}::bank::ActiveLoan`;
 
   const { data, isPending } = useQuery({
     queryKey: ['getOwnedObjects', account?.address, ACTIVE_LOAN_TYPE],
-    queryFn: () => client.getOwnedObjects({
+    queryFn: () => suiRpcClient.getOwnedObjects({
       owner:   account!.address,
       filter:  { StructType: ACTIVE_LOAN_TYPE },
       options: { showContent: true },

@@ -2,18 +2,23 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createDAppKit, DAppKitProvider } from '@mysten/dapp-kit-react';
-import { SuiJsonRpcClient, getJsonRpcFullnodeUrl } from '@mysten/sui/jsonRpc';
+import { SuiGrpcClient } from '@mysten/sui/grpc';
 import { VaultProvider } from '@evefrontier/dapp-kit';
 import App from './App';
 import { NetworkProvider } from './contexts/NetworkContext';
 import './index.css';
 
+/**
+ * gRPC client for the dAppKit wallet/transaction layer.
+ * Transaction building in @mysten/sui v2 requires gRPC.
+ * Data queries use suiRpcClient (JSON-RPC) in hooks.
+ */
 const dAppKit = createDAppKit({
   networks: ['testnet'],
   createClient() {
-    return new SuiJsonRpcClient({
+    return new SuiGrpcClient({
       network: 'testnet',
-      url: import.meta.env.VITE_RPC_URL ?? getJsonRpcFullnodeUrl('testnet'),
+      baseUrl: 'https://fullnode.testnet.sui.io:443',
     });
   },
 });
