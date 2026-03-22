@@ -9,9 +9,11 @@
     "dev": "turbo run dev",
     "dev:move": "npm run dev -w @mysite/move",
     "dev:home": "npm run dev -w @mysite/home",
+    "dev:finance": "npm run dev -w @mysite/finance",
     "build": "turbo run build && node scripts/combine-dist.mjs",
     "build:move": "npm run build -w @mysite/move",
     "build:home": "npm run build -w @mysite/home",
+    "build:finance": "npm run build -w @mysite/finance",
     "typecheck": "turbo run typecheck",
     "resize-images": "node packages/assets/resize.mjs"
   },

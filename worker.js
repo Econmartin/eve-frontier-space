@@ -6,10 +6,10 @@ export default {
     const response = await env.ASSETS.fetch(request);
     if (response.status !== 404) return response;
 
-    // SPA fallback: /move/* → move app, everything else → home app
-    const fallback = url.pathname.startsWith('/move')
-      ? '/move/index.html'
-      : '/index.html';
+    // SPA fallback: route to correct app index
+    let fallback = '/index.html';
+    if (url.pathname.startsWith('/move'))    fallback = '/move/index.html';
+    if (url.pathname.startsWith('/finance')) fallback = '/finance/index.html';
 
     return env.ASSETS.fetch(new URL(fallback, url));
   },
