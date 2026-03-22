@@ -1,0 +1,95 @@
+import { useState } from 'react';
+import { ConnectButton, useCurrentAccount } from '@mysten/dapp-kit';
+import { BankDashboard } from './components/BankDashboard';
+import { LoanDashboard } from './components/LoanDashboard';
+import { LotteryDashboard } from './components/LotteryDashboard';
+import { AdminPanel } from './components/AdminPanel';
+import { useNetwork } from './contexts/NetworkContext';
+import { useAdminCap } from './hooks/useAdminCap';
+import { NETWORKS, type NetworkId } from './constants';
+
+type Tab = 'bank' | 'loans' | 'lottery' | 'admin';
+
+const USER_TABS: { id: Tab; label: string }[] = [
+  { id: 'bank',    label: 'DEPOSIT / WITHDRAW' },
+  { id: 'loans',   label: 'BORROW / REPAY' },
+  { id: 'lottery', label: 'LOTTERY' },
+];
+
+const NETWORK_IDS = Object.keys(NETWORKS) as NetworkId[];
+
+export default function App() {
+  const account = useCurrentAccount();
+  const [activeTab, setActiveTab] = useState<Tab>('bank');
+  const { networkId, setNetworkId } = useNetwork();
+  const { capId } = useAdminCap();
+
+  const tabs = capId
+    ? [...USER_TABS, { id: 'admin' as Tab, label: 'ADMIN' }]
+    : USER_TABS;
+
+  return (
+    <div className="min-h-screen bg-eve-bg text-white font-mono">
+      <header className="border-b border-eve-border px-6 py-4 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <span className="text-eve-gold font-bold text-xl tracking-widest">
+            EVE FRONTIER BANK
+          </span>
+          <div className="flex items-center bg-eve-surface border border-eve-border rounded overflow-hidden text-xs">
+            {NETWORK_IDS.map((id) => (
+              <button
+                key={id}
+                onClick={() => setNetworkId(id)}
+                className={`px-3 py-1 font-bold tracking-wider transition-colors ${
+                  networkId === id
+                    ? 'bg-eve-gold text-eve-bg'
+                    : 'text-eve-muted hover:text-white'
+                }`}
+              >
+                {NETWORKS[id].label.toUpperCase()}
+              </button>
+            ))}
+          </div>
+        </div>
+        <ConnectButton />
+      </header>
+
+      <main className="max-w-2xl mx-auto px-4 py-8 space-y-6">
+        {!account && (
+          <div className="text-center py-16">
+            <p className="text-eve-muted text-sm">
+              Connect your EVE Vault wallet to continue.
+            </p>
+          </div>
+        )}
+
+        {account && (
+          <>
+            <nav className="flex gap-1 bg-eve-surface border border-eve-border rounded-lg p-1">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex-1 py-2 px-3 rounded text-xs font-bold tracking-wider transition-colors ${
+                    activeTab === tab.id
+                      ? tab.id === 'admin'
+                        ? 'bg-eve-gold/20 text-eve-gold border border-eve-gold/40'
+                        : 'bg-eve-gold text-eve-bg'
+                      : 'text-eve-muted hover:text-white'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </nav>
+
+            {activeTab === 'bank'    && <BankDashboard />}
+            {activeTab === 'loans'   && <LoanDashboard />}
+            {activeTab === 'lottery' && <LotteryDashboard />}
+            {activeTab === 'admin'   && capId && <AdminPanel capId={capId} />}
+          </>
+        )}
+      </main>
+    </div>
+  );
+}
