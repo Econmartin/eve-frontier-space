@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useCurrentAccount, useDAppKit } from '@mysten/dapp-kit-react';
 import { buildDepositTx, buildWithdrawTx } from '../transactions';
 import { useEveBalance } from '../hooks/useEveBalance';
@@ -9,6 +10,7 @@ import { EVE_SCALE } from '../constants';
 export function BankDashboard() {
   const account = useCurrentAccount();
   const dAppKit = useDAppKit();
+  const queryClient = useQueryClient();
   const { network } = useNetwork();
 
   const { formattedBalance, largestCoinId, isLoading: balanceLoading } = useEveBalance();
@@ -26,6 +28,7 @@ export function BankDashboard() {
     try {
       const amountMist = BigInt(Math.floor(Number(depositAmount))) * EVE_SCALE;
       await dAppKit.signAndExecuteTransaction({ transaction: buildDepositTx(largestCoinId, amountMist, overrides) });
+      await queryClient.invalidateQueries();
       setStatus(`Deposited ${depositAmount} EVE — BankShare minted.`);
       setDepositAmount('');
     } catch (e) {
@@ -38,6 +41,7 @@ export function BankDashboard() {
     setStatus(null); setError(null);
     try {
       await dAppKit.signAndExecuteTransaction({ transaction: buildWithdrawTx(shareId, overrides) });
+      await queryClient.invalidateQueries();
       setStatus('Withdrawal complete — EVE returned to wallet.');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Withdrawal failed');
