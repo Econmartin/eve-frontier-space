@@ -20,12 +20,23 @@ const WALLET_METHODS = [
   'getItemId',
 ];
 
-// eveFrontierRpcRequest — long-shot attempts, may only work from on-chain registered dapp
+// eveFrontierRpcRequest — introspection attempts first, then guesses
 const RPC_METHODS = [
-  'getSmartAssembly', 'getAssemblyContext', 'getDappContext',
-  'getRegisteredAssembly', 'getLinkedAssembly',
-  'getCurrentCharacter', 'getOwner',
-  'sui:getAddress',
+  // JSON-RPC introspection (standard + Python jsonrpcserver / flask-jsonrpc / jsonrpclib)
+  'system.listMethods',
+  'system.methodHelp',
+  'system.methodSignature',
+  'system.describe',
+  'system.getCapabilities',
+  'rpc.discover',           // JSON-RPC 2.0 service discovery spec
+  '__all__',                // Python introspection
+  'listMethods',
+  'describe',
+  'help',
+  'methods',
+  'introspect',
+  // OpenRPC service discovery
+  'rpc.discover',
 ];
 
 type Status = 'ok' | 'error' | 'timeout';
