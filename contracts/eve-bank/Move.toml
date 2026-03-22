@@ -1,0 +1,6 @@
+[package]
+name = "eve_bank"
+edition = "2024.beta"
+
+[addresses]
+eve_bank = "0x0"
