@@ -40,12 +40,14 @@ export default function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ FixedAmountRequest: { recipient: account.address } }),
       });
-      if (!res.ok) throw new Error(`Faucet error ${res.status}`);
-      setFaucetMsg('1 SUI sent — check back in a moment.');
-      setTimeout(() => { refetchGas(); setFaucetMsg(null); }, 4000);
+      const body = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(`Faucet ${res.status}: ${body?.error ?? res.statusText}`);
+      if (body?.error) throw new Error(body.error);
+      setFaucetMsg('✓ SUI incoming — allow ~10s');
+      setTimeout(() => { refetchGas(); setFaucetMsg(null); }, 10000);
     } catch (e) {
-      setFaucetMsg(e instanceof Error ? e.message : 'Faucet request failed');
-      setTimeout(() => setFaucetMsg(null), 4000);
+      setFaucetMsg(`⚠ ${e instanceof Error ? e.message : 'Faucet request failed'}`);
+      setTimeout(() => setFaucetMsg(null), 8000);
     } finally {
       setFaucetLoading(false);
     }
@@ -83,10 +85,9 @@ export default function App() {
             <button
               onClick={requestGas}
               disabled={faucetLoading}
-              title={faucetMsg ?? 'SUI gas low — request testnet tokens'}
               className="px-3 py-2 text-xs font-bold font-mono tracking-wider border rounded transition-colors border-eve-red text-eve-red hover:bg-eve-red hover:text-white disabled:opacity-50"
             >
-              {faucetMsg ? '✓' : faucetLoading ? '…' : '⛽ GAS'}
+              {faucetLoading ? '…' : '⛽ GAS'}
             </button>
           )}
           <button
@@ -97,6 +98,12 @@ export default function App() {
           </button>
         </div>
       </header>
+
+      {faucetMsg && (
+        <div className={`px-6 py-2 text-xs font-mono text-center ${faucetMsg.startsWith('⚠') ? 'bg-eve-red/10 text-eve-red' : 'bg-eve-green/10 text-eve-green'}`}>
+          {faucetMsg}
+        </div>
+      )}
 
       <main className="max-w-2xl mx-auto px-4 py-8 space-y-6">
         {!account && (
