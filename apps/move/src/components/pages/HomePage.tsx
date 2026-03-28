@@ -1,139 +1,249 @@
 import { Link } from 'react-router';
-import { COURSE } from '../../../content/curriculum';
-import type { Course } from '@/lib/types';
-
-const course = COURSE as Course;
+import { LandingLayout } from '@eve-frontier-space/ui';
+import { COURSE, COURSE_1_MODULE_COUNT } from '../../../content/curriculum';
+import { HOME_APP_HREF } from '@/config';
+import { PageWrapper } from '@/components/templates/PageWrapper';
+import { Hero } from '@/components/organisms/Hero';
+import { HomeFooter } from '@/components/organisms/Footer';
+import { useCompleters } from '@/hooks/useCompleters';
+import { abbreviateAddress } from '@evefrontier/dapp-kit';
 
 export function HomePage() {
   return (
-    <div className="flex-1 overflow-y-auto">
-      {/* Hero */}
-      <section className="relative px-6 py-24 flex flex-col items-center text-center max-w-4xl mx-auto">
-        <div className="absolute inset-0 pointer-events-none overflow-hidden">
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-cyan/[0.04] rounded-full blur-[120px]" />
-        </div>
-
-        <span className="font-mono text-[11px] tracking-[0.15em] uppercase text-cyan-dim mb-4 relative">
-          Interactive Course
-        </span>
-        <h1 className="text-5xl md:text-6xl font-bold text-text leading-tight mb-6 relative">
-          Learn{' '}
-          <span className="text-cyan">Move</span>{' '}
-          on Sui
-        </h1>
-        <p className="text-lg text-[#94a3b8] max-w-2xl leading-relaxed mb-10 relative">
-          Go from zero to writing real Sui smart contracts. An interactive,
-          browser-based course with a real Move compiler — no setup required.
-        </p>
-
-        <div className="flex gap-4 relative">
+    <PageWrapper>
+      <LandingLayout
+        homeHref={HOME_APP_HREF}
+        headerRight={
           <Link
             to="/learn"
             viewTransition
-            className="font-mono text-sm font-semibold tracking-wider px-8 py-3 rounded-lg bg-cyan/15 border border-cyan-dim text-cyan hover:bg-cyan/25 hover:border-cyan hover:shadow-[0_0_24px_rgba(0,212,255,0.2)] transition-all no-underline"
+            className="rounded-lg px-5 py-2 text-sm font-semibold text-black transition-colors bg-[#FAFAE5] hover:bg-[#e8e8d0] no-underline"
           >
-            Start Learning →
+            Start Learning
           </Link>
-        </div>
-      </section>
-
-      {/* Features */}
-      <section className="px-6 py-16 max-w-5xl mx-auto">
-        <h2 className="text-center text-2xl font-bold text-text mb-12">
-          Everything you need to learn Move
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <FeatureCard
-            icon="⚡"
-            title="Real Compiler"
-            description="Your code is compiled by the actual Sui Move compiler (WASM). No simulators, no faking it."
-          />
-          <FeatureCard
-            icon="🎯"
-            title="Interactive Tasks"
-            description="Write real Move code in every lesson. Instant feedback tells you exactly what to fix."
-          />
-          <FeatureCard
-            icon="📊"
-            title="Track Progress"
-            description="Your progress is saved automatically. Pick up right where you left off."
-          />
-        </div>
-      </section>
-
-      {/* Course Modules */}
-      <section className="px-6 py-16 max-w-5xl mx-auto">
-        <h2 className="text-center text-2xl font-bold text-text mb-3">
-          Course Modules
-        </h2>
-        <p className="text-center text-sm text-text-muted mb-12">
-          {course.modules.length} modules · {course.modules.reduce((s, m) => s + m.lessons.length, 0)} lessons
-        </p>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {course.modules.map((mod, idx) => (
-            <Link
-              key={mod.id}
-              to={`/learn/${mod.id}/${mod.lessons[0].id}/0`}
-              viewTransition
-              className="group bg-panel border border-border rounded-lg p-5 hover:border-border-glow hover:bg-panel-raised transition-all no-underline"
-            >
-              <div className="flex items-center gap-3 mb-3">
-                <span className="text-2xl">{mod.icon}</span>
-                <span className="font-mono text-[10px] text-text-dim tracking-wider">
-                  MODULE {idx + 1}
-                </span>
-              </div>
-              <h3 className="text-sm font-semibold text-text mb-1 group-hover:text-cyan transition-colors">
-                {mod.title}
-              </h3>
-              <p className="text-xs text-text-muted">
-                {mod.lessons.length} lesson{mod.lessons.length !== 1 ? 's' : ''}
-              </p>
-            </Link>
-          ))}
-        </div>
-      </section>
-
-      {/* Footer CTA */}
-      <section className="px-6 py-20 flex flex-col items-center text-center">
-        <h2 className="text-2xl font-bold text-text mb-4">Ready to start?</h2>
-        <p className="text-sm text-text-muted mb-8 max-w-md">
-          No setup, no downloads. Just open your browser and start writing Move.
-        </p>
-        <Link
-          to="/learn"
-          viewTransition
-          className="font-mono text-sm font-semibold tracking-wider px-8 py-3 rounded-lg bg-green/10 border border-green/50 text-green hover:bg-green/20 hover:border-green hover:shadow-[0_0_24px_rgba(34,197,94,0.2)] transition-all no-underline"
-        >
-          Begin the Course →
-        </Link>
-      </section>
-
-      {/* Minimal footer */}
-      <footer className="px-6 py-8 border-t border-border text-center">
-        <p className="text-xs text-text-dim">
-          Move on Sui — Interactive Learning Platform
-        </p>
-      </footer>
-    </div>
+        }
+        footer={<HomeFooter />}
+      >
+        <main>
+          <Hero />
+          <div className="px-4 sm:px-6 lg:px-8">
+            <CoursesSection />
+            <FeaturesSection />
+            <CompletersSection />
+          </div>
+        </main>
+      </LandingLayout>
+    </PageWrapper>
   );
 }
 
-function FeatureCard({
-  icon,
-  title,
-  description,
-}: {
-  icon: string;
-  title: string;
-  description: string;
-}) {
+// ---------------------------------------------------------------------------
+// Courses section (two-course split)
+// ---------------------------------------------------------------------------
+
+const COURSES_META = [
+  {
+    num: '01',
+    title: 'Learn Move',
+    description: 'Move language fundamentals — types, structs, abilities, generics, testing, and best practices.',
+    modules: COURSE.modules.slice(0, COURSE_1_MODULE_COUNT),
+    startModule: COURSE.modules[0],
+    globalOffset: 0,
+  },
+  {
+    num: '02',
+    title: 'Learn Move on Sui',
+    description: 'Move on Sui — objects, entry functions, design patterns, tokens, dynamic storage, and production.',
+    modules: COURSE.modules.slice(COURSE_1_MODULE_COUNT),
+    startModule: COURSE.modules[COURSE_1_MODULE_COUNT],
+    globalOffset: COURSE_1_MODULE_COUNT,
+  },
+];
+
+function CoursesSection() {
   return (
-    <div className="bg-panel border border-border rounded-lg p-6 flex flex-col gap-3">
-      <span className="text-3xl">{icon}</span>
-      <h3 className="text-sm font-semibold text-text">{title}</h3>
-      <p className="text-xs text-text-muted leading-relaxed">{description}</p>
-    </div>
+    <section className="py-20 max-w-5xl mx-auto">
+      {/* Course overview cards */}
+      <h2 className="text-2xl font-bold text-text font-heading mb-2">Two Courses</h2>
+      <p className="text-sm text-text-muted mb-10">
+        Learn Move fundamentals first, then apply it on Sui — take a break between them or go straight through.
+      </p>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-16">
+        {COURSES_META.map((course) => {
+          const totalLessons = course.modules.reduce((s, m) => s + m.lessons.length, 0);
+          return (
+            <Link
+              key={course.num}
+              to={`/learn/${course.startModule.id}/${course.startModule.lessons[0].id}/0`}
+              viewTransition
+              className="group bg-panel border border-border rounded-xl p-6 hover:border-[var(--color-cyan-dim)] hover:bg-panel-raised transition-all no-underline"
+            >
+              <span className="font-mono text-[10px] tracking-[0.2em] text-text-dim uppercase">
+                Course {course.num}
+              </span>
+              <h3 className="font-heading text-lg font-bold text-text mt-2 mb-2 group-hover:text-[var(--color-cyan)] transition-colors">
+                {course.title}
+              </h3>
+              <p className="text-xs text-text-muted leading-relaxed mb-4">
+                {course.description}
+              </p>
+              <p className="font-mono text-[10px] text-text-dim">
+                {course.modules.length} modules · {totalLessons} lessons
+              </p>
+            </Link>
+          );
+        })}
+      </div>
+
+      {/* Module grids, one per course */}
+      {COURSES_META.map((course, cIdx) => (
+        <div key={course.num} className={cIdx > 0 ? 'mt-12' : ''}>
+          <div className="flex items-center gap-4 mb-6">
+            <span className="font-mono text-[10px] tracking-[0.15em] text-cyan uppercase whitespace-nowrap">
+              Course {course.num}
+            </span>
+            <span className="font-mono text-[10px] text-text-muted whitespace-nowrap">{course.title}</span>
+            <div className="flex-1 h-px bg-border" />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {course.modules.map((mod, idx) => (
+              <Link
+                key={mod.id}
+                to={`/learn/${mod.id}/${mod.lessons[0].id}/0`}
+                viewTransition
+                className="group bg-panel border border-border rounded-xl p-5 hover:border-[var(--color-cyan-dim)] hover:bg-panel-raised transition-all no-underline"
+              >
+                <div className="flex items-center gap-3 mb-3">
+                  <span
+                    className="w-5 h-5 shrink-0 inline-block"
+                    style={{
+                      maskImage: `url(${import.meta.env.BASE_URL + mod.icon})`,
+                      maskSize: 'contain',
+                      maskRepeat: 'no-repeat',
+                      maskPosition: 'center',
+                      backgroundColor: 'var(--color-icon-dim)',
+                    }}
+                  />
+                  <span className="font-mono text-[10px] text-text-dim tracking-wider">
+                    MODULE {String(course.globalOffset + idx + 1).padStart(2, '0')}
+                  </span>
+                </div>
+                <h3 className="text-sm font-semibold text-text mb-1 group-hover:text-[var(--color-cyan)] transition-colors">
+                  {mod.title}
+                </h3>
+                <p className="text-xs text-text-muted">
+                  {mod.lessons.length} lesson{mod.lessons.length !== 1 ? 's' : ''}
+                </p>
+              </Link>
+            ))}
+          </div>
+        </div>
+      ))}
+    </section>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Features section
+// ---------------------------------------------------------------------------
+
+const FEATURES = [
+  {
+    icon: '⚡',
+    title: 'Real Compiler',
+    description:
+      'Your code runs through the actual Sui Move compiler (WASM). No simulators, no shortcuts.',
+  },
+  {
+    icon: '🎯',
+    title: 'Interactive Tasks',
+    description:
+      'Write real Move in every lesson. Instant feedback tells you exactly what to fix.',
+  },
+  {
+    icon: '📊',
+    title: 'Progress Saved',
+    description: 'Pick up right where you left off. Progress is stored locally in your browser.',
+  },
+] as const;
+
+function FeaturesSection() {
+  return (
+    <section className="py-16 max-w-5xl mx-auto border-t border-border">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {FEATURES.map((f) => (
+          <div key={f.title} className="flex flex-col gap-3 p-6 rounded-xl bg-panel border border-border">
+            <span className="text-3xl">{f.icon}</span>
+            <h3 className="text-sm font-semibold text-text">{f.title}</h3>
+            <p className="text-xs text-text-muted leading-relaxed">{f.description}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Completers section — on-chain graduates inscribed on Stillness
+// ---------------------------------------------------------------------------
+
+function CompletersSection() {
+  const { data: completers, isLoading } = useCompleters();
+
+  if (isLoading || !completers?.length) return null;
+
+  return (
+    <section className="py-16 max-w-5xl mx-auto border-t border-border">
+      <div className="flex items-baseline gap-4 mb-2">
+        <h2 className="text-2xl font-bold text-text font-heading">Inscribed on Stillness</h2>
+        <span className="font-mono text-[10px] text-cyan tracking-[0.15em] uppercase">
+          {completers.length} graduate{completers.length !== 1 ? 's' : ''}
+        </span>
+      </div>
+      <p className="text-sm text-text-muted mb-10 max-w-xl">
+        Complete a course and your name is written into the Stillness chain permanently. A living record of everyone who has learned Move for EVE Frontier.
+      </p>
+
+      <div className="flex flex-col gap-1.5">
+        {completers.map((c, i) => (
+          <div
+            key={c.address}
+            className="flex items-center gap-4 px-4 py-3 rounded-lg bg-panel border border-border hover:border-[var(--color-border-glow)] transition-colors"
+          >
+            <span className="font-mono text-[10px] text-text-dim w-5 shrink-0 text-right">
+              {String(i + 1).padStart(2, '0')}
+            </span>
+            <span className="flex-1 text-sm font-semibold text-text truncate">
+              {c.name}
+            </span>
+            <div className="flex gap-1.5 shrink-0">
+              {c.courses.sort().map(n => (
+                <span
+                  key={n}
+                  className={`font-mono text-[9px] tracking-wider px-2 py-0.5 rounded-full border whitespace-nowrap ${
+                    n === 1
+                      ? 'bg-orange/8 text-orange border-orange/25'
+                      : 'bg-cyan-glow text-cyan border-cyan/25'
+                  }`}
+                >
+                  Course {n}
+                </span>
+              ))}
+            </div>
+            <span className="font-mono text-[10px] text-text-dim hidden sm:block shrink-0">
+              {abbreviateAddress(c.address)}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      <p className="mt-6 font-mono text-[10px] text-text-dim">
+        Complete a course at{' '}
+        <Link to="/learn" className="text-cyan hover:text-cyan-dim transition-colors no-underline">
+          /learn
+        </Link>{' '}
+        to add your name.
+      </p>
+    </section>
   );
 }
