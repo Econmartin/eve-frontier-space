@@ -1,0 +1,6 @@
+[package]
+name = "course_registry"
+edition = "2024.beta"
+
+[addresses]
+course_registry = "0x0"
