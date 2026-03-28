@@ -58,7 +58,7 @@ export default function App() {
     : USER_TABS;
 
   return (
-    <div className="min-h-screen bg-eve-bg text-white font-mono">
+    <div className="min-h-screen bg-eve-bg text-white font-mono mx-auto max-w-[1920px]">
       <header className="border-b border-eve-border px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <span className="text-eve-gold font-bold text-xl tracking-widest">

@@ -80,7 +80,7 @@ export function CodeEditor({ value, onChange, onRun }: CodeEditorProps) {
   }, [value]);
 
   return (
-    <div className="flex flex-col flex-1 min-h-0 border-b border-border overflow-hidden">
+    <div id="tour-code-editor" className="flex flex-col flex-1 min-h-0 border-b border-border overflow-hidden">
       <div className="font-mono text-xs font-semibold tracking-[0.09em] uppercase text-text-muted px-3.5 py-1.5 bg-panel border-b border-border shrink-0">
         EDITOR — Move
       </div>

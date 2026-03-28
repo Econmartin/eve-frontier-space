@@ -34,10 +34,17 @@ export function HomeFooter() {
               Play EVE Frontier
             </a>
           </div>
-          <p className="text-xs text-slate-500">
-            Built by pilots, not CCP. Not affiliated with or endorsed by CCP.
-            EVE Frontier and all related trademarks are the property of CCP.
-          </p>
+
+          <div className="text-left text-xs text-slate-500 mb-6">
+            Built by pilots, not CCP.
+          </div>
+
+          <div className="text-slate-500 text-xs text-left max-w-2xl leading-relaxed border-t border-slate-800 pt-6 space-y-2">
+            <p>
+              This site is community-built and is not affiliated with or endorsed by CCP. EVE Frontier and all related
+              trademarks and IP are the property of CCP and EVE Frontier.
+            </p>
+          </div>
         </div>
       </div>
     </footer>
