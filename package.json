@@ -1,19 +1,20 @@
 {
-  "name": "mysite",
+  "name": "eve-frontier-space",
   "version": "1.0.1",
   "private": true,
   "workspaces": [
-    "apps/*"
+    "apps/*",
+    "packages/*"
   ],
   "scripts": {
     "dev": "turbo run dev",
-    "dev:move": "npm run dev -w @mysite/move",
-    "dev:home": "npm run dev -w @mysite/home",
-    "dev:finance": "npm run dev -w @mysite/finance",
+    "dev:move": "npm run dev -w @eve-frontier-space/move",
+    "dev:home": "npm run dev -w @eve-frontier-space/home",
+    "dev:finance": "npm run dev -w @eve-frontier-space/finance",
     "build": "turbo run build && node scripts/combine-dist.mjs",
-    "build:move": "npm run build -w @mysite/move",
-    "build:home": "npm run build -w @mysite/home",
-    "build:finance": "npm run build -w @mysite/finance",
+    "build:move": "npm run build -w @eve-frontier-space/move",
+    "build:home": "npm run build -w @eve-frontier-space/home",
+    "build:finance": "npm run build -w @eve-frontier-space/finance",
     "typecheck": "turbo run typecheck",
     "resize-images": "node packages/assets/resize.mjs"
   },

@@ -1,13 +1,20 @@
-# My Site — Monorepo
+# EVE Frontier Space — Monorepo
 
-Monorepo for mysite.com and related projects.
+Community tools and educational resources for EVE Frontier on Sui.
 
 ## Structure
 
 ```
 apps/
-  home/     # mysite.com/ — landing page
-  move/     # mysite.com/move — Move on Sui interactive course
+  home/      # Landing page and app directory  (served at /)
+  move/      # Interactive Move on Sui course   (served at /move)
+  finance/   # DeFi dashboard for eve-bank     (served at /finance)
+
+contracts/
+  eve-bank/  # Generic Move smart contract (bank · loans · lottery)
+
+packages/
+  assets/    # Shared fonts and images used across all apps
 ```
 
 ## Development
@@ -16,12 +23,13 @@ apps/
 # Install dependencies (from root)
 npm install
 
-# Run all apps (home + move in parallel)
+# Run all apps in parallel
 npm run dev
 
 # Run a single app
-npm run dev:home    # Homepage at http://localhost:5173
-npm run dev:move    # Move course at http://localhost:5174 (or next port)
+npm run dev:home     # http://localhost:5173
+npm run dev:move     # http://localhost:5174
+npm run dev:finance  # http://localhost:5175
 ```
 
 ## Build
@@ -30,13 +38,31 @@ npm run dev:move    # Move course at http://localhost:5174 (or next port)
 npm run build
 ```
 
-Outputs:
-- `apps/home/dist` → deploy to `public_html`
-- `apps/move/dist` → deploy to `public_html/move`
+Builds all three apps and merges their output into `dist/` via `scripts/combine-dist.mjs`:
 
-## Deployment (DreamHost shared hosting)
+```
+dist/           ← home app    (serves /)
+dist/move/      ← move app    (serves /move/*)
+dist/finance/   ← finance app (serves /finance/*)
+```
 
-1. Build: `npm run build`
-2. Upload `apps/home/dist/*` to `public_html`
-3. Upload `apps/move/dist/*` to `public_html/move`
-4. Add `.htaccess` in `move` for SPA routing (see apps/move for details)
+## Deployment
+
+Deployed to **Cloudflare Pages** with a Workers script for SPA routing.
+
+```bash
+# Deploy (Cloudflare Wrangler)
+npx wrangler pages deploy dist/
+```
+
+`worker.js` handles SPA fallback routing: unknown paths under `/move/*` and `/finance/*` are served their respective `index.html`.
+
+## Smart Contract
+
+The `eve-bank` Move contract lives in `contracts/eve-bank/`. See [`contracts/eve-bank/README.md`](contracts/eve-bank/README.md) for deployment addresses and setup instructions.
+
+```bash
+# Run contract tests
+cd contracts/eve-bank
+sui move test
+```
