@@ -59,7 +59,27 @@ This is how \`coin::create_currency\` works — it requires an OTW to ensure onl
     {
       type: 'TASK',
       title: 'Fleet Pass with OTW',
-      content: `Create a module that uses a One-Time Witness to register a fleet — proving that registration can only happen once, at module publish time.`,
+      content: `Create a module that uses a One-Time Witness to register a fleet — proving that registration can only happen once, at module publish time.
+
+For example:
+
+\`\`\`move
+public struct GAME_TOKEN has drop {}
+
+public struct Ledger has key {
+    id: UID,
+    name: vector<u8>,
+}
+
+public fun register<T: drop>(_witness: T, name: vector<u8>, ctx: &mut TxContext): Ledger {
+    Ledger { id: object::new(ctx), name }
+}
+
+fun init(witness: GAME_TOKEN, ctx: &mut TxContext) {
+    let ledger = register(witness, b"Main Ledger", ctx);
+    transfer::transfer(ledger, ctx.sender());
+}
+\`\`\``,
       task: `Write a module \`frontier::fleet_pass\` with an OTW called \`FLEET_PASS\`:
 
 1. Define the OTW struct \`FLEET_PASS\` with \`drop\` ability only, no fields

@@ -184,7 +184,22 @@ frontier = "0xDEV"     # only used during testing
     {
       type: 'TASK',
       title: 'Mode-Gated Code',
-      content: `Write a \`#[test_only]\` helper function and use it in a test.`,
+      content: `Write a \`#[test_only]\` helper function and use it in a test.
+
+For example:
+
+\`\`\`move
+#[test_only]
+fun make_data(): MyStruct {
+    MyStruct { value: 42 }
+}
+
+#[test]
+fun test_with_helper() {
+    let d = make_data();
+    assert!(d.value == 42, 0);
+}
+\`\`\``,
       task: `1. Write a \`#[test_only]\` function \`make_test_fleet(): vector<u64>\` that returns \`vector[100, 80, 60]\`
 2. Write a \`#[test]\` function \`test_fleet_total\` that calls \`make_test_fleet()\`, sums the values in a loop, and asserts the sum is 240`,
       hint: `\`\`\`move

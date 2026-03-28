@@ -94,11 +94,28 @@ public struct ShipDocked has copy, drop {
     {
       type: 'TASK',
       title: 'Dock a Ship',
-      content: `Write a docking module that tracks docked ships and emits an event.`,
+      content: `Write a docking module that tracks docked ships and emits an event.
+
+For example:
+
+\`\`\`move
+public struct BayOpened has copy, drop {
+    bay_id: address,
+    opened_by: address,
+}
+
+public fun open_bay(station: &mut Station, opener: address) {
+    station.open_count = station.open_count + 1;
+    event::emit(BayOpened {
+        bay_id: object::uid_to_address(&station.id),
+        opened_by: opener,
+    });
+}
+\`\`\``,
       task: `1. Define a \`ShipDocked\` event struct with \`copy, drop\` abilities and fields: \`ship_id: address\`, \`station_id: address\`, \`timestamp: u64\`
 2. Complete the \`dock\` function:
    - Increment \`station.docked_count\`
-   - Emit a \`ShipDocked\` event using \`event::emit\` with the station's id (\`station.id.to_address()\`), the ship_id, and timestamp`,
+   - Emit a \`ShipDocked\` event using \`event::emit\` with the station's id (\`object::uid_to_address(&station.id)\`), the ship_id, and timestamp`,
       hint: `\`\`\`move
 public struct ShipDocked has copy, drop {
     ship_id: address,
@@ -110,7 +127,7 @@ public fun dock(station: &mut Station, ship_id: address, timestamp: u64) {
     station.docked_count = station.docked_count + 1;
     event::emit(ShipDocked {
         ship_id,
-        station_id: station.id.to_address(),
+        station_id: object::uid_to_address(&station.id),
         timestamp,
     });
 }
@@ -129,8 +146,8 @@ public struct Station has key {
 // Fields: ship_id (address), station_id (address), timestamp (u64)
 
 
-// Increment docked_count and emit ShipDocked event
-// Use station.id.to_address() for the station_id field
+// Increment docked_count and fire a ShipDocked event
+// Use object::uid_to_address(&station.id) for the station_id field
 public fun dock(station: &mut Station, ship_id: address, timestamp: u64) {
     // your code here
 }
@@ -142,7 +159,7 @@ public fun dock(station: &mut Station, ship_id: address, timestamp: u64) {
         { test: (code: string) => /timestamp\s*:\s*u64/.test(code), errorMsg: 'ShipDocked needs a timestamp: u64 field.' },
         { test: (code: string) => /docked_count\s*\+\s*1/.test(code) || /docked_count\s*=\s*station\.docked_count\s*\+\s*1/.test(code), errorMsg: 'Increment station.docked_count by 1.' },
         { test: (code: string) => /event\s*::\s*emit\s*\(/.test(code), errorMsg: 'Use event::emit() to emit the ShipDocked event.' },
-        { test: (code: string) => /ShipDocked\s*\{/.test(code.split('emit')[1] || ''), errorMsg: 'Emit a ShipDocked struct inside event::emit().' },
+        { test: (code: string) => /event\s*::\s*emit\s*\(\s*ShipDocked\s*\{/.test(code), errorMsg: 'Emit a ShipDocked struct inside event::emit().' },
       ],
       successOutput: `$ sui move build
    Compiling frontier v0.0.1

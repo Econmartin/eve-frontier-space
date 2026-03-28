@@ -83,7 +83,19 @@ The Clock object is automatically available in transactions — callers just pas
     {
       type: 'TASK',
       title: 'Cooldown System',
-      content: `Build a cooldown system for ship abilities using the Clock.`,
+      content: `Build a cooldown system for ship abilities using the Clock.
+
+For example:
+
+\`\`\`move
+public fun mark_used(item: &mut Item, clock: &Clock) {
+    item.last_used = clock.timestamp_ms();
+}
+
+public fun can_use(item: &Item, clock: &Clock, delay: u64): bool {
+    clock.timestamp_ms() - item.last_used >= delay
+}
+\`\`\``,
       task: `Write a cooldown module:
 
 1. \`start_cooldown(ship: &mut Ship, clock: &Clock)\` — sets \`ship.last_used_ms\` to \`clock.timestamp_ms()\`

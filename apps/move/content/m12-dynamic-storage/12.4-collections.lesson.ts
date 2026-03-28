@@ -33,7 +33,23 @@ These are small and fast for <100 entries, but cost grows linearly with size. Us
     {
       type: 'TASK',
       title: 'Crew Roster',
-      content: `Write a crew roster using VecSet to manage unique crew member IDs.`,
+      content: `Write a crew roster using VecSet to manage unique crew member IDs.
+
+For example:
+
+\`\`\`move
+public fun allow(acl: &mut AccessList, user_id: u64) {
+    acl.users.insert(user_id);
+}
+
+public fun revoke(acl: &mut AccessList, user_id: u64) {
+    acl.users.remove(&user_id);
+}
+
+public fun has_access(acl: &AccessList, user_id: u64): bool {
+    acl.users.contains(&user_id)
+}
+\`\`\``,
       task: `Write a crew roster using VecSet:
 
 1. \`add_member(roster: &mut CrewRoster, member_id: u64)\` — insert into vec_set

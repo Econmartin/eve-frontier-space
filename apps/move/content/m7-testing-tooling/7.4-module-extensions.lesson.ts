@@ -8,54 +8,69 @@ const lesson: Lesson = {
     {
       type: 'LEARN',
       title: 'Extending Modules for Testing',
-      content: `What if you need to peek at a struct's private fields during testing — but the module doesn't provide a getter? Move has **module extensions** that let you add new functions to an existing module, as if you wrote them inside it.
-
-Extensions use the \`extend\` keyword and must always have a mode annotation:
+      content: `What if you need to peek at a struct's private fields during testing — but the module doesn't expose a getter? The answer is \`#[test_only]\` functions placed **inside the module itself**.
 
 \`\`\`move
+module frontier::reactor;
+
+public struct Reactor has drop {
+    temperature: u64,
+}
+
+public fun new(temp: u64): Reactor { Reactor { temperature: temp } }
+
+// Only compiled when running tests — invisible in production
 #[test_only]
-extend module frontier::reactor {
-    // This function is added to the reactor module — it can access private fields!
-    public fun peek_temp(r: &Reactor): u64 {
-        r.temperature
-    }
+public fun peek_temp(r: &Reactor): u64 {
+    r.temperature
+}
+
+#[test]
+fun test_reactor() {
+    let r = new(500);
+    assert!(peek_temp(&r) == 500, 0);
 }
 \`\`\`
 
-Now in your tests, you can call \`reactor.peek_temp()\` even though it wasn't in the original module.
+The \`#[test_only]\` attribute tells the compiler to strip this function out of the production build. It exists purely to give tests access to internals that shouldn't be part of the public API.
 
-Rules:
-- Extensions can only **add** — never modify or remove existing code
-- Must have a mode annotation (\`#[test_only]\`, \`#[mode(debug)]\`, etc.)
-- Only extensions in the **root package** are applied (not from dependencies)
-- Added code follows the same rules as if it were in the original module
+### What about \`extend module\`?
 
-This is powerful for testing library code you don't own:
+Move 2024 also supports an \`extend module\` block that adds declarations to a module from outside it — the main use case is adding test helpers to **third-party code you don't own**:
 
 \`\`\`move
-// You imported counter::counter from a library
-// It has no way to peek at the value...
-
 #[test_only]
 extend module counter::counter {
     public fun peek(c: &Counter): u64 { c.value }
 }
+\`\`\`
 
-// Now your tests can inspect Counter internals!
-\`\`\``,
+Key rules:
+- Extensions can **only add** new items — never modify or remove existing ones
+- Only extensions in the **root package** are applied (dependency extensions are ignored)
+- Requires the \`#[test_only]\` annotation to stay out of production builds
+
+For modules you own, \`#[test_only]\` functions directly inside the module is the simpler and more common pattern.`,
     },
     {
       type: 'TASK',
-      title: 'Extend for Testing',
-      content: `The \`Engine\` module has a struct with private fields. Use \`extend module\` to add a test helper, then write a test.`,
-      task: `1. Write a \`#[test_only] extend module frontier::engine\` block that adds \`public fun peek_rpm(e: &Engine): u64\` returning \`e.rpm\`
+      title: 'Test Helper Inside the Module',
+      content: `The \`Engine\` module has a struct with private fields. Add a \`#[test_only]\` helper directly inside the module to expose those fields for testing.
+
+For example:
+
+\`\`\`move
+#[test_only]
+public fun peek_temp(r: &Reactor): u64 {
+    r.temperature   // access private field — only in test mode
+}
+\`\`\``,
+      task: `1. Add a \`#[test_only]\` function \`peek_rpm(e: &Engine): u64\` inside \`frontier::engine\` that returns \`e.rpm\`
 2. Write a \`#[test]\` function \`test_rev_engine\` that creates an engine with \`new(1000)\`, calls \`rev(&mut engine, 500)\`, then asserts \`peek_rpm\` returns \`1500\``,
       hint: `\`\`\`move
 #[test_only]
-extend module frontier::engine {
-    public fun peek_rpm(e: &Engine): u64 {
-        e.rpm
-    }
+public fun peek_rpm(e: &Engine): u64 {
+    e.rpm
 }
 
 #[test]
@@ -80,8 +95,8 @@ public fun rev(e: &mut Engine, amount: u64) {
     e.rpm = e.rpm + amount;
 }
 
-// Write: #[test_only] extend module frontier::engine { ... }
-// Add: public fun peek_rpm(e: &Engine): u64 — returns e.rpm
+// Add: #[test_only] public fun peek_rpm(e: &Engine): u64
+// Returns e.rpm — only compiled in test mode
 
 
 // Write: #[test] fun test_rev_engine
@@ -91,10 +106,10 @@ public fun rev(e: &mut Engine, amount: u64) {
 `,
       checks: [
         { test: (code: string) => /module\s+frontier\s*::\s*engine\s*;/.test(code), errorMsg: 'Keep the module declaration: module frontier::engine;' },
-        { test: (code: string) => /extend\s+module/.test(code), errorMsg: 'Use extend module to add the test helper.' },
-        { test: (code: string) => /#\[test_only\]/.test(code), errorMsg: 'Mark the extension with #[test_only].' },
-        { test: (code: string) => /fun\s+peek_rpm/.test(code), errorMsg: 'Add a peek_rpm function in the extension.' },
+        { test: (code: string) => /#\[test_only\]/.test(code), errorMsg: 'Mark the helper function with #[test_only].' },
+        { test: (code: string) => /fun\s+peek_rpm/.test(code), errorMsg: 'Add a peek_rpm function inside the module.' },
         { test: (code: string) => /fun\s+test_rev_engine/.test(code), errorMsg: 'Write a test called test_rev_engine.' },
+        { test: (code: string) => /assert!\s*\(\s*peek_rpm/.test(code), errorMsg: 'Use peek_rpm in your assertion.' },
       ],
       successOutput: `$ sui move test
    Compiling frontier v0.0.1
@@ -105,12 +120,11 @@ Test result: OK. Total tests: 1; passed: 1; failed: 0`,
     {
       type: 'REVIEW',
       title: 'Lesson 7.4 — Summary',
-      content: `- \`extend module\` adds new declarations to an existing module
-- Must have a mode annotation (e.g., \`#[test_only]\`)
-- Can only add — never modify or remove
-- Only root package extensions are applied
-- Perfect for adding test helpers that access private fields
-- Extension code follows the same rules as the original module`,
+      content: `- \`#[test_only]\` functions inside the module are the standard way to expose private fields for testing
+- The compiler strips \`#[test_only]\` code from production builds — zero runtime cost
+- You can mark functions, imports, and even whole modules as \`#[test_only]\`
+- \`extend module\` adds declarations to a module from outside it — useful for testing third-party code
+- Extensions can only add, not modify or remove; only root package extensions are applied`,
     },
   ],
 };

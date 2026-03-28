@@ -65,7 +65,17 @@ Create them with \`&value\` or \`&mut value\`. Pass them to functions with \`fun
     {
       type: 'TASK',
       title: 'Borrow, Don\'t Take',
-      content: `Use references to read a struct without consuming it.`,
+      content: `Use references to read a struct without consuming it.
+
+For example:
+
+\`\`\`move
+fun read_power(r: &Reactor): u64 {
+    r.power   // read without consuming r
+}
+
+// r is still valid after calling read_power
+\`\`\``,
       task: `Write two functions:
 
 1. \`fun get_shields(ship: &Ship): u64\` — returns the shields value via immutable reference
@@ -185,7 +195,19 @@ This means \`&mut T\` is a **subtype** of \`&T\` — it can do everything \`&T\`
     {
       type: 'TASK',
       title: 'Modify Through References',
-      content: `Use mutable references to change struct fields and dereference primitives.`,
+      content: `Use mutable references to change struct fields and dereference primitives.
+
+For example:
+
+\`\`\`move
+fun set_power(r: &mut Reactor, p: u64) {
+    r.power = p;   // mutate through &mut
+}
+
+fun get_power(r: &Reactor): u64 {
+    r.power   // read through &
+}
+\`\`\``,
       task: `Write three functions:
 
 1. \`fun charge(reactor: &mut Reactor, amount: u64)\` — adds \`amount\` to \`power\`
@@ -288,7 +310,15 @@ For struct fields accessed via dot notation (\`ship.fuel\`), this happens automa
     {
       type: 'TASK',
       title: 'Reference Patterns',
-      content: `Combine ownership, immutable references, and mutable references in one module.`,
+      content: `Combine ownership, immutable references, and mutable references in one module.
+
+For example:
+
+\`\`\`move
+fun new(v: u64): Data { Data { value: v } }         // by value — returns ownership
+fun read(d: &Data): u64 { d.value }                 // &T — read-only
+fun update(d: &mut Data, v: u64) { d.value = v; }   // &mut T — read + write
+\`\`\``,
       task: `Write three functions for the \`Cargo\` struct:
 
 1. \`fun new_cargo(weight: u64, fragile: bool): Cargo\` — constructor (returns by value)

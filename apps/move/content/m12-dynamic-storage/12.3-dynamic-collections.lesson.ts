@@ -47,7 +47,23 @@ All collections track size with \`.length()\` and \`.is_empty()\`.
     {
       type: 'TASK',
       title: 'Leaderboard',
-      content: `Write a leaderboard using Table to track pilot scores.`,
+      content: `Write a leaderboard using Table to track pilot scores.
+
+For example:
+
+\`\`\`move
+public fun set_entry(reg: &mut Registry, key: address, value: u64) {
+    reg.entries.add(key, value);
+}
+
+public fun get_entry(reg: &Registry, key: address): &u64 {
+    reg.entries.borrow(key)
+}
+
+public fun clear_entry(reg: &mut Registry, key: address): u64 {
+    reg.entries.remove(key)
+}
+\`\`\``,
       task: `Write a leaderboard using Table:
 
 1. \`add_score(board: &mut Leaderboard, pilot: address, score: u64)\` — adds to table

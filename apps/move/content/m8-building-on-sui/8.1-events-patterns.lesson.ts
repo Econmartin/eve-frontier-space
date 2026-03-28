@@ -61,7 +61,20 @@ Use events for: trade notifications, game actions, state changes, audit trails �
     {
       type: 'TASK',
       title: 'Emit an Event',
-      content: `Define an event struct and emit it from a function.`,
+      content: `Define an event struct and emit it from a function.
+
+For example:
+
+\`\`\`move
+public struct ItemCreated has copy, drop {
+    creator: address,
+    value: u64,
+}
+
+fun create(value: u64, ctx: &TxContext) {
+    event::emit(ItemCreated { creator: ctx.sender(), value });
+}
+\`\`\``,
       task: `Write:
 
 1. \`public struct DockingComplete has copy, drop\` with fields \`station_id: address\` and \`pilot: address\`
@@ -159,7 +172,21 @@ The \`_cap: &AdminCap\` parameter doesn't do anything in the function body — i
     {
       type: 'TASK',
       title: 'Admin Capability',
-      content: `Set up a module with an init function and an admin-only operation.`,
+      content: `Set up a module with an init function and an admin-only operation.
+
+For example:
+
+\`\`\`move
+fun init(ctx: &mut TxContext) {
+    let cap = AdminCap { id: object::new(ctx) };
+    transfer::transfer(cap, ctx.sender());
+}
+
+// Only the AdminCap holder can call this:
+entry fun admin_action(_cap: &AdminCap, data: u64) {
+    // _cap proves the caller is authorized
+}
+\`\`\``,
       task: `Write:
 
 1. \`fun init(ctx: &mut TxContext)\` — creates a \`FleetCommand\` and transfers it to the sender using \`transfer::transfer\` (not \`public_transfer\` — we want only this module to control it)

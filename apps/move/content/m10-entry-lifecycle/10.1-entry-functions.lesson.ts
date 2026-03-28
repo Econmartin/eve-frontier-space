@@ -47,7 +47,15 @@ Since Move 2024, \`entry\` functions **can return values**. This is essential fo
     {
       type: 'TASK',
       title: 'Launch a Ship',
-      content: `Write an \`entry\` function that removes a ship from a hangar by index and returns it.`,
+      content: `Write an \`entry\` function that removes a ship from a hangar by index and returns it.
+
+For example:
+
+\`\`\`move
+entry fun grab_item(bag: &mut ItemBag, idx: u64): Item {
+    bag.items.swap_remove(idx)
+}
+\`\`\``,
       task: `Complete the \`entry fun launch\` function:
 1. It takes \`hangar: &mut Hangar\` and \`idx: u64\`
 2. It removes the ship at \`idx\` from \`hangar.ships\` using \`swap_remove\`
@@ -60,9 +68,8 @@ entry fun launch(hangar: &mut Hangar, idx: u64): Ship {
       bonus: null,
       starterCode: `module frontier::hangar;
 
-public struct Ship has key, store {
-    id: UID,
-    name: vector<u8>,
+public struct Ship has drop, store {
+    hull: u64,
 }
 
 public struct Hangar has key {
@@ -99,11 +106,14 @@ Ship at index 0 removed from hangar and returned to caller's transaction.`,
 
 Results from one command can feed directly into the next — all within a single atomic transaction:
 
-\`\`\`
+\`\`\`move
 // Single transaction with 3 commands:
-// 1. let coin = split(my_coin, 100)        — split off 100 units
-// 2. let ship = buy_ship(shop, coin)        — buy a ship with that coin
-// 3. equip_shield(ship, my_shield)          — equip it immediately
+// 1. Split off 100 units
+let coin = split(my_coin, 100);
+// 2. Buy a ship with that coin
+let ship = buy_ship(shop, coin);
+// 3. Equip it immediately
+equip_shield(ship, my_shield);
 \`\`\`
 
 This is why \`public fun\` returning values is so powerful. Each function is a building block that PTBs can chain together.
@@ -123,11 +133,11 @@ public fun commission(fleet: &mut Fleet, ship: Ship) { /* ... */ }
 \`\`\`
 
 A dApp can combine these into one transaction:
-\`\`\`
-// 1. let ship = build_hull()
-// 2. install_engine(ship, 3)
-// 3. install_shields(ship, 500)
-// 4. commission(fleet, ship)
+\`\`\`move
+let ship = build_hull();
+install_engine(ship, 3);
+install_shields(ship, 500);
+commission(fleet, ship);
 \`\`\`
 
 All four steps succeed or fail **together** — no half-built ships floating around.

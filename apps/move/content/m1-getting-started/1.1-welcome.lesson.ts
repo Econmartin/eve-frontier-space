@@ -42,7 +42,7 @@ package
 
 A **package** is a directory with a \`Move.toml\` configuration file. It groups related modules together and has a globally unique address on-chain.
 
-A **module** is a single file that contains functions, structs, and constants. Modules are the unit of code reuse in Move — similar to a class or namespace in other languages. Inside a module you can have:
+A **module** is a single file that contains functions, structs, and constants. Modules are the unit of code used in Move — similar to a class or namespace in other languages. Inside a module you can have:
 
 - **Functions** — blocks of logic (\`fun my_function() { ... }\`)
 - **Structs** — custom data types
@@ -93,7 +93,13 @@ Build Successful
     {
       type: 'TASK',
       title: 'Add a Function',
-      content: `Now let's add something to our module. A **function** is declared with the \`fun\` keyword. Don't worry about the syntax details yet — we'll cover functions properly in the next subject.`,
+      content: `Now let's add something to our module. A **function** is declared with the \`fun\` keyword. Don't worry about the syntax details yet — we'll cover functions properly in the next subject.
+
+\`\`\`move
+fun my_function(): u64 {
+    42
+}
+\`\`\``,
       task: `The module is already declared for you. Add a function called \`ship_id\` that returns the number \`42\`. The test is pre-written — hit Run to check your work.`,
       hint: `Add this below the module declaration:
 

@@ -58,7 +58,22 @@ Now users can write \`bay[0]\` and \`bay[2] = 500\` — just like vectors.
     {
       type: 'TASK',
       title: 'Crew Roster Index',
-      content: `Define index syntax for a custom type.`,
+      content: `Define index syntax for a custom type.
+
+For example:
+
+\`\`\`move
+#[syntax(index)]
+public fun borrow(data: &MyType, i: u64): &u64 {
+    &data.items[i]
+}
+
+#[syntax(index)]
+public fun borrow_mut(data: &mut MyType, i: u64): &mut u64 {
+    &mut data.items[i]
+}
+// Now data[0] and data[1] = 99 work!
+\`\`\``,
       task: `The \`CrewRoster\` struct wraps a \`vector<u64>\` of crew IDs. Define the two \`#[syntax(index)]\` functions so that \`roster[i]\` works:
 
 1. \`public fun borrow(roster: &CrewRoster, i: u64): &u64\`
@@ -157,7 +172,24 @@ Index syntax is just **sugar** — the compiler translates \`map[i, j]\` into a 
     {
       type: 'TASK',
       title: 'Navigation Grid',
-      content: `Build a 2D grid that supports index syntax.`,
+      content: `Build a 2D grid that supports index syntax.
+
+For example — nested loops to build a 2×3 grid:
+
+\`\`\`move
+let mut grid = vector[];
+let mut r = 0;
+while (r < 2) {
+    let mut row = vector[];
+    let mut c = 0;
+    while (c < 3) {
+        row.push_back(0u64);
+        c = c + 1;
+    };
+    grid.push_back(row);
+    r = r + 1;
+};
+\`\`\``,
       task: `Write a \`public fun new(rows: u64, cols: u64): NavGrid\` function that creates a grid filled with zeros. The \`#[syntax(index)]\` functions are already written for you.
 
 Use nested loops: for each row, create a vector of \`cols\` zeros, then push it into the grid.`,

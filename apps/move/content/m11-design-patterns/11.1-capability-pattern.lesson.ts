@@ -43,7 +43,26 @@ The \`_cap: &CommandCap\` parameter is the guard — if you don't have the cap, 
     {
       type: 'TASK',
       title: 'Minting System with Capability',
-      content: `Build a minting system that uses the capability pattern to control who can create ships.`,
+      content: `Build a minting system that uses the capability pattern to control who can create ships.
+
+For example:
+
+\`\`\`move
+public struct PrintCap has key, store { id: UID }
+
+public struct Token has key, store {
+    id: UID,
+    symbol: vector<u8>,
+}
+
+fun init(ctx: &mut TxContext) {
+    transfer::transfer(PrintCap { id: object::new(ctx) }, ctx.sender());
+}
+
+public fun mint(_cap: &PrintCap, symbol: vector<u8>, ctx: &mut TxContext): Token {
+    Token { id: object::new(ctx), symbol }
+}
+\`\`\``,
       task: `Write a minting system with \`MintCap\`:
 
 1. Define \`MintCap\` with \`key, store\` abilities and a \`UID\` field

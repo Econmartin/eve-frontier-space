@@ -56,7 +56,15 @@ let empty = fuel_reserves.is_empty();  // false
     {
       type: 'TASK',
       title: 'Fleet Roster',
-      content: `Create a vector and return it from a function.`,
+      content: `Create a vector and return it from a function.
+
+For example:
+
+\`\`\`move
+fun example(): vector<u64> {
+    vector[10, 20, 30]
+}
+\`\`\``,
       task: `Write a \`fun fleet_ids(): vector<u64>\` that returns a vector containing the ship IDs \`101\`, \`102\`, and \`103\`.`,
       hint: `\`\`\`move
 fun fleet_ids(): vector<u64> {
@@ -146,7 +154,23 @@ fun double_first(v: &mut vector<u64>) {
     {
       type: 'TASK',
       title: 'Fuel Calculator',
-      content: `Build a vector with \`push_back\`, then iterate it to compute a total.`,
+      content: `Build a vector with \`push_back\`, then iterate it to compute a total.
+
+For example:
+
+\`\`\`move
+let mut v: vector<u64> = vector[];
+v.push_back(10);
+v.push_back(20);
+// v is now [10, 20]
+
+let mut sum = 0;
+let mut i = 0;
+while (i < v.length()) {
+    sum = sum + v[i];
+    i = i + 1;
+};
+\`\`\``,
       task: `Write two functions:
 
 1. \`fun build_reserves(): vector<u64>\` — start with an empty \`mut\` vector, push the values \`40\`, \`60\`, and \`100\`, then return it

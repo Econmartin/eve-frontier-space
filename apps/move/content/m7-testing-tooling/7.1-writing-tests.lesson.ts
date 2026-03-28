@@ -62,7 +62,17 @@ sui move test test_      # runs all tests starting with "test_"
     {
       type: 'TASK',
       title: 'Write Your Own Tests',
-      content: `Write a function and thorough tests for it.`,
+      content: `Write a function and thorough tests for it.
+
+For example:
+
+\`\`\`move
+#[test]
+fun test_my_function() {
+    assert!(double(3) == 6, 0);   // assertion 0
+    assert!(double(0) == 0, 1);   // assertion 1
+}
+\`\`\``,
       task: `The \`clamp\` function is written for you — it restricts a value to a range. Write three \`#[test]\` functions:
 
 1. \`test_clamp_within_range\` — assert that \`clamp(50, 0, 100) == 50\`
@@ -176,7 +186,25 @@ Tests have special privileges — they can call \`entry fun\` functions directly
     {
       type: 'TASK',
       title: 'Test Error Paths',
-      content: `Write tests that verify both success and failure cases.`,
+      content: `Write tests that verify both success and failure cases.
+
+For example:
+
+\`\`\`move
+#[test]
+fun test_success() {
+    let mut w = Wallet { balance: 50 };
+    withdraw(&mut w, 10);
+    assert!(w.balance == 40, 0);
+}
+
+#[test]
+#[expected_failure(abort_code = EInsufficientFunds)]
+fun test_abort() {
+    let mut w = Wallet { balance: 5 };
+    withdraw(&mut w, 100);  // should abort
+}
+\`\`\``,
       task: `The \`withdraw\` function is written for you. Write:
 
 1. \`test_withdraw_success\` — withdraw 30 from a wallet with 100, assert balance is 70

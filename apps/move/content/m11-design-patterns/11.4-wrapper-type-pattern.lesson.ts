@@ -42,7 +42,25 @@ This pattern is used for vaults, escrow systems, timelocks, and any scenario whe
     {
       type: 'TASK',
       title: 'Build a Lockbox',
-      content: `Create a Lockbox wrapper that can hold a Ship, let you peek inside, and unlock it to get the Ship back.`,
+      content: `Create a Lockbox wrapper that can hold a Ship, let you peek inside, and unlock it to get the Ship back.
+
+For example:
+
+\`\`\`move
+public fun wrap(gem: Gem, ctx: &mut TxContext): Box {
+    Box { id: object::new(ctx), gem }
+}
+
+public fun peek(b: &Box): &Gem {
+    &b.gem
+}
+
+public fun unwrap(b: Box): Gem {
+    let Box { id, gem } = b;
+    id.delete();
+    gem
+}
+\`\`\``,
       task: `Write a \`Lockbox\` wrapper:
 
 1. Define \`Ship\` with \`key, store\` abilities, fields: \`id: UID\`, \`name: vector<u8>\`

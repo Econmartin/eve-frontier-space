@@ -53,7 +53,16 @@ The same pattern applies: \`public_share_object\` vs \`share_object\`, \`public_
     {
       type: 'TASK',
       title: 'Mint & Transfer',
-      content: `Create an object and send it to the transaction sender — the standard "mint" pattern.`,
+      content: `Create an object and send it to the transaction sender — the standard "mint" pattern.
+
+For example:
+
+\`\`\`move
+entry fun mint(data: u64, ctx: &mut TxContext) {
+    let obj = MyObject { id: object::new(ctx), data };
+    transfer::public_transfer(obj, ctx.sender());
+}
+\`\`\``,
       task: `The \`PilotBadge\` struct is defined for you. Write an entry function:
 
 \`entry fun mint(rank: u64, ctx: &mut TxContext)\`
@@ -153,7 +162,20 @@ This only works if \`Scoreboard\` was previously shared with \`transfer::public_
     {
       type: 'TASK',
       title: 'Shared Object Pattern',
-      content: `Create a shared object that anyone can interact with.`,
+      content: `Create a shared object that anyone can interact with.
+
+For example:
+
+\`\`\`move
+entry fun create_board(ctx: &mut TxContext) {
+    let board = Scoreboard { id: object::new(ctx), count: 0 };
+    transfer::public_share_object(board);   // shared: anyone can use it
+}
+
+entry fun increment(board: &mut Scoreboard) {
+    board.count = board.count + 1;
+}
+\`\`\``,
       task: `The \`FuelStation\` struct is defined. Write two entry functions:
 
 1. \`entry fun create_station(fuel_price: u64, ctx: &mut TxContext)\` — creates a \`FuelStation\` with the given price, \`reserve\` of \`1000\`, and **shares** it using \`transfer::public_share_object\`

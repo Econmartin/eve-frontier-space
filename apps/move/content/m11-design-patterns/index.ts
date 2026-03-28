@@ -7,7 +7,7 @@ import lesson11_4 from './11.4-wrapper-type-pattern.lesson';
 const module: Module = {
   id: 'm11',
   title: 'Design Patterns',
-  icon: '\uD83C\uDFAF',
+  icon: 'assets/design-patterns.svg',
   lessons: [lesson11_1, lesson11_2, lesson11_3, lesson11_4],
 };
 export default module;

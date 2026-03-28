@@ -160,7 +160,15 @@ fun is_full_crew(crew: u64): bool {
     {
       type: 'TASK',
       title: 'Ship Ready Check',
-      content: `Combine what you know about integers and booleans.`,
+      content: `Combine what you know about integers and booleans.
+
+For example:
+
+\`\`\`move
+fun has_fuel(tank: u64): bool {
+    tank > 0
+}
+\`\`\``,
       task: `Write a function \`is_ready\` that takes \`shields: u64\` and \`crew: u8\` and returns \`true\` if shields is greater than \`0\` AND crew is greater than \`0\`.
 
 **Note:** You can't compare \`u64\` and \`u8\` directly — compare each to a zero of its own type (\`0\` for u64, \`0u8\` for u8).`,
@@ -206,11 +214,11 @@ Addresses are written with the \`@\` prefix:
 module frontier::registry;
 
 fun headquarters(): address {
-    @0xCAFE
+    @0xACE
 }
 
 fun is_home_base(location: address): bool {
-    location == @0xCAFE
+    location == @0xACE
 }
 \`\`\`
 
@@ -229,11 +237,63 @@ Key things to know about addresses:
 - Common addresses: \`@0x1\` (standard library), \`@0x2\` (Sui framework)`,
     },
     {
+      type: 'TASK',
+      title: 'Fleet Registry',
+      content: `Practice using address literals and comparison.
+
+For example:
+
+\`\`\`move
+const ZERO_ADDR: address = @0x0;
+
+fun is_zero(addr: address): bool {
+    addr == ZERO_ADDR
+}
+\`\`\``,
+      task: `1. Declare a constant \`PILOT\` of type \`address\` with the value \`@0xACE\`
+2. Write a function \`is_pilot\` that takes \`addr: address\` and returns \`true\` if it matches \`PILOT\``,
+      hint: `\`\`\`move
+const PILOT: address = @0xACE;
+
+fun is_pilot(addr: address): bool {
+    addr == PILOT
+}
+\`\`\``,
+      bonus: null,
+      starterCode: `module frontier::registry;
+
+// Declare constant PILOT: address = @0xACE
+
+
+// Write is_pilot(addr: address) -> bool
+
+
+#[test]
+fun test_registry() {
+    assert!(is_pilot(@0xACE) == true, 0);
+    assert!(is_pilot(@0xDEAD) == false, 1);
+}
+`,
+      checks: [
+        { test: (code: string) => /module\s+frontier\s*::\s*registry\s*;/.test(code), errorMsg: 'Keep the module declaration: module frontier::registry;' },
+        { test: (code: string) => /const\s+PILOT\s*:\s*address\s*=\s*@0xACE/.test(code), errorMsg: 'Declare: const PILOT: address = @0xACE;' },
+        { test: (code: string) => /fun\s+is_pilot\s*\(/.test(code), errorMsg: 'Write a function called is_pilot.' },
+        { test: (code: string) => /==/.test(code), errorMsg: 'Use == to compare the address.' },
+      ],
+      successOutput: `$ sui move test
+   Compiling frontier v0.0.1
+   Running tests...
+[ PASS ] frontier::registry::test_registry
+Test result: OK. Total tests: 1; passed: 1; failed: 0`,
+    },
+    {
       type: 'LEARN',
       title: 'Tuples & Unit',
       content: `### Returning multiple values
 
 Sometimes a function needs to return more than one thing. Move supports this with **tuples** — a group of values in parentheses:
+
+*You'll notice \`let\` used below to declare variables — don't worry about it for now, we cover it properly in the next lesson.*
 
 \`\`\`move
 module frontier::scanner;
@@ -279,7 +339,17 @@ Tuples in Move are **not** full values like in Python or Rust. They can only be 
     {
       type: 'TASK',
       title: 'Multi-Return Scanner',
-      content: `Practice returning multiple values from a function.`,
+      content: `Practice returning multiple values from a function.
+
+For example:
+
+\`\`\`move
+fun check(a: u64, b: u64): (bool, u64) {
+    let first = a > 0;
+    let second = b * 2;
+    (first, second)
+}
+\`\`\``,
       task: `Write a function \`scan_target\` that takes \`distance: u64\` and \`mass: u64\` and returns \`(bool, u64)\`:
 - First value: \`true\` if distance is less than \`1000\` (in range), \`false\` otherwise
 - Second value: a threat rating calculated as \`mass / (distance + 1)\` (the +1 prevents divide-by-zero)`,

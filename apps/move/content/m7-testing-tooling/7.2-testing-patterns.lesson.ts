@@ -73,7 +73,23 @@ Notice the pattern: **one concept per test**, with a descriptive name that says 
     {
       type: 'TASK',
       title: 'Test a Module',
-      content: `Write comprehensive tests for a cargo module.`,
+      content: `Write comprehensive tests for a cargo module.
+
+For example:
+
+\`\`\`move
+#[test]
+fun test_new() {
+    let item = new(100);
+    assert!(item.value() == 100, 0);
+}
+
+#[test]
+#[expected_failure(abort_code = ETooBig)]
+fun test_too_big() {
+    new(9999);  // should abort
+}
+\`\`\``,
       task: `The \`CargoHold\` module is written for you. Write four tests:
 
 1. \`test_new_hold\` — a new hold with capacity 100 should have \`weight() == 0\` and \`space_left() == 100\`
@@ -238,7 +254,22 @@ fun test_wallet(): Wallet {
     {
       type: 'TASK',
       title: 'Comprehensive Testing',
-      content: `Apply good testing practices to a shield module.`,
+      content: `Apply good testing practices to a shield module.
+
+For example:
+
+\`\`\`move
+#[test_only]
+fun make_item(): MyStruct {
+    new(100)  // shared helper — call in each test
+}
+
+#[test]
+fun test_initial_state() {
+    let s = make_item();
+    assert!(s.value() == 100, 0);
+}
+\`\`\``,
       task: `Write four tests using the \`test_shield\` helper:
 
 1. \`test_new_shield_is_active\` — a new shield should be active and have full strength

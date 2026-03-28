@@ -89,7 +89,23 @@ This is how off-chain systems communicate structured data to on-chain contracts 
     {
       type: 'TASK',
       title: 'Encode & Decode Orders',
-      content: `Build encoding and decoding functions for a market order.`,
+      content: `Build encoding and decoding functions for a market order.
+
+For example:
+
+\`\`\`move
+public fun encode_point(x: u64, y: u64): vector<u8> {
+    let mut bytes = vector[];
+    bytes.append(bcs::to_bytes(&x));
+    bytes.append(bcs::to_bytes(&y));
+    bytes
+}
+
+public fun decode_point(data: vector<u8>): (u64, u64) {
+    let mut b = bcs::new(data);
+    (b.peel_u64(), b.peel_u64())
+}
+\`\`\``,
       task: `Write encode/decode functions for market orders:
 
 1. \`encode_order(price: u64, quantity: u64): vector<u8>\` — encode price then quantity using \`bcs::to_bytes\` and append to a vector

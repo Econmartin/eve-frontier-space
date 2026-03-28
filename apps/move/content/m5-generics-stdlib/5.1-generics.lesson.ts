@@ -77,7 +77,20 @@ The \`+\` syntax combines constraints: \`T: copy + drop + store\` means T must h
     {
       type: 'TASK',
       title: 'Generic Functions',
-      content: `Write functions that work with any type.`,
+      content: `Write functions that work with any type.
+
+For example:
+
+\`\`\`move
+fun identity<T>(x: T): T {
+    x   // works for any type
+}
+
+// T needs copy to use it twice:
+fun clone_val<T: copy>(x: T): (T, T) {
+    (copy x, x)
+}
+\`\`\``,
       task: `Write two generic functions:
 
 1. \`fun wrap_pair<T: copy + drop>(a: T, b: T): (T, T, T)\` — returns \`(a, b, a)\`. Since you use \`a\` twice, \`T\` needs \`copy\`.
@@ -192,7 +205,17 @@ Now \`T\` is guaranteed to have \`store\` and \`drop\`, so anyone creating a \`S
     {
       type: 'TASK',
       title: 'Build a Container',
-      content: `Create a generic container struct with functions to manipulate it.`,
+      content: `Create a generic container struct with functions to manipulate it.
+
+For example:
+
+\`\`\`move
+// Create with a type inferred from context:
+let c = Container { item: 42u64 };   // Container<u64>
+
+// Destructure to extract the item:
+let Container { item } = c;
+\`\`\``,
       task: `1. The \`Container<T>\` struct is defined for you
 2. Write \`fun new_container<T>(item: T): Container<T>\` — wraps the item
 3. Write \`fun unpack<T>(c: Container<T>): T\` — destructures and returns the item`,
@@ -304,7 +327,23 @@ fun refuel_ship(reserve: &mut FuelReserve<StarshipFuel>, amount: u64) {
     {
       type: 'TASK',
       title: 'Type-Safe Tokens',
-      content: `Use phantom types to create fuel reserves that can't be mixed up.`,
+      content: `Use phantom types to create fuel reserves that can't be mixed up.
+
+For example:
+
+\`\`\`move
+// Marker types — no fields, just type labels
+public struct Gold {}
+public struct Silver {}
+
+// phantom T: type tag only, not stored
+public struct Reserve<phantom T> has drop {
+    amount: u64,
+}
+
+let gold = Reserve<Gold> { amount: 100 };
+// Reserve<Gold> and Reserve<Silver> are different types!
+\`\`\``,
       task: `The marker types and struct are defined for you.
 
 Write two functions:

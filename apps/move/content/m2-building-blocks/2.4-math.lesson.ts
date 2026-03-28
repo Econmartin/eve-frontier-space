@@ -107,46 +107,55 @@ Casting is useful when different parts of your code use different integer sizes.
     },
     {
       type: 'TASK',
-      title: 'Safe Damage',
-      content: `Underflow is a common trap — subtracting more than you have aborts the program. Let's write a safe version.`,
-      task: `Write a function \`apply_damage\` that takes \`hull: u64\` and \`damage: u64\`:
-- If damage is greater than or equal to hull, return \`0\` (ship destroyed)
-- Otherwise return \`hull - damage\`
+      title: 'Type Casting',
+      content: `Practice casting between integer types with \`as\`.
 
-This prevents the underflow abort.`,
+For example:
+
+\`\`\`move
+let value: u64 = 42;
+let small = (value as u8);   // narrow: u64 → u8
+let big = (value as u128);   // widen:  u64 → u128
+\`\`\``,
+      task: `Write two functions:
+1. \`compress\` — takes \`value: u64\` and returns it cast to \`u8\`
+2. \`expand\` — takes \`value: u8\` and returns it cast to \`u64\``,
       hint: `\`\`\`move
-fun apply_damage(hull: u64, damage: u64): u64 {
-    if (damage >= hull) {
-        0
-    } else {
-        hull - damage
-    }
+fun compress(value: u64): u8 {
+    (value as u8)
+}
+
+fun expand(value: u8): u64 {
+    (value as u64)
 }
 \`\`\``,
       bonus: null,
-      starterCode: `module frontier::damage;
+      starterCode: `module frontier::casting;
 
-// Write apply_damage(hull, damage) -> u64
-// If damage >= hull, return 0
-// Otherwise return hull - damage
+// Write compress(value: u64) -> u8
+
+
+// Write expand(value: u8) -> u64
 
 
 #[test]
-fun test_damage() {
-    assert!(apply_damage(100, 30) == 70, 0);
-    assert!(apply_damage(50, 50) == 0, 1);
-    assert!(apply_damage(30, 100) == 0, 2);
+fun test_casting() {
+    assert!(compress(200) == 200u8, 0);
+    assert!(expand(42u8) == 42, 1);
+    assert!(expand(compress(100)) == 100, 2);
 }
 `,
       checks: [
-        { test: code => /module\s+frontier\s*::\s*damage\s*;/.test(code), errorMsg: 'Keep the module declaration: module frontier::damage;' },
-        { test: code => /fun\s+apply_damage\s*\(/.test(code), errorMsg: 'Write a function called apply_damage.' },
-        { test: code => /if\s*\(/.test(code), errorMsg: 'Use an if/else to check before subtracting.' },
+        { test: code => /module\s+frontier\s*::\s*casting\s*;/.test(code), errorMsg: 'Keep the module declaration: module frontier::casting;' },
+        { test: code => /fun\s+compress\s*\(/.test(code), errorMsg: 'Write a function called compress.' },
+        { test: code => /fun\s+expand\s*\(/.test(code), errorMsg: 'Write a function called expand.' },
+        { test: code => /as\s+u8/.test(code), errorMsg: 'Use (value as u8) to cast to u8.' },
+        { test: code => /as\s+u64/.test(code), errorMsg: 'Use (value as u64) to cast to u64.' },
       ],
       successOutput: `$ sui move test
    Compiling frontier v0.0.1
    Running tests...
-[ PASS ] frontier::damage::test_damage
+[ PASS ] frontier::casting::test_casting
 Test result: OK. Total tests: 1; passed: 1; failed: 0`,
     },
     {
@@ -168,6 +177,7 @@ let shields: u64 = 75;
 let is_low = shields < 25;         // false
 let is_full = shields == 100;      // false
 let needs_repair = shields <= 50;  // false
+let is_damaged = shields < 100;    // true
 \`\`\`
 
 You can combine comparisons with the boolean operators from the data types lesson:
@@ -180,70 +190,56 @@ fun battle_ready(hull: u64, shields: u64, crew: u64): bool {
     },
     {
       type: 'TASK',
-      title: 'Ship Status Checker',
-      content: `Combine comparisons and casting to build a status report.`,
-      task: `1. Write \`threat_level\` that takes \`distance: u64\` and returns a \`u8\`:
-   - Distance < 10 → return \`3u8\` (critical)
-   - Distance < 50 → return \`2u8\` (warning)
-   - Otherwise → return \`1u8\` (safe)
-2. Write \`is_critical\` that takes \`distance: u64\` and returns \`true\` if the threat level is \`3u8\``,
-      hint: `\`\`\`move
-fun threat_level(distance: u64): u8 {
-    if (distance < 10) {
-        3u8
-    } else if (distance < 50) {
-        2u8
-    } else {
-        1u8
-    }
-}
+      title: 'Battle Ready Check',
+      content: `Use comparisons to check ship conditions.
 
-fun is_critical(distance: u64): bool {
-    threat_level(distance) == 3u8
+\`\`\`move
+a > 50    // greater than
+a < 50    // less than
+a >= 3    // greater than or equal
+\`\`\``,
+      task: `Write a function \`battle_ready\` that takes \`hull: u64\`, \`shields: u64\`, and \`crew: u64\` and returns \`true\` if all three conditions are met:
+- hull is greater than \`50\`
+- shields is greater than \`25\`
+- crew is greater than or equal to \`3\``,
+      hint: `\`\`\`move
+fun battle_ready(hull: u64, shields: u64, crew: u64): bool {
+    hull > 50 && shields > 25 && crew >= 3
 }
 \`\`\``,
       bonus: null,
       starterCode: `module frontier::sensors;
 
-// Write threat_level(distance) -> u8
-// < 10 = 3 (critical), < 50 = 2 (warning), else = 1 (safe)
-
-
-// Write is_critical(distance) -> bool
-// Returns true if threat_level is 3
+// Write battle_ready(hull, shields, crew) -> bool
+// hull > 50 AND shields > 25 AND crew >= 3
 
 
 #[test]
-fun test_threat() {
-    assert!(threat_level(5) == 3u8, 0);
-    assert!(threat_level(30) == 2u8, 1);
-    assert!(threat_level(100) == 1u8, 2);
-}
-
-#[test]
-fun test_critical() {
-    assert!(is_critical(5) == true, 0);
-    assert!(is_critical(50) == false, 1);
+fun test_ready() {
+    assert!(battle_ready(100, 50, 5) == true, 0);
+    assert!(battle_ready(40, 50, 5) == false, 1);   // hull too low
+    assert!(battle_ready(100, 20, 5) == false, 2);  // shields too low
+    assert!(battle_ready(100, 50, 2) == false, 3);  // crew too small
 }
 `,
       checks: [
         { test: code => /module\s+frontier\s*::\s*sensors\s*;/.test(code), errorMsg: 'Keep the module declaration: module frontier::sensors;' },
-        { test: code => /fun\s+threat_level\s*\(/.test(code), errorMsg: 'Write a function called threat_level.' },
-        { test: code => /fun\s+is_critical\s*\(/.test(code), errorMsg: 'Write a function called is_critical.' },
-        { test: code => /:\s*u8/.test(code), errorMsg: 'threat_level should return u8.' },
-        { test: code => /threat_level\s*\(/.test(code) && /is_critical[\s\S]*threat_level/.test(code), errorMsg: 'is_critical should call threat_level.' },
+        { test: code => /fun\s+battle_ready\s*\(/.test(code), errorMsg: 'Write a function called battle_ready.' },
+        { test: code => /&&/.test(code), errorMsg: 'Use && to combine all three conditions.' },
+        { test: code => />=/.test(code), errorMsg: 'Use >= to check crew.' },
       ],
       successOutput: `$ sui move test
    Compiling frontier v0.0.1
    Running tests...
-[ PASS ] frontier::sensors::test_threat
-[ PASS ] frontier::sensors::test_critical
-Test result: OK. Total tests: 2; passed: 2; failed: 0`,
+[ PASS ] frontier::sensors::test_ready
+Test result: OK. Total tests: 1; passed: 1; failed: 0`,
     },
     {
       type: 'LEARN',
       title: 'Bitwise Operations',
       content: `Move supports **bitwise operators** that work on individual bits — the 1s and 0s that make up every number. These are useful for flags, permissions, and low-level data packing.
+
+*New to binary? [This guide covers the basics of bits and bytes.](https://www.w3schools.com/programming/prog_binary_numbers.php)*
 
 | Operator | Name | What it does |
 |----------|------|-------------|
@@ -295,7 +291,14 @@ Key rules:
     {
       type: 'TASK',
       title: 'Status Flags',
-      content: `Use bitwise operators to manage ship status flags.`,
+      content: `Use bitwise operators to manage ship status flags.
+
+\`\`\`move
+const ACTIVE: u8 = 1;   // bit 0
+
+// turn on a bit:  value | flag
+// check a bit:   (value & flag) != 0
+\`\`\``,
       task: `Write two functions using bitwise operators:
 
 1. \`set_flag(status: u8, flag: u8): u8\` — turns on a flag using OR (\`|\`)

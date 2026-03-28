@@ -40,7 +40,27 @@ If the caller doesn't call \`complete_dock\`, the transaction **FAILS** — beca
     {
       type: 'TASK',
       title: 'Refueling with Hot Potato',
-      content: `Build a refueling system that uses the hot potato pattern to guarantee the refueling process is completed.`,
+      content: `Build a refueling system that uses the hot potato pattern to guarantee the refueling process is completed.
+
+For example:
+
+\`\`\`move
+// No abilities — must be destructured to dispose of
+public struct ActionTicket {
+    action_id: u64,
+}
+
+public fun begin(tracker: &mut Tracker): ActionTicket {
+    let id = tracker.next_id;
+    tracker.next_id = tracker.next_id + 1;
+    ActionTicket { action_id: id }
+}
+
+public fun finish(tracker: &mut Tracker, ticket: ActionTicket) {
+    let ActionTicket { action_id: _ } = ticket;
+    tracker.completed = tracker.completed + 1;
+}
+\`\`\``,
       task: `Write a refueling system with a hot potato:
 
 1. Define \`Ship\` with \`key\` ability, fields: \`id: UID\`, \`fuel: u64\`

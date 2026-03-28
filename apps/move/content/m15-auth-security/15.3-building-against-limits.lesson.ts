@@ -73,7 +73,24 @@ public struct UserCounter has key {
     {
       type: 'TASK',
       title: 'Refactor to Table',
-      content: `Refactor a shipyard from a bounded vector to a scalable Table.`,
+      content: `Refactor a shipyard from a bounded vector to a scalable Table.
+
+For example:
+
+\`\`\`move
+public fun add_entry(store: &mut DataStore, key: u64, value: vector<u8>) {
+    table::add(&mut store.data, key, value);
+    store.count = store.count + 1;
+}
+
+public fun get_entry(store: &DataStore, key: u64): &vector<u8> {
+    table::borrow(&store.data, key)
+}
+
+public fun entry_count(store: &DataStore): u64 {
+    store.count
+}
+\`\`\``,
       task: `Given a Shipyard using Table, implement three functions:
 
 1. \`add_ship(yard: &mut Shipyard, ship_id: u64, name: vector<u8>)\` — adds the name to the table at ship_id and increments count

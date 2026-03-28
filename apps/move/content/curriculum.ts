@@ -19,3 +19,7 @@ import m16 from './m16-production/index';
 export const COURSE: Course = {
   modules: [m1, m2, m3, m4, m5, m6, m7, m8, m9, m10, m11, m12, m13, m14, m15, m16],
 };
+
+// Course 1 = m1–m8 (Learn Move fundamentals)
+// Course 2 = m9–m16 (Learn Move on Sui)
+export const COURSE_1_MODULE_COUNT = 8;

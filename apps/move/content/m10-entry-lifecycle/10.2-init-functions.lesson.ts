@@ -57,7 +57,21 @@ Whatever you create in \`init\` determines your module's initial on-chain state.
     {
       type: 'TASK',
       title: 'Initialize a Registry',
-      content: `Write an \`init\` function that sets up a pilot registry with an admin cap and shared state.`,
+      content: `Write an \`init\` function that sets up a pilot registry with an admin cap and shared state.
+
+For example:
+
+\`\`\`move
+fun init(ctx: &mut TxContext) {
+    transfer::transfer(
+        AdminCap { id: object::new(ctx) },
+        ctx.sender()
+    );
+    transfer::share_object(
+        GameBoard { id: object::new(ctx), players: vector[] }
+    );
+}
+\`\`\``,
       task: `Complete the \`init\` function:
 1. Create a \`RegistryCap { id: object::new(ctx) }\` and transfer it to \`ctx.sender()\`
 2. Create a \`Registry { id: object::new(ctx), pilots: vector[] }\` and share it with \`transfer::share_object\``,
