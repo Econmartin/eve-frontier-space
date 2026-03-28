@@ -2,7 +2,7 @@ import './Hero.css';
 
 export function Hero() {
   return (
-    <section className="hero-section grid min-h-[50vh] -mt-[56px] transition-all items-end justify-items-start">
+    <section className="hero-section grid min-h-[50vh] -mt-[76px] transition-all items-end justify-items-start">
       <div className="hero-mask relative overflow-hidden rounded-4xl [grid-area:1/1] place-self-stretch">
         <div className="hero-bg absolute inset-0 bg-cover bg-center bg-no-repeat" />
         <div className="absolute inset-0 bg-slate-900/10" />
