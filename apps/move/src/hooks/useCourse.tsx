@@ -7,7 +7,7 @@ import {
   useRef,
   type ReactNode,
 } from 'react';
-import { COURSE } from '../../content/curriculum';
+import { COURSE, COURSE_1_MODULE_COUNT } from '../../content/curriculum';
 import { executor } from '@/lib/executor';
 import {
   loadProgress,
@@ -42,7 +42,7 @@ type CourseAction =
   | { type: 'RESET_COURSE' };
 
 function clampPosition(pos: CoursePosition): CoursePosition {
-  const modules = (COURSE as Course).modules;
+  const modules = COURSE.modules;
   const m = Math.min(pos.m, modules.length - 1);
   const l = Math.min(pos.l, modules[m].lessons.length - 1);
   const p = Math.min(pos.p, modules[m].lessons[l].pages.length - 1);
@@ -74,11 +74,10 @@ function reducer(state: CourseState, action: CourseAction): CourseState {
       };
     case 'RESET_PAGE': {
       const pKey = pageKey(state.pos.m, state.pos.l, state.pos.p);
-      const lKey = lessonKey(state.pos.m, state.pos.l);
       const newCompleted = { ...state.completed };
       delete newCompleted[pKey];
       const newLessonCode = { ...state.lessonCode };
-      delete newLessonCode[lKey];
+      delete newLessonCode[pKey];
       return { ...state, completed: newCompleted, lessonCode: newLessonCode };
     }
     case 'RESET_COURSE':
@@ -106,19 +105,22 @@ interface CourseContextValue {
   nextPage: () => void;
   prevPage: () => void;
   setCode: (code: string) => void;
-  markCompleted: (m?: number, l?: number, p?: number) => void;
+  markCompleted: () => void;
   resetPage: () => void;
   resetCourse: () => void;
   isLessonCompleted: (mIdx: number, lIdx: number) => boolean;
   isLastPage: boolean;
   isFirstPage: boolean;
+  isCourse1End: boolean;
+  isCourse1Completed: boolean;
+  isCourse2Completed: boolean;
   savedPosition: () => CoursePosition;
 }
 
 const CourseContext = createContext<CourseContextValue | null>(null);
 
 export function CourseProvider({ children }: { children: ReactNode }) {
-  const course = COURSE as Course;
+  const course = COURSE;
 
   const [state, dispatch] = useReducer(reducer, {
     pos: { m: 0, l: 0, p: 0 },
@@ -165,12 +167,6 @@ export function CourseProvider({ children }: { children: ReactNode }) {
   const currentLesson = currentModule.lessons[l];
   const currentPage = currentLesson.pages[p];
 
-  const saveCurrentCode = useCallback(() => {
-    const s = stateRef.current;
-    const key = lessonKey(s.pos.m, s.pos.l);
-    // code saving happens via setCode
-  }, []);
-
   const navigateTo = useCallback(
     (nm: number, nl: number, np: number) => {
       dispatch({ type: 'NAVIGATE', pos: { m: nm, l: nl, p: np } });
@@ -210,18 +206,15 @@ export function CourseProvider({ children }: { children: ReactNode }) {
 
   const setCode = useCallback((code: string) => {
     const s = stateRef.current;
-    const key = lessonKey(s.pos.m, s.pos.l);
+    const key = pageKey(s.pos.m, s.pos.l, s.pos.p);
     dispatch({ type: 'SET_CODE', key, code });
   }, []);
 
-  const markCompleted = useCallback(
-    (cm?: number, cl?: number, cp?: number) => {
-      const s = stateRef.current;
-      const key = pageKey(cm ?? s.pos.m, cl ?? s.pos.l, cp ?? s.pos.p);
-      dispatch({ type: 'MARK_COMPLETED', key });
-    },
-    [],
-  );
+  const markCompleted = useCallback(() => {
+    const s = stateRef.current;
+    const key = pageKey(s.pos.m, s.pos.l, s.pos.p);
+    dispatch({ type: 'MARK_COMPLETED', key });
+  }, []);
 
   const resetPage = useCallback(() => {
     dispatch({ type: 'RESET_PAGE' });
@@ -252,6 +245,33 @@ export function CourseProvider({ children }: { children: ReactNode }) {
   const isLastPage = m === lastM && l === lastL && p === lastP;
   const isFirstPage = m === 0 && l === 0 && p === 0;
 
+  const c1LastM = COURSE_1_MODULE_COUNT - 1;
+  const c1LastL = course.modules[c1LastM].lessons.length - 1;
+  const c1LastP = course.modules[c1LastM].lessons[c1LastL].pages.length - 1;
+  const isCourse1End = m === c1LastM && l === c1LastL && p === c1LastP;
+
+  // Check every lesson in a course range is completed
+  const isCourseFullyCompleted = (fromM: number, toM: number): boolean => {
+    for (let mi = fromM; mi < toM; mi++) {
+      const mod = course.modules[mi];
+      for (let li = 0; li < mod.lessons.length; li++) {
+        const lesson = mod.lessons[li];
+        const taskIndices = lesson.pages
+          .map((pg, i) => (pg.type === 'TASK' ? i : -1))
+          .filter((i) => i >= 0);
+        if (taskIndices.length === 0) {
+          if (!state.completed[pageKey(mi, li, lesson.pages.length - 1)]) return false;
+        } else {
+          if (!taskIndices.every((pi) => state.completed[pageKey(mi, li, pi)])) return false;
+        }
+      }
+    }
+    return true;
+  };
+
+  const isCourse1Completed = isCourseFullyCompleted(0, COURSE_1_MODULE_COUNT);
+  const isCourse2Completed = isCourseFullyCompleted(COURSE_1_MODULE_COUNT, course.modules.length);
+
   const savedPosition = useCallback((): CoursePosition => {
     const data = loadProgress();
     return clampPosition(data.pos);
@@ -276,6 +296,9 @@ export function CourseProvider({ children }: { children: ReactNode }) {
     isLessonCompleted,
     isLastPage,
     isFirstPage,
+    isCourse1End,
+    isCourse1Completed,
+    isCourse2Completed,
     savedPosition,
   };
 

@@ -7,21 +7,19 @@ interface TerminalProps {
   executorMode?: ExecutorMode;
 }
 
-const typeStyles: Record<string, string> = {
+const typeStyles: Partial<Record<TerminalLine['type'], string>> = {
   prompt: 'text-[#475569]',
   success: 'text-green',
   error: 'text-red',
   'error-detail': 'text-red/70 pl-2',
   data: 'text-[#7dd3fc]',
-  info: 'text-[#94a3b8]',
+  info: 'text-[#cbd5e1]',
   muted: 'text-text-muted italic',
-  blank: '',
-  placeholder: 'text-text-dim italic',
 };
 
 export function Terminal({ lines, isSuccess, executorMode }: TerminalProps) {
   return (
-    <div className="flex-1 flex flex-col min-h-[120px] overflow-hidden">
+    <div className="flex-[1] flex flex-col min-h-[80px] overflow-hidden">
       <div className="font-mono text-xs font-semibold tracking-[0.09em] uppercase text-text-muted px-3.5 py-1.5 bg-panel border-b border-border shrink-0 flex items-center justify-between">
         <span>OUTPUT</span>
         {executorMode === 'simulator' && (
@@ -31,7 +29,7 @@ export function Terminal({ lines, isSuccess, executorMode }: TerminalProps) {
         )}
       </div>
       <div
-        className={`flex-1 overflow-y-auto bg-[#020408] px-4 py-2.5 font-mono text-sm leading-relaxed text-[#94a3b8] ${
+        className={`flex-1 overflow-y-auto bg-[#020408] px-4 py-2.5 font-mono text-sm leading-relaxed text-[#cbd5e1] ${
           isSuccess === true
             ? 'border-t border-green/30'
             : isSuccess === false

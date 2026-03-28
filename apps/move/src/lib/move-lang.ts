@@ -1,20 +1,6 @@
 import { LanguageSupport, StreamLanguage } from '@codemirror/language';
 import type { StreamParser } from '@codemirror/language';
-
-const KEYWORDS = new Set([
-  'module', 'fun', 'public', 'struct', 'let', 'if', 'else', 'return',
-  'use', 'has', 'mut', 'const', 'entry', 'friend', 'as', 'spec',
-  'acquires', 'native', 'move', 'copy', 'match', 'enum', 'type',
-  'loop', 'while', 'break', 'continue', 'abort', 'for', 'in',
-]);
-
-const TYPES = new Set([
-  'u8', 'u16', 'u32', 'u64', 'u128', 'u256',
-  'bool', 'address', 'vector', 'String', 'Option',
-  'TxContext', 'UID', 'ID', 'Balance', 'Coin', 'Clock',
-]);
-
-const ABILITIES = new Set(['key', 'store', 'drop']);
+import { MOVE_KEYWORDS, MOVE_TYPES, MOVE_ABILITIES } from '@/lib/move-tokens';
 
 interface MoveState {
   inBlock: boolean;
@@ -41,9 +27,9 @@ const moveParser: StreamParser<MoveState> = {
 
     if (stream.match(/[A-Za-z_][A-Za-z0-9_]*/)) {
       const w = stream.current();
-      if (KEYWORDS.has(w)) return 'keyword';
-      if (TYPES.has(w)) return 'typeName';
-      if (ABILITIES.has(w)) return 'atom';
+      if (MOVE_KEYWORDS.has(w)) return 'keyword';
+      if (MOVE_TYPES.has(w)) return 'typeName';
+      if (MOVE_ABILITIES.has(w)) return 'atom';
       if (/^[A-Z]/.test(w)) return 'className';
       return 'variableName';
     }

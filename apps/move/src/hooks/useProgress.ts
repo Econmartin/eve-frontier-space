@@ -1,4 +1,3 @@
-import { useCallback } from 'react';
 import type { CoursePosition } from '@/lib/types';
 
 const LS_KEY = 'move-learn-progress';
@@ -38,16 +37,52 @@ export function saveProgress(data: ProgressData): void {
   }
 }
 
+const COURSE1_COMPLETION_KEY = 'move-learn-course1-completed-at';
+
+export function saveCourse1CompletionDate(): void {
+  try {
+    const date = new Date().toLocaleDateString('en-US', {
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+    });
+    localStorage.setItem(COURSE1_COMPLETION_KEY, date);
+  } catch {}
+}
+
+export function loadCourse1CompletionDate(): string | null {
+  try {
+    return localStorage.getItem(COURSE1_COMPLETION_KEY);
+  } catch {
+    return null;
+  }
+}
+
+const COURSE2_COMPLETION_KEY = 'move-learn-course2-completed-at';
+
+export function saveCourse2CompletionDate(): void {
+  try {
+    const date = new Date().toLocaleDateString('en-US', {
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+    });
+    localStorage.setItem(COURSE2_COMPLETION_KEY, date);
+  } catch {}
+}
+
+export function loadCourse2CompletionDate(): string | null {
+  try {
+    return localStorage.getItem(COURSE2_COMPLETION_KEY);
+  } catch {
+    return null;
+  }
+}
+
 export function lessonKey(m: number, l: number): string {
   return `m${m}l${l}`;
 }
 
 export function pageKey(m: number, l: number, p: number): string {
   return `m${m}l${l}p${p}`;
-}
-
-export function useProgressActions() {
-  const save = useCallback((data: ProgressData) => saveProgress(data), []);
-  const load = useCallback(() => loadProgress(), []);
-  return { save, load };
 }

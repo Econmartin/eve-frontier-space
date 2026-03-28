@@ -1,6 +1,12 @@
 import { MoveSimulator } from './simulator.ts';
 import type { TaskPage, ValidationResult, ExecutorMode } from './types.ts';
 
+/** Shape of the value returned by `buildMovePackage` from sui-move-builder. */
+interface BuildResult {
+  modules?: unknown[];
+  error?: string;
+}
+
 // Base-aware so compiler loads correctly when app is served at e.g. /move
 const COMPILER_URL = `${import.meta.env.BASE_URL}vendor/sui-move-builder/index.js`;
 
@@ -132,7 +138,7 @@ async function validateWithCompiler(
 ): Promise<ValidationResult> {
   const files = buildPackageFiles(code);
 
-  let result: any;
+  let result: BuildResult;
   try {
     const resolved = await resolveForFiles(files);
     result = await buildPackage!({
