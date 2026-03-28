@@ -5,6 +5,10 @@ node_modules/
 dist/
 *.local
 
+# Move build artifacts
+contracts/**/build/
+contracts/**/Move.lock
+
 # Turborepo (cache + logs)
 .turbo/
 *.turbo*.log

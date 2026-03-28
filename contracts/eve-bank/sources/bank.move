@@ -24,6 +24,12 @@ const EInvalidLoanParameters: u64 = 1;
 const ELoanAmountOutOfBounds: u64 = 2;
 const EInsufficientPoolFunds: u64 = 3;
 const EUnderpayment:          u64 = 4;
+/// Ticket is still valid for the current round and cannot be burned yet.
+const ETicketNotExpired:      u64 = 5;
+/// Split amount must be > 0 and strictly less than the share's total.
+const EInvalidSplitAmount:    u64 = 6;
+/// Payment does not meet the ticket price.
+const EInsufficientPayment:   u64 = 7;
 
 // ═══════════════════════════════════════════════════════════
 // Types
@@ -235,7 +241,7 @@ public fun buy_ticket<T>(
     payment: Coin<T>,
     ctx:     &mut TxContext,
 ): LotteryTicket {
-    assert!(payment.value() >= lottery.ticket_price, EZeroAmount);
+    assert!(payment.value() >= lottery.ticket_price, EInsufficientPayment);
     lottery.lottery_pool.join(payment.into_balance());
     LotteryTicket { id: object::new(ctx), round: lottery.current_round }
 }
@@ -302,7 +308,7 @@ public fun merge_shares(share1: &mut BankShare, share2: BankShare) {
 /// Split `amount` shares off into a new BankShare, reducing share in place.
 /// Used by the frontend to carve out the exact portion to withdraw.
 public fun split_share(share: &mut BankShare, amount: u64, ctx: &mut TxContext): BankShare {
-    assert!(amount > 0 && amount < share.shares, EZeroAmount);
+    assert!(amount > 0 && amount < share.shares, EInvalidSplitAmount);
     share.shares = share.shares - amount;
     BankShare { id: object::new(ctx), shares: amount }
 }
@@ -314,7 +320,7 @@ public fun split_share(share: &mut BankShare, amount: u64, ctx: &mut TxContext):
 /// Burn a ticket from a previous round, reclaiming the storage rebate.
 /// Anyone can call this on their own expired tickets.
 public fun burn_expired_ticket<T>(lottery: &LotterySystem<T>, ticket: LotteryTicket) {
-    assert!(ticket.round < lottery.current_round, EZeroAmount);
+    assert!(ticket.round < lottery.current_round, ETicketNotExpired);
     let LotteryTicket { id, round: _ } = ticket;
     id.delete();
 }
