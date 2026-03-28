@@ -1,20 +1,22 @@
 {
-  "name": "@mysite/move",
+  "name": "@eve-frontier-space/move",
   "version": "1.0.0",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build && cp public/.htaccess dist/.htaccess && cp -r public/vendor dist/vendor",
+    "build": "vite build && cp -r public/vendor dist/vendor",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "update-compiler": "node -e \"const fs=require('fs'),src='node_modules/@zktx.io/sui-move-builder/dist/lite',dst='public/vendor/sui-move-builder';fs.mkdirSync(dst,{recursive:true});['index.js','sui_move_wasm.js','sui_move_wasm_bg.wasm'].forEach(f=>fs.copyFileSync(src+'/'+f,dst+'/'+f));console.log('Compiler updated.');\""
+    "update-compiler": "node scripts/update-compiler.mjs"
   },
   "devDependencies": {
+    "@types/node": "^22.0.0",
     "@tailwindcss/typography": "^0.5.19",
     "@tailwindcss/vite": "^4.2.1",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
+    "@types/three": "^0.183.1",
     "@vitejs/plugin-react": "^5.1.4",
     "@zktx.io/sui-move-builder": "^0.2.8",
     "tailwindcss": "^4.2.1",
@@ -22,18 +24,28 @@
     "vite": "^5.4.0"
   },
   "dependencies": {
+    "@eve-frontier-space/ui": "*",
+    "@evefrontier/dapp-kit": "^0.1.7",
+    "@mysten/dapp-kit-react": "^1.0.2",
+    "@mysten/sui": "^2.8.0",
+    "@tanstack/react-query": "^5.90.16",
     "@codemirror/autocomplete": "^6.20.1",
     "@codemirror/commands": "^6.10.2",
-    "@codemirror/lang-javascript": "^6.2.5",
     "@codemirror/language": "^6.12.2",
     "@codemirror/state": "^6.5.4",
     "@codemirror/view": "^6.39.16",
     "@lezer/highlight": "^1.2.3",
+    "@react-three/fiber": "^9.5.0",
+    "@shadergradient/react": "^2.4.20",
+    "animejs": "^4.3.6",
+    "camera-controls": "^3.1.2",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "react-markdown": "^10.1.0",
     "react-router": "^7.13.1",
     "rehype-raw": "^7.0.0",
-    "remark-gfm": "^4.0.1"
+    "remark-gfm": "^4.0.1",
+    "three": "^0.183.2",
+    "three-stdlib": "^2.36.1"
   }
 }

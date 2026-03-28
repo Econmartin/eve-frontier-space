@@ -1,0 +1,11 @@
+
+.move-hero-gradient {
+  /* Strong left fade for text legibility; lighter on right for image */
+  background: linear-gradient(
+    to right,
+    rgba(0, 0, 0, 0.85) 0%,
+    rgba(0, 0, 0, 0.5) 40%,
+    rgba(0, 0, 0, 0.15) 70%,
+    transparent 100%
+  );
+}
