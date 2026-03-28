@@ -54,7 +54,17 @@ Without \`store\`, only the defining module can transfer the object — useful f
     {
       type: 'TASK',
       title: 'Define a Sui Object',
-      content: `Create your first Sui object struct.`,
+      content: `Create your first Sui object struct.
+
+For example:
+
+\`\`\`move
+public struct Beacon has key, store {
+    id: UID,       // must be first
+    power: u64,
+    active: bool,
+}
+\`\`\``,
       task: `Define \`public struct Ship\` with:
 - Abilities: \`key, store\`
 - Fields: \`id: UID\` (first), \`fuel: u64\`, \`name: vector<u8>\`
@@ -145,7 +155,18 @@ public fun mint(name: vector<u8>, fuel: u64, ctx: &mut TxContext)
     {
       type: 'TASK',
       title: 'Write an Object Constructor',
-      content: `Write a constructor function that creates a Sui object.`,
+      content: `Write a constructor function that creates a Sui object.
+
+For example:
+
+\`\`\`move
+fun create(data: u64, ctx: &mut TxContext): MyObject {
+    MyObject {
+        id: object::new(ctx),   // creates a unique UID
+        data,
+    }
+}
+\`\`\``,
       task: `The \`Beacon\` struct is defined for you. Write a constructor:
 
 \`fun new_beacon(signal: u64, ctx: &mut TxContext): Beacon\`

@@ -6,7 +6,7 @@ import lesson15_3 from './15.3-building-against-limits.lesson';
 const module: Module = {
   id: 'm15',
   title: 'Authorization & Security',
-  icon: '🛡️',
+  icon: 'assets/authorisation.svg',
   lessons: [lesson15_1, lesson15_2, lesson15_3],
 };
 export default module;

@@ -71,7 +71,18 @@ These messages appear in transaction error output, making debugging much easier.
     {
       type: 'TASK',
       title: 'Robust Fleet Manager',
-      content: `Use good error patterns to build a fleet manager.`,
+      content: `Use good error patterns to build a fleet manager.
+
+For example:
+
+\`\`\`move
+const EFull: u64 = 0;
+
+fun add(items: &mut vector<u64>, item: u64, limit: u64) {
+    assert!(items.length() < limit, EFull);
+    items.push_back(item);
+}
+\`\`\``,
       task: `Write a fleet module that uses good error patterns:
 
 1. Define error constants \`EFleetFull\` (value 0) and \`ENotFound\` (value 1)
@@ -193,7 +204,20 @@ fun find_ship(fleet: &vector<u64>, id: u64): Option<u64> {
     {
       type: 'TASK',
       title: 'Defense in Depth',
-      content: `Build a module with layered error handling — a check function and an asserting function that reuses it.`,
+      content: `Build a module with layered error handling — a check function and an asserting function that reuses it.
+
+For example:
+
+\`\`\`move
+fun can_act(value: u64): bool {
+    value >= 10
+}
+
+fun do_action(value: u64) {
+    assert!(can_act(value), ENotEnough);
+    // ... rest of the action
+}
+\`\`\``,
       task: `Build a module with layered error handling:
 
 1. \`can_jump(fuel: u64, distance: u64): bool\` — returns true if fuel >= distance * 10

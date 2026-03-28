@@ -45,7 +45,23 @@ The tradeoff: it costs more gas (2 objects stored vs 1). Use regular dynamic fie
     {
       type: 'TASK',
       title: 'Equipment System',
-      content: `Write an equipment system using dynamic object fields to attach gear to a ship.`,
+      content: `Write an equipment system using dynamic object fields to attach gear to a ship.
+
+For example:
+
+\`\`\`move
+public fun attach(station: &mut Station, slot: vector<u8>, module: Module) {
+    ofield::add(&mut station.id, slot, module);
+}
+
+public fun check(station: &Station, slot: vector<u8>): &Module {
+    ofield::borrow(&station.id, slot)
+}
+
+public fun detach(station: &mut Station, slot: vector<u8>): Module {
+    ofield::remove(&mut station.id, slot)
+}
+\`\`\``,
       task: `Write an equipment system:
 
 1. \`equip(ship: &mut Ship, name: vector<u8>, gear: Equipment)\` — attaches equipment as dynamic object field

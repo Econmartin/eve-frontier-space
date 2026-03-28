@@ -6,7 +6,7 @@ import lesson4_3 from './4.3-error-handling.lesson';
 const module: Module = {
   id: 'm4',
   title: 'Abilities & Ownership',
-  icon: '🔑',
+  icon: 'assets/abilties.svg',
   lessons: [lesson4_1, lesson4_2, lesson4_3],
 };
 export default module;

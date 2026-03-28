@@ -51,7 +51,23 @@ This makes the Move ecosystem more collaborative — frontier pilots can share r
     {
       type: 'TASK',
       title: 'Package Info Module',
-      content: `Write functions that return information about your package manifest — a pattern useful for on-chain introspection.`,
+      content: `Write functions that return information about your package manifest — a pattern useful for on-chain introspection.
+
+For example:
+
+\`\`\`move
+public fun project_name(): vector<u8> {
+    b"my_project"
+}
+
+public fun major_version(): u64 {
+    1
+}
+
+public fun is_active(): bool {
+    true
+}
+\`\`\``,
       task: `Complete the module so each function returns the correct value:
 
 1. \`package_name(): vector<u8>\` — returns \`b"frontier_game"\`

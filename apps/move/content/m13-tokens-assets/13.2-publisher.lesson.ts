@@ -42,7 +42,18 @@ Think of Publisher as your **master key** for display and policy operations on y
     {
       type: 'TASK',
       title: 'Claim Publisher & Create AdminCap',
-      content: `Write an init function that claims the Publisher and creates an admin capability.`,
+      content: `Write an init function that claims the Publisher and creates an admin capability.
+
+For example:
+
+\`\`\`move
+fun init(otw: MY_MODULE, ctx: &mut TxContext) {
+    let publisher = package::claim(otw, ctx);
+    let admin = AdminCap { id: object::new(ctx) };
+    transfer::public_transfer(publisher, ctx.sender());
+    transfer::public_transfer(admin, ctx.sender());
+}
+\`\`\``,
       task: `Complete the init function to:
 
 1. Claim the \`Publisher\` using the One-Time Witness

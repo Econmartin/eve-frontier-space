@@ -6,7 +6,7 @@ import lesson3_3 from './3.3-enums.lesson';
 const module: Module = {
   id: 'm3',
   title: 'Data Structures',
-  icon: '🏗️',
+  icon: 'assets/data-structure.svg',
   lessons: [lesson3_1, lesson3_2, lesson3_3],
 };
 export default module;

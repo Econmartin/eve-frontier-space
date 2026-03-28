@@ -122,7 +122,18 @@ let _unused = some_value();  // no warning
     {
       type: 'TASK',
       title: 'Mutable Shields',
-      content: `Practice using mutable variables to track changing state.`,
+      content: `Practice using mutable variables to track changing state.
+
+For example:
+
+\`\`\`move
+fun count_up(start: u64): u64 {
+    let mut n = start;
+    n = n + 1;
+    n = n + 1;
+    n
+}
+\`\`\``,
       task: `Write a function \`shield_cycle\` that takes \`shields: u64\`:
 1. Store it in a \`let mut\` variable called \`current\`
 2. Subtract \`30\` (taking a hit)

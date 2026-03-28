@@ -65,7 +65,22 @@ Method syntax is just **sugar** — it compiles to the same code. Use whichever 
     {
       type: 'TASK',
       title: 'Define Methods',
-      content: `Write functions that can be called with method syntax on your own struct.`,
+      content: `Write functions that can be called with method syntax on your own struct.
+
+For example:
+
+\`\`\`move
+public struct Counter has drop { value: u64 }
+
+public fun new(): Counter { Counter { value: 0 } }
+public fun increment(c: &mut Counter) { c.value = c.value + 1; }
+public fun get(c: &Counter): u64 { c.value }
+
+// These can all be called with dot notation:
+// let mut c = Counter::new();
+// c.increment();   // same as increment(&mut c)
+// let v = c.get(); // same as get(&c)
+\`\`\``,
       task: `Write three functions for the \`FuelTank\` struct:
 
 1. \`public fun new(capacity: u64): FuelTank\` — creates a tank with the given capacity and \`level\` starting at \`0\`
@@ -178,7 +193,21 @@ You'll work with the Sui modules hands-on in modules 7 and 8.`,
     {
       type: 'TASK',
       title: 'Combine It All',
-      content: `Use method syntax, index syntax, and standard library types together.`,
+      content: `Use method syntax, index syntax, and standard library types together.
+
+For example:
+
+\`\`\`move
+use std::option::{Self, Option};
+
+fun first_item(v: &vector<u64>): Option<u64> {
+    if (v.is_empty()) {       // method syntax
+        option::none()
+    } else {
+        option::some(v[0])    // index syntax
+    }
+}
+\`\`\``,
       task: `Write a function \`fun highest_rank(ranks: &vector<u64>): Option<u64>\` that:
 - Returns \`option::none()\` if the vector is empty
 - Otherwise, iterates the vector to find the highest value and returns \`option::some(highest)\`

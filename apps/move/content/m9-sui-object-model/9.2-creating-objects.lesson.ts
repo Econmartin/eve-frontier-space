@@ -96,7 +96,20 @@ Think of \`store\` as "this object is freely tradeable." Without it, your module
     {
       type: 'TASK',
       title: 'Build a Space Station',
-      content: `Create a constructor for a space station object.`,
+      content: `Create a constructor for a space station object.
+
+For example:
+
+\`\`\`move
+public fun new(name: vector<u8>, slots: u64, ctx: &mut TxContext): Depot {
+    Depot {
+        id: object::new(ctx),
+        name,
+        slots,
+        stored: 0,
+    }
+}
+\`\`\``,
       task: `Write the \`new\` function for \`SpaceStation\`. It should:
 
 1. Take \`name: vector<u8>\`, \`capacity: u64\`, and \`ctx: &mut TxContext\`

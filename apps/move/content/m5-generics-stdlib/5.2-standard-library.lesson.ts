@@ -53,7 +53,17 @@ For everything else, add a \`use\` at the top of your module.`,
     {
       type: 'TASK',
       title: 'Use Imports',
-      content: `Practice importing and using the string module.`,
+      content: `Practice importing and using the string module.
+
+For example:
+
+\`\`\`move
+use std::string::{Self, String};
+
+fun greeting(): String {
+    string::utf8(b"Hello, pilot!")
+}
+\`\`\``,
       task: `The module already has \`use std::string::{Self, String};\` at the top.
 
 Write a function \`fun ship_name(): String\` that returns the string \`"Nebula Runner"\` using \`string::utf8(b"Nebula Runner")\`.`,
@@ -155,7 +165,21 @@ greeting.append(b"pilot!".to_string());
     {
       type: 'TASK',
       title: 'Optional Lookups',
-      content: `Use \`Option\` to handle lookups that might fail.`,
+      content: `Use \`Option\` to handle lookups that might fail.
+
+For example:
+
+\`\`\`move
+use std::option::{Self, Option};
+
+fun maybe_find(id: u64): Option<u64> {
+    if (id == 42) {
+        option::some(99)    // found: wrap the value
+    } else {
+        option::none()      // not found: empty
+    }
+}
+\`\`\``,
       task: `Write a function \`fun find_rank(pilot_id: u64): Option<u64>\` that:
 - Returns \`option::some(5)\` if \`pilot_id == 1\`
 - Returns \`option::some(3)\` if \`pilot_id == 2\`

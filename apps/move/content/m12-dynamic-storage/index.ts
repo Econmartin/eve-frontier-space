@@ -7,7 +7,7 @@ import lesson12_4 from './12.4-collections.lesson';
 const module: Module = {
   id: 'm12',
   title: 'Dynamic Storage',
-  icon: '💾',
+  icon: 'assets/dynamic-storage.svg',
   lessons: [lesson12_1, lesson12_2, lesson12_3, lesson12_4],
 };
 export default module;

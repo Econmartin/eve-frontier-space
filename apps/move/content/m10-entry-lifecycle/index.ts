@@ -6,7 +6,7 @@ import lesson10_3 from './10.3-events.lesson';
 const module: Module = {
   id: 'm10',
   title: 'Entry Points & Lifecycle',
-  icon: '🔄',
+  icon: 'assets/entry.svg',
   lessons: [lesson10_1, lesson10_2, lesson10_3],
 };
 export default module;

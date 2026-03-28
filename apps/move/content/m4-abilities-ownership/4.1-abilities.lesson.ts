@@ -57,7 +57,19 @@ Think about digital assets. A \`Coin\` struct representing real money should **n
     {
       type: 'TASK',
       title: 'Copy and Move',
-      content: `Practice the difference between copying and moving.`,
+      content: `Practice the difference between copying and moving.
+
+For example:
+
+\`\`\`move
+// copy: use the copy keyword to duplicate
+let a = Coords { x: 10, y: 20 };   // has copy ability
+let b = copy a;   // a is still valid
+
+// move: ownership transfers, original is gone
+let plan = Plan { dest: 5 };   // no copy ability
+let moved = plan;   // plan is now invalid
+\`\`\``,
       task: `Two structs are defined: \`Coordinates\` (with \`copy, drop\`) and \`FlightPlan\` (with only \`drop\`).
 
 Write two functions:
@@ -173,7 +185,21 @@ Here's a practical guide:
     {
       type: 'TASK',
       title: 'Handle a Non-Droppable Value',
-      content: `When a struct has no \`drop\`, you must explicitly destructure it.`,
+      content: `When a struct has no \`drop\`, you must explicitly destructure it.
+
+For example:
+
+\`\`\`move
+public struct Token {
+    amount: u64,
+}
+
+// The only way to consume a non-droppable value:
+fun consume(t: Token): u64 {
+    let Token { amount } = t;
+    amount
+}
+\`\`\``,
       task: `The \`FuelCell\` struct has **no abilities** — it can't be copied or dropped.
 
 Write two functions:
@@ -279,7 +305,20 @@ key         →  the object itself (on-chain, unique ID)
     {
       type: 'TASK',
       title: 'Choose the Right Abilities',
-      content: `Design structs with appropriate abilities for each use case.`,
+      content: `Design structs with appropriate abilities for each use case.
+
+For example:
+
+\`\`\`move
+// Freely copyable/droppable — for temporary data
+public struct Config has copy, drop { value: u64 }
+
+// Storable in objects, copyable — for persistent data
+public struct Label has store, copy, drop { name: vector<u8> }
+
+// No abilities — must be explicitly consumed
+public struct Key { level: u8 }
+\`\`\``,
       task: `Define three structs:
 
 1. \`ScanResult\` — temporary sensor data, freely copyable and discardable. Fields: \`signal: u64\`, \`range: u64\`. Give it \`copy, drop\`.

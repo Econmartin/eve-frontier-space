@@ -8,7 +8,7 @@ import lesson14_5 from './14.5-cryptography-hashing.lesson';
 const module: Module = {
   id: 'm14',
   title: 'Advanced Sui',
-  icon: '\uD83D\uDD2C',
+  icon: 'assets/advanced-sui.svg',
   lessons: [lesson14_1, lesson14_2, lesson14_3, lesson14_4, lesson14_5],
 };
 export default module;

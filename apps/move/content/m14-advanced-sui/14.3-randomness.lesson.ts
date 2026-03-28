@@ -55,7 +55,16 @@ public fun roll_dice(r: &Random, ctx: &mut TxContext) { ... }
     {
       type: 'TASK',
       title: 'Loot Drop System',
-      content: `Build a loot drop system that assigns random rarity to items.`,
+      content: `Build a loot drop system that assigns random rarity to items.
+
+For example:
+
+\`\`\`move
+entry fun flip_coin(r: &Random, ctx: &mut TxContext): bool {
+    let mut gen = random::new_generator(r, ctx);
+    gen.generate_bool()
+}
+\`\`\``,
       task: `Write a loot drop function:
 
 1. \`roll_loot(r: &Random, ctx: &mut TxContext): u8\` — an \`entry fun\` that creates a random generator and returns a rarity value from 1 to 5 using \`generate_u8_in_range(1, 5)\``,

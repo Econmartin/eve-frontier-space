@@ -59,7 +59,21 @@ let nav = ShipCommand::SetCourse { x: 10, y: 20 };
     {
       type: 'TASK',
       title: 'Define an Enum',
-      content: `Model the different alert levels on a frontier station.`,
+      content: `Model the different alert levels on a frontier station.
+
+For example:
+
+\`\`\`move
+public enum Status has copy, drop {
+    Online,
+    Offline,
+    Standby,
+}
+
+fun default_status(): Status {
+    Status::Online
+}
+\`\`\``,
       task: `Define a \`public enum\` named \`AlertLevel\` with abilities \`copy\` and \`drop\`, and three variants: \`Green\`, \`Yellow\`, and \`Red\`.
 
 Then write a function \`default_alert(): AlertLevel\` that returns \`AlertLevel::Green\`.`,
@@ -170,7 +184,19 @@ When matching on a reference (\`&ShipCommand\`), the bound variables are also re
     {
       type: 'TASK',
       title: 'Weapon Selector',
-      content: `Use \`match\` to return different values based on a weapon mode.`,
+      content: `Use \`match\` to return different values based on a weapon mode.
+
+For example:
+
+\`\`\`move
+fun describe(s: &Status): u64 {
+    match (s) {
+        Status::Online => 1,
+        Status::Offline => 0,
+        Status::Standby => 2,
+    }
+}
+\`\`\``,
       task: `The \`WeaponMode\` enum is defined for you. Write a function \`damage(mode: &WeaponMode): u64\` that uses \`match\` to return:
 - \`Laser\` → \`25\`
 - \`Missile\` → \`75\`

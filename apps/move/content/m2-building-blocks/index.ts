@@ -8,7 +8,7 @@ import lesson2_5 from './2.5-control-flow.lesson';
 const module: Module = {
   id: 'm2',
   title: 'The Building Blocks',
-  icon: '🔧',
+  icon: 'assets/building-block.svg',
   lessons: [lesson2_1, lesson2_2, lesson2_3, lesson2_4, lesson2_5],
 };
 export default module;

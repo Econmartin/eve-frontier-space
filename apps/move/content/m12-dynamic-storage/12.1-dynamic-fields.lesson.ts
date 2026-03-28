@@ -57,7 +57,23 @@ Now \`ShieldKey\` and \`WeaponKey\` can't be confused — the type system preven
     {
       type: 'TASK',
       title: 'Cargo System',
-      content: `Write a cargo system using dynamic fields to attach named cargo to a ship.`,
+      content: `Write a cargo system using dynamic fields to attach named cargo to a ship.
+
+For example:
+
+\`\`\`move
+public fun set_mod(ship: &mut Ship, key: vector<u8>, value: u64) {
+    df::add(&mut ship.id, key, value);
+}
+
+public fun get_mod(ship: &Ship, key: vector<u8>): &u64 {
+    df::borrow(&ship.id, key)
+}
+
+public fun remove_mod(ship: &mut Ship, key: vector<u8>): u64 {
+    df::remove(&mut ship.id, key)
+}
+\`\`\``,
       task: `Write a cargo system using dynamic fields:
 
 1. \`add_cargo(ship: &mut Ship, cargo_name: vector<u8>, quantity: u64)\` — adds a dynamic field

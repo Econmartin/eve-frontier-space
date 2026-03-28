@@ -7,7 +7,7 @@ import lesson16_4 from './16.4-fast-path-consensus.lesson';
 const module: Module = {
   id: 'm16',
   title: 'Production Deployment',
-  icon: '\u{1F6A2}',
+  icon: 'assets/production.svg',
   lessons: [lesson16_1, lesson16_2, lesson16_3, lesson16_4],
 };
 export default module;

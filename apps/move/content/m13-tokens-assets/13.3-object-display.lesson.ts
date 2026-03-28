@@ -57,7 +57,21 @@ fun init(otw: SHIP_NFT, ctx: &mut TxContext) {
     {
       type: 'TASK',
       title: 'Display for Pilot Badges',
-      content: `Define a PilotBadge struct and set up Display with name and description templates.`,
+      content: `Define a PilotBadge struct and set up Display with name and description templates.
+
+For example:
+
+\`\`\`move
+fun init(otw: MY_MODULE, ctx: &mut TxContext) {
+    let publisher = package::claim(otw, ctx);
+    let mut disp = display::new<MyNFT>(&publisher, ctx);
+    disp.add(b"name".to_string(), b"{name}".to_string());
+    disp.add(b"description".to_string(), b"A {trait} NFT".to_string());
+    disp.update_version();
+    transfer::public_transfer(disp, ctx.sender());
+    transfer::public_transfer(publisher, ctx.sender());
+}
+\`\`\``,
       task: `Complete the module:
 
 1. Define a \`PilotBadge\` struct with fields: \`id: UID\`, \`name: vector<u8>\`, \`rank: vector<u8>\`

@@ -33,15 +33,13 @@ Unlike Ethereum where a transaction calls a single contract function, Sui transa
 The key insight: **results from one command feed into the next**. This lets you compose complex operations without intermediate transactions.
 
 Example flow (pseudocode):
-\`\`\`
-Transaction {
-  // 1. Split 100 MIST from my gas coin
-  let payment = SplitCoins(my_coin, [100]);
-  // 2. Buy a ship with that payment
-  let ship = MoveCall(frontier::shop::buy_ship, [shop, payment]);
-  // 3. Send the ship to my friend
-  TransferObjects([ship], friend_address);
-}
+\`\`\`move
+// 1. Split 100 MIST from my gas coin
+let payment = SplitCoins(my_coin, [100]);
+// 2. Buy a ship with that payment
+let ship = MoveCall(frontier::shop::buy_ship, [shop, payment]);
+// 3. Send the ship to my friend
+TransferObjects([ship], friend_address);
 \`\`\`
 
 All three commands execute **atomically** — if the buy fails, the split is rolled back too. No half-completed states.

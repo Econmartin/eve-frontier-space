@@ -5,7 +5,7 @@ import lesson8_2 from './8.2-error-patterns.lesson';
 const module: Module = {
   id: 'm8',
   title: 'Best Practices',
-  icon: '🏆',
+  icon: 'assets/best-practices.svg',
   lessons: [lesson8_1, lesson8_2],
 };
 export default module;

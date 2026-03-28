@@ -56,7 +56,18 @@ This is a runtime check — the compiler doesn't resolve it at compile time.`,
     {
       type: 'TASK',
       title: 'Type Logger',
-      content: `Use type reflection to compare types at runtime.`,
+      content: `Use type reflection to compare types at runtime.
+
+For example:
+
+\`\`\`move
+use std::type_name;
+
+// Get the TypeName for T and compare:
+fun same<T, U>(): bool {
+    type_name::get<T>() == type_name::get<U>()
+}
+\`\`\``,
       task: `Write a function \`is_same_type<T, U>(): bool\` that returns \`true\` if types \`T\` and \`U\` have the same type name.
 
 Use \`type_name::get<T>()\` and compare the results with \`==\`.`,

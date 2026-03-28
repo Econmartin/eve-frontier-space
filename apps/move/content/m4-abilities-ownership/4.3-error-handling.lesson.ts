@@ -48,7 +48,19 @@ assert!(crew > 0, ENoCrew);  // immediately clear
     {
       type: 'TASK',
       title: 'Guard a Function',
-      content: `Protect a docking function with proper error handling.`,
+      content: `Protect a docking function with proper error handling.
+
+For example:
+
+\`\`\`move
+const ENoFuel: u64 = 0;
+const ENoCrew: u64 = 1;
+
+fun launch(fuel: u64, crew: u64) {
+    assert!(fuel > 0, ENoFuel);
+    assert!(crew > 0, ENoCrew);
+}
+\`\`\``,
       task: `Define three error constants and write a function:
 
 1. \`const ENoFuel: u64 = 0;\`
@@ -176,7 +188,18 @@ assert!(has_enough_fuel(&ship, 50), EInsufficientFuel);
     {
       type: 'TASK',
       title: 'Descriptive Errors',
-      content: `Use the \`#[error]\` attribute for human-readable error messages.`,
+      content: `Use the \`#[error]\` attribute for human-readable error messages.
+
+For example:
+
+\`\`\`move
+#[error]
+const ENotReady: vector<u8> = b"Ship is not ready for launch";
+
+fun check(ready: bool) {
+    assert!(ready, ENotReady);
+}
+\`\`\``,
       task: `Write a fuel management module:
 
 1. Define two \`#[error]\` constants:

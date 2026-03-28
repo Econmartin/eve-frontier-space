@@ -112,7 +112,25 @@ entry fun scrap_ship(ship: Ship) {
     {
       type: 'TASK',
       title: 'Fleet Operations',
-      content: `Build the core operations for a fleet of fighters.`,
+      content: `Build the core operations for a fleet of fighters.
+
+For example:
+
+\`\`\`move
+public fun create_ship(name: vector<u8>, ctx: &mut TxContext) {
+    let ship = Ship { id: object::new(ctx), name, fuel: 50 };
+    transfer::public_transfer(ship, ctx.sender());
+}
+
+public fun refuel(ship: &mut Ship, amount: u64) {
+    ship.fuel = ship.fuel + amount;
+}
+
+public fun scrap(ship: Ship) {
+    let Ship { id, name: _, fuel: _ } = ship;
+    id.delete();
+}
+\`\`\``,
       task: `Write three functions for the \`Fighter\` struct:
 
 1. \`create_fighter(name: vector<u8>, ctx: &mut TxContext)\` — create a Fighter with \`power: 10\` and transfer it to the sender
@@ -249,7 +267,21 @@ Sui enforces this — you can't just "drop" an object with a UID. Every object m
     {
       type: 'TASK',
       title: 'Restricted Transfer',
-      content: `Create a non-transferable credential using module-only transfer.`,
+      content: `Create a non-transferable credential using module-only transfer.
+
+For example:
+
+\`\`\`move
+public fun issue(name: vector<u8>, to: address, ctx: &mut TxContext) {
+    let badge = Badge { id: object::new(ctx), name };
+    transfer::transfer(badge, to);  // module-only transfer
+}
+
+public fun revoke(badge: Badge) {
+    let Badge { id, name: _ } = badge;
+    id.delete();
+}
+\`\`\``,
       task: `Write two functions for the \`Credential\` struct (which has \`key\` only — no \`store\`):
 
 1. \`issue(name: vector<u8>, to: address, ctx: &mut TxContext)\` — create a Credential and transfer it using the **module-only** \`transfer::transfer\`

@@ -8,26 +8,23 @@ const lesson: Lesson = {
     {
       type: 'LEARN',
       title: 'On-Chain Crypto Primitives',
-      content: `Sui provides built-in hash functions for content addressing, verification, and cryptographic patterns. All live in \`sui::hash\`:
+      content: `Sui provides built-in hash functions for content addressing, verification, and commit-reveal patterns. Both live in \`std::hash\`:
 
 \`\`\`move
 module frontier::crypto_demo;
 
-use sui::hash;
+use std::hash;
 
 fun hash_examples() {
     // SHA2-256 — the most common general-purpose hash
     let digest = hash::sha2_256(b"frontier data");
 
-    // SHA3-256 — newer standard, used in some protocols
-    let digest = hash::sha3_256(b"frontier data");
-
-    // Keccak256 — Ethereum compatible
-    let digest = hash::keccak256(b"frontier data");
+    // SHA3-256 — newer standard, additional security margin
+    let digest2 = hash::sha3_256(b"frontier data");
 }
 \`\`\`
 
-All three functions:
+Both functions:
 - Accept \`vector<u8>\` as input
 - Return \`vector<u8>\` (32 bytes / 256 bits)
 - Are deterministic — same input always produces same output
@@ -36,11 +33,12 @@ All three functions:
 
 | Hash | Use case |
 |------|----------|
-| SHA2-256 | General purpose, most common |
-| SHA3-256 | Newer protocols, additional security margin |
-| Keccak256 | Cross-chain with Ethereum, Solidity compatibility |
+| SHA2-256 | General purpose, most common — use this by default |
+| SHA3-256 | Where a newer standard is required by a protocol |
 
-Sui also provides signature verification modules (\`sui::ecdsa_k1\`, \`sui::ed25519\`) for verifying off-chain signatures on-chain.`,
+### Signature verification
+
+For verifying off-chain signatures on-chain, Sui provides \`sui::ed25519::ed25519_verify(sig, pk, msg)\`. The common pattern is a server signs a message off-chain with its private key; the contract stores the public key and verifies the signature when a player submits it. Useful for server-signed item grants, one-time permits, and allowlists.`,
     },
     {
       type: 'LEARN',
@@ -56,7 +54,7 @@ In an on-chain auction or game, if you submit your choice openly, others can see
 \`\`\`move
 module frontier::commit_reveal;
 
-use sui::hash;
+use std::hash;
 
 public struct Game has key {
     id: UID,
@@ -88,7 +86,21 @@ Nobody can see your choice during the commit phase (they only see the hash). Dur
     {
       type: 'TASK',
       title: 'Commit-Reveal System',
-      content: `Build a commit-reveal system for hidden game choices.`,
+      content: `Build a commit-reveal system for hidden game choices.
+
+For example:
+
+\`\`\`move
+public fun submit_bid(auction: &mut Auction, hash: vector<u8>) {
+    auction.bid_hash = hash;
+}
+
+public fun reveal_bid(auction: &mut Auction, amount: vector<u8>, salt: vector<u8>): bool {
+    let mut data = amount;
+    data.append(salt);
+    hash::sha2_256(data) == auction.bid_hash
+}
+\`\`\``,
       task: `Write a commit-reveal module:
 
 1. \`commit(game: &mut Game, hash: vector<u8>)\` — stores the hash in \`game.commitment\`
@@ -108,7 +120,7 @@ public fun reveal(game: &mut Game, choice: vector<u8>, secret: vector<u8>): bool
       bonus: null,
       starterCode: `module frontier::commit_reveal;
 
-use sui::hash;
+use std::hash;
 
 public struct Game has key {
     id: UID,
@@ -162,11 +174,11 @@ Test result: OK. Total tests: 1; passed: 1; failed: 0`,
     {
       type: 'REVIEW',
       title: 'Lesson 14.5 — Summary',
-      content: `- **\`hash::sha2_256\`**, **\`hash::sha3_256\`**, **\`hash::keccak256\`** — all accept \`vector<u8>\`, return 32-byte \`vector<u8>\`
-- Use SHA2-256 for general purpose, Keccak256 for Ethereum compatibility
+      content: `- **\`std::hash::sha2_256\`** and **\`std::hash::sha3_256\`** — accept \`vector<u8>\`, return 32-byte \`vector<u8>\`
+- **\`sui::ed25519::ed25519_verify(sig, pk, msg)\`** — verifies an ed25519 signature on-chain; returns \`bool\`
+- **Server-signed permit pattern**: store a public key on-chain, have the server sign messages, verify in the contract
 - **Commit-reveal pattern**: hash(choice + secret) to hide, then reveal and verify
-- Prevents front-running in games, auctions, and competitive scenarios
-- Sui also provides \`sui::ecdsa_k1\` and \`sui::ed25519\` for signature verification`,
+- Commit-reveal prevents front-running in games, auctions, and competitive scenarios`,
     },
   ],
 };

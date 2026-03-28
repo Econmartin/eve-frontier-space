@@ -59,7 +59,16 @@ public struct Ship has drop {
     {
       type: 'TASK',
       title: 'Define a Struct',
-      content: `Define your first struct to model a pilot's profile.`,
+      content: `Define your first struct to model a pilot's profile.
+
+For example:
+
+\`\`\`move
+public struct Config has copy, drop {
+    speed: u64,
+    power: u64,
+}
+\`\`\``,
       task: `Define a \`public struct\` named \`Pilot\` with the abilities \`copy\` and \`drop\`, and two fields: \`rank: u64\` and \`missions: u64\`.`,
       hint: `\`\`\`move
 public struct Pilot has copy, drop {
@@ -119,7 +128,7 @@ fun create_pilot(rank: u64, missions: u64): Pilot {
 
 ### Accessing fields (dot notation)
 
-Read a field with the dot operator:
+Read a field with the dot operator. Notice the \`&\` before \`Pilot\` — this is a **reference**, meaning the function borrows the value to read it without consuming it. We'll cover references in depth later; for now, just know that \`&T\` means "read-only access to a T":
 
 \`\`\`move
 fun is_veteran(pilot: &Pilot): bool {
@@ -160,7 +169,19 @@ let Pilot { rank: _, missions } = pilot;
     {
       type: 'TASK',
       title: 'Build a Ship',
-      content: `Practice creating structs, reading fields, and writing a constructor.`,
+      content: `Practice creating structs, reading fields, and writing a constructor.
+
+For example:
+
+\`\`\`move
+fun new_config(speed: u64, power: u64): Config {
+    Config { speed, power }   // field punning
+}
+
+fun is_fast(cfg: &Config): bool {
+    cfg.speed > 50   // dot notation
+}
+\`\`\``,
       task: `The \`Ship\` struct is already defined. Write two functions:
 
 1. \`fun new_ship(fuel: u64, shields: u64): Ship\` — creates and returns a Ship (use field punning)
@@ -262,7 +283,19 @@ Since only the defining module can pack a struct, \`new\` becomes the **only** w
     {
       type: 'TASK',
       title: 'Shield Manager',
-      content: `Practice mutating struct fields through references.`,
+      content: `Practice mutating struct fields through references.
+
+For example:
+
+\`\`\`move
+fun charge(reactor: &mut Reactor, amount: u64) {
+    reactor.power = reactor.power + amount;
+}
+
+fun is_powered(reactor: &Reactor): bool {
+    reactor.power > 0
+}
+\`\`\``,
       task: `Write three functions:
 
 1. \`fun new_shield(strength: u64): Shield\` — creates a Shield with the given \`strength\` and \`active\` set to \`true\`

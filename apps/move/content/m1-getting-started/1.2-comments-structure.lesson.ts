@@ -78,6 +78,9 @@ fun fleet_speed(total_speed: u64, ship_count: u64): u64 {
     total_speed / ship_count
 }
 
+
+
+
 #[test]
 fun test_fleet_speed() {
     assert!(fleet_speed(300, 3) == 100, 0);

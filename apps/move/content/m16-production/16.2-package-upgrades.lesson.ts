@@ -66,7 +66,23 @@ This protects users from accidentally calling outdated logic on shared state.`,
     {
       type: 'TASK',
       title: 'Versioned Game Module',
-      content: `Build a versioned module that protects shared state after an upgrade.`,
+      content: `Build a versioned module that protects shared state after an upgrade.
+
+For example:
+
+\`\`\`move
+const VERSION: u64 = 2;
+const EOutdated: u64 = 0;
+
+fun update(config: &mut Config) {
+    assert!(config.version == VERSION, EOutdated);
+    config.value = config.value + 1;
+}
+
+fun upgrade(config: &mut Config, _cap: &AdminCap) {
+    config.version = VERSION;
+}
+\`\`\``,
       task: `Complete the module for package version 2:
 
 1. Set \`VERSION\` to \`2\`

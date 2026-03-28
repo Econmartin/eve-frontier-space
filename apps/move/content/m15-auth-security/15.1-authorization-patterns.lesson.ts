@@ -79,7 +79,30 @@ This pattern scales well: add more tiers by creating more cap types, each scoped
     {
       type: 'TASK',
       title: 'Base Defense System',
-      content: `Build a hierarchical authorization system for a starbase defense network.`,
+      content: `Build a hierarchical authorization system for a starbase defense network.
+
+For example:
+
+\`\`\`move
+public struct FleetAdminCap has key, store { id: UID }
+
+public struct PilotCap has key, store {
+    id: UID,
+    ship_id: ID,
+}
+
+public fun commission(_admin: &FleetAdminCap, ship_id: ID, pilot: address, ctx: &mut TxContext) {
+    transfer::public_transfer(
+        PilotCap { id: object::new(ctx), ship_id },
+        pilot,
+    );
+}
+
+public fun launch(cap: &PilotCap, ship: &mut Ship) {
+    assert!(cap.ship_id == object::id(ship), EWrongShip);
+    ship.launched = ship.launched + 1;
+}
+\`\`\``,
       task: `Write a base defense module with two authorization tiers:
 
 1. Define \`BaseAdminCap\` (key, store, with id: UID) and \`GunnerCap\` (key, store, with id: UID and base_id: ID)

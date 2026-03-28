@@ -96,7 +96,25 @@ let amount = coin2.value();          // works on Coin
     {
       type: 'TASK',
       title: 'Mint & Burn Fuel Tokens',
-      content: `Write minting and burning functions for a frontier fuel token.`,
+      content: `Write minting and burning functions for a frontier fuel token.
+
+For example:
+
+\`\`\`move
+public fun mint_tokens(
+    cap: &mut TreasuryCap<GAME_COIN>,
+    amount: u64,
+    to: address,
+    ctx: &mut TxContext,
+) {
+    let coin = coin::mint(cap, amount, ctx);
+    transfer::public_transfer(coin, to);
+}
+
+public fun burn_tokens(cap: &mut TreasuryCap<GAME_COIN>, coin: Coin<GAME_COIN>) {
+    coin::burn(cap, coin);
+}
+\`\`\``,
       task: `Complete the module by writing two functions:
 
 1. \`mint_fuel(cap: &mut TreasuryCap<FUEL_TOKEN>, amount: u64, recipient: address, ctx: &mut TxContext)\` — mints a coin and transfers it to the recipient

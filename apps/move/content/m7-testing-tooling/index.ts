@@ -7,7 +7,7 @@ import lesson7_4 from './7.4-module-extensions.lesson';
 const module: Module = {
   id: 'm7',
   title: 'Testing & Tooling',
-  icon: '🧪',
+  icon: 'assets/testing.svg',
   lessons: [lesson7_1, lesson7_2, lesson7_3, lesson7_4],
 };
 export default module;

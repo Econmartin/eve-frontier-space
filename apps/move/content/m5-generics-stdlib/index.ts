@@ -7,7 +7,7 @@ import lesson5_4 from './5.4-index-syntax.lesson';
 const module: Module = {
   id: 'm5',
   title: 'Generics & Standard Library',
-  icon: '🧩',
+  icon: 'assets/generics.svg',
   lessons: [lesson5_1, lesson5_2, lesson5_3, lesson5_4],
 };
 export default module;

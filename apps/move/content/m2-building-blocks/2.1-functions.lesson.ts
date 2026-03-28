@@ -58,7 +58,15 @@ Private functions are your internal helpers — they keep your module's logic sa
     {
       type: 'TASK',
       title: 'Your First Function',
-      content: `Let's write a simple function that takes a parameter and returns a value.`,
+      content: `Let's write a simple function that takes a parameter and returns a value.
+
+For example:
+
+\`\`\`move
+public fun max_speed(): u64 {
+    1000
+}
+\`\`\``,
       task: `Write a \`public fun\` named \`max_shields\` that takes no parameters and returns the \`u64\` value \`500\`.`,
       hint: `\`\`\`move
 public fun max_shields(): u64 {

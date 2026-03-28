@@ -49,7 +49,19 @@ When both branches return a value, they must return the **same type**.`,
     {
       type: 'TASK',
       title: 'Docking Permission',
-      content: `Use if/else to make a decision.`,
+      content: `Use if/else to make a decision.
+
+For example:
+
+\`\`\`move
+fun is_safe(speed: u64): bool {
+    if (speed < 100) {
+        true
+    } else {
+        false
+    }
+}
+\`\`\``,
       task: `Write a function \`can_dock\` that takes \`fuel: u64\` and \`cargo: u64\`:
 - If fuel is less than \`10\`, return \`true\` (emergency docking always allowed)
 - If cargo is greater than \`500\`, return \`false\` (too heavy)
@@ -134,7 +146,19 @@ fun total_crew(ships: u64, crew_per_ship: u64): u64 {
     {
       type: 'TASK',
       title: 'Hyperspace Jumps',
-      content: `Use a loop to calculate a journey.`,
+      content: `Use a loop to calculate a journey.
+
+For example:
+
+\`\`\`move
+let mut remaining = 100;
+let mut count = 0;
+while (remaining >= 25) {
+    remaining = remaining - 25;
+    count = count + 1;
+};
+// count == 4
+\`\`\``,
       task: `Write a function \`jump_count\` that takes \`fuel: u64\` and \`cost_per_jump: u64\`.
 
 Use a \`while\` loop to count how many jumps the ship can make before running out of fuel. Each jump costs \`cost_per_jump\` fuel.`,
@@ -225,7 +249,27 @@ The \`E\` prefix is a Move convention for error constants.`,
     {
       type: 'TASK',
       title: 'Flight Computer',
-      content: `Put everything together — if/else, loops, and assert.`,
+      content: `Put everything together — if/else, loops, and assert.
+
+For example:
+
+\`\`\`move
+const EEmpty: u64 = 0;
+
+fun check(value: u64) {
+    assert!(value > 0, EEmpty);
+}
+
+fun count_steps(total: u64, step: u64): u64 {
+    let mut remaining = total;
+    let mut steps = 0;
+    while (remaining >= step) {
+        remaining = remaining - step;
+        steps = steps + 1;
+    };
+    steps
+}
+\`\`\``,
       task: `1. Add error constants \`ENoFuel\` (value \`0\`) and \`ENoRoute\` (value \`1\`)
 2. Write \`validate_route\` that takes \`fuel: u64\` and \`waypoints: u64\`. Assert that fuel > 0 and waypoints > 0 using the error constants
 3. Write \`journey_cost\` that takes \`waypoints: u64\` and returns the total fuel cost — each waypoint costs 15 fuel. Use a loop to calculate`,
@@ -365,7 +409,18 @@ Key rules:
     {
       type: 'TASK',
       title: 'Sector Search',
-      content: `Use a labeled loop to sum values with a ceiling.`,
+      content: `Use a labeled loop to sum values with a ceiling.
+
+For example:
+
+\`\`\`move
+let result = 'scan: loop {
+    if (done) {
+        break 'scan total   // exit the loop with a value
+    };
+    total = total + 1;
+};
+\`\`\``,
       task: `Write a function \`count_until_limit\` that takes \`values: &vector<u64>\` and \`limit: u64\`.
 
 Use a \`'scan: loop\` to iterate through the vector and sum the values. If adding the next value would make the sum exceed \`limit\`, break out with the current sum. If you reach the end, break with the total sum.`,

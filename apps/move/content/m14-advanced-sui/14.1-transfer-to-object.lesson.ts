@@ -60,7 +60,19 @@ Once received, the child object is yours to keep, transfer, or destroy — it's 
     {
       type: 'TASK',
       title: 'Cargo Delivery System',
-      content: `Build a cargo delivery system where crates can be sent to ships and received later.`,
+      content: `Build a cargo delivery system where crates can be sent to ships and received later.
+
+For example:
+
+\`\`\`move
+public fun send_item(item: Parcel, dest_id: ID) {
+    transfer::public_transfer(item, dest_id.to_address());
+}
+
+public fun receive_item(box: &mut Box, parcel: Receiving<Parcel>): Parcel {
+    transfer::public_receive(&mut box.id, parcel)
+}
+\`\`\``,
       task: `Write a cargo delivery module:
 
 1. \`send_cargo(cargo: CargoCrate, ship_id: ID)\` — transfers the cargo crate to the ship using \`transfer::public_transfer\` and \`ship_id.to_address()\`

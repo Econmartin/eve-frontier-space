@@ -104,7 +104,21 @@ Lambdas can only be used directly in macro calls — you cannot store them in va
     {
       type: 'TASK',
       title: 'Fleet Mapper',
-      content: `Use macros with lambdas to transform data.`,
+      content: `Use macros with lambdas to transform data.
+
+For example:
+
+\`\`\`move
+// Lambda syntax: |param| body
+let doubled = map_fleet!(values, |x| x * 2);
+
+// Lambda can capture outer variables:
+let factor = 3;
+let scaled = map_fleet!(values, |x| x * factor);
+
+// filter keeps elements where the test returns true:
+let big = filter_fleet!(values, |x| *x > 50);
+\`\`\``,
       task: `The \`map_fleet\` and \`filter_fleet\` macros are provided. Use them to write two regular functions:
 
 1. \`double_ratings(ratings: vector<u64>): vector<u64>\` — doubles every value using \`map_fleet!\`
@@ -245,17 +259,27 @@ let sum = v.fold!(0, |acc, x| acc + x);
     {
       type: 'TASK',
       title: 'Fleet Stats with Macros',
-      content: `Use standard library macros to write clean fleet analytics.`,
+      content: `Use standard library macros to write clean fleet analytics.
+
+For example:
+
+\`\`\`move
+// fold! takes the vector by value — elements are passed as u64:
+let sum = v.fold!(0, |acc, x| acc + x);
+
+// any! borrows the vector — elements are passed as &u64:
+let has_zero = v.any!(|x| *x == 0);
+\`\`\``,
       task: `Write two functions using standard library macros:
 
-1. \`total_fuel(levels: &vector<u64>): u64\` — sum all fuel levels using \`fold!\`
-2. \`any_critical(levels: &vector<u64>): bool\` — return \`true\` if any level is below 20 using \`any!\``,
+1. \`total_fuel(levels: vector<u64>): u64\` — sum all fuel levels using \`fold!\`
+2. \`any_critical(levels: vector<u64>): bool\` — return \`true\` if any level is below 20 using \`any!\``,
       hint: `\`\`\`move
-fun total_fuel(levels: &vector<u64>): u64 {
-    levels.fold!(0, |acc, x| acc + *x)
+fun total_fuel(levels: vector<u64>): u64 {
+    levels.fold!(0, |acc, x| acc + x)
 }
 
-fun any_critical(levels: &vector<u64>): bool {
+fun any_critical(levels: vector<u64>): bool {
     levels.any!(|x| *x < 20)
 }
 \`\`\``,
@@ -271,25 +295,25 @@ fun any_critical(levels: &vector<u64>): bool {
 #[test]
 fun test_total() {
     let levels = vector[100u64, 80, 60];
-    assert!(total_fuel(&levels) == 240, 0);
+    assert!(total_fuel(levels) == 240, 0);
 }
 
 #[test]
 fun test_total_empty() {
     let empty: vector<u64> = vector[];
-    assert!(total_fuel(&empty) == 0, 0);
+    assert!(total_fuel(empty) == 0, 0);
 }
 
 #[test]
 fun test_critical() {
     let levels = vector[100u64, 15, 80];
-    assert!(any_critical(&levels) == true, 0);
+    assert!(any_critical(levels) == true, 0);
 }
 
 #[test]
 fun test_no_critical() {
     let safe = vector[100u64, 50, 80];
-    assert!(any_critical(&safe) == false, 0);
+    assert!(any_critical(safe) == false, 0);
 }
 `,
       checks: [

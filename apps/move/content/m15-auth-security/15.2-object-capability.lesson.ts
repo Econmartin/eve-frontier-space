@@ -82,7 +82,30 @@ Choose the delegation style based on how much trust and how much time the delega
     {
       type: 'TASK',
       title: 'Delegation System',
-      content: `Build a key delegation system with master keys and scoped access keys.`,
+      content: `Build a key delegation system with master keys and scoped access keys.
+
+For example:
+
+\`\`\`move
+public struct OwnerKey has key, store { id: UID }
+
+public struct RoomKey has key, store {
+    id: UID,
+    room: u64,
+}
+
+public fun make_owner_key(ctx: &mut TxContext): OwnerKey {
+    OwnerKey { id: object::new(ctx) }
+}
+
+public fun make_room_key(_owner: &OwnerKey, room: u64, ctx: &mut TxContext): RoomKey {
+    RoomKey { id: object::new(ctx), room }
+}
+
+public fun has_room_access(key: &RoomKey, room: u64): bool {
+    key.room == room
+}
+\`\`\``,
       task: `Write a delegation module:
 
 1. Define \`MasterKey\` (key, store, with id: UID) and \`AccessKey\` (key, store, with id: UID and zone: u64)
