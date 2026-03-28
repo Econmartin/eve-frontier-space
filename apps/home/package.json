@@ -1,11 +1,11 @@
 {
-  "name": "@mysite/home",
+  "name": "@eve-frontier-space/home",
   "version": "1.0.0",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build && cp public/.htaccess dist/.htaccess",
+    "build": "vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit"
   },
@@ -19,6 +19,7 @@
     "vite": "^7.3.1"
   },
   "dependencies": {
+    "@eve-frontier-space/ui": "*",
     "@fontsource-variable/geist": "^5.2.8",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
