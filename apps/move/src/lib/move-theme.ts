@@ -10,10 +10,10 @@ const moveDarkHighlight = HighlightStyle.define([
   { tag: tags.atom, color: '#22d3ee', fontStyle: 'italic' },
   { tag: tags.number, color: '#fb923c' },
   { tag: tags.string, color: '#86efac' },
-  { tag: tags.comment, color: '#374151', fontStyle: 'italic' },
-  { tag: tags.variableName, color: '#cbd5e1' },
+  { tag: tags.comment, color: '#6b7280', fontStyle: 'italic' },
+  { tag: tags.variableName, color: '#e2e8f0' },
   { tag: tags.className, color: '#67e8f9' },
-  { tag: tags.operator, color: '#6b7280' },
+  { tag: tags.operator, color: '#94a3b8' },
   { tag: tags.meta, color: '#a78bfa' },
   { tag: tags.definition(tags.variableName), color: '#67e8f9' },
 ]);

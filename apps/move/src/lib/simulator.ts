@@ -2,7 +2,7 @@ import type { TaskPage, ValidationResult } from './types';
 
 interface TerminalLine {
   text: string;
-  type: 'prompt' | 'success' | 'error' | 'error-detail' | 'data' | 'info' | 'muted' | 'blank' | 'placeholder';
+  type: 'prompt' | 'success' | 'error' | 'error-detail' | 'data' | 'info' | 'muted' | 'blank';
 }
 
 function checkSyntax(code: string): string | null {

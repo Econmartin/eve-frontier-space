@@ -30,6 +30,11 @@ export function CourseLayout() {
         navigateTo(saved.m, saved.l, saved.p);
       }
     }
+    // Intentionally omit `pos`, `navigateTo`, and `savedPosition` from deps.
+    // `navigateTo` and `savedPosition` are stable callbacks (useCallback with
+    // [] deps). `pos` is excluded to avoid re-running when the navigate call
+    // itself updates pos, which would create an infinite update loop.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.moduleId, params.lessonId, params.pageIdx]);
 
   return (

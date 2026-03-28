@@ -1,5 +1,6 @@
+import { useNavigate } from 'react-router';
 import { useCourse } from '@/hooks/useCourse';
-import { pageKey } from '@/hooks/useProgress';
+import { pageKey, saveCourse1CompletionDate, saveCourse2CompletionDate } from '@/hooks/useProgress';
 
 export function Footer() {
   const {
@@ -8,11 +9,15 @@ export function Footer() {
     completed,
     isLastPage,
     isFirstPage,
+    isCourse1End,
+    isCourse1Completed,
+    isCourse2Completed,
     nextPage,
     prevPage,
     navigateTo,
     currentPage,
   } = useCourse();
+  const navigate = useNavigate();
 
   const isTaskCompleted = currentPage.type === 'TASK'
     ? !!completed[pageKey(pos.m, pos.l, pos.p)]
@@ -61,8 +66,25 @@ export function Footer() {
           })}
       </div>
 
-      <button
-        onClick={nextPage}
+      {isCourse1End && canAdvance && isCourse1Completed ? (
+        <button
+          onClick={() => { saveCourse1CompletionDate(); navigate('/learn/complete'); }}
+          className="font-mono text-xs font-semibold tracking-wider px-4 py-[7px] rounded-md border cursor-pointer transition-all whitespace-nowrap leading-none outline-none bg-cyan-glow border-cyan/40 text-cyan hover:bg-cyan/15 hover:border-cyan hover:shadow-[0_0_12px_var(--color-cyan-glow)]"
+          aria-label="Complete Course 1"
+        >
+          Complete Course 1 →
+        </button>
+      ) : isLastPage && canAdvance && isCourse2Completed ? (
+        <button
+          onClick={() => { saveCourse2CompletionDate(); navigate('/learn/complete2'); }}
+          className="font-mono text-xs font-semibold tracking-wider px-4 py-[7px] rounded-md border cursor-pointer transition-all whitespace-nowrap leading-none outline-none bg-cyan-glow border-cyan/40 text-cyan hover:bg-cyan/15 hover:border-cyan hover:shadow-[0_0_12px_var(--color-cyan-glow)]"
+          aria-label="Complete Course 2"
+        >
+          Complete Course 2 →
+        </button>
+      ) : (
+        <button
+          onClick={nextPage}
           disabled={!canAdvance || isLastPage}
           className={`font-mono text-xs font-semibold tracking-wider px-4 py-[7px] rounded-md border cursor-pointer transition-all whitespace-nowrap leading-none outline-none disabled:opacity-35 disabled:cursor-not-allowed disabled:pointer-events-none ${
             canAdvance && !isLastPage
@@ -73,6 +95,7 @@ export function Footer() {
         >
           {nextLabel}
         </button>
+      )}
     </footer>
   );
 }

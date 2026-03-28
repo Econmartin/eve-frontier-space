@@ -1,19 +1,5 @@
 import { useMemo } from 'react';
-
-const KEYWORDS = new Set([
-  'module', 'fun', 'public', 'struct', 'let', 'if', 'else', 'return',
-  'use', 'has', 'mut', 'const', 'entry', 'friend', 'as', 'spec',
-  'acquires', 'native', 'move', 'copy', 'match', 'enum', 'type',
-  'loop', 'while', 'break', 'continue', 'abort', 'for', 'in',
-]);
-
-const TYPES = new Set([
-  'u8', 'u16', 'u32', 'u64', 'u128', 'u256',
-  'bool', 'address', 'vector', 'String', 'Option',
-  'TxContext', 'UID', 'ID', 'Balance', 'Coin', 'Clock',
-]);
-
-const ABILITIES = new Set(['key', 'store', 'drop']);
+import { MOVE_KEYWORDS, MOVE_TYPES, MOVE_ABILITIES } from '@/lib/move-tokens';
 
 const COLORS: Record<string, string> = {
   keyword: '#c084fc',
@@ -110,11 +96,11 @@ function tokenize(code: string): Token[] {
       const word = code.slice(start, i);
       const base = word.replace(/!$/, '');
 
-      if (KEYWORDS.has(base)) {
+      if (MOVE_KEYWORDS.has(base)) {
         tokens.push({ text: word, color: COLORS.keyword, bold: true });
-      } else if (TYPES.has(base)) {
+      } else if (MOVE_TYPES.has(base)) {
         tokens.push({ text: word, color: COLORS.type });
-      } else if (ABILITIES.has(base)) {
+      } else if (MOVE_ABILITIES.has(base)) {
         tokens.push({ text: word, color: COLORS.ability, italic: true });
       } else if (/^[A-Z]/.test(base)) {
         tokens.push({ text: word, color: COLORS.className });

@@ -1,4 +1,5 @@
 @import 'tailwindcss';
+@source "../../../packages/ui/src";
 @plugin '@tailwindcss/typography';
 
 @custom-variant dark (&:is(.dark *));
@@ -55,6 +56,7 @@
   --color-cyan: #ff610a;
   --color-cyan-dim: #cc3002;
   --color-cyan-glow: rgba(255, 97, 10, 0.15);
+  --color-icon-dim: rgba(255, 97, 10, 0.35);
   --color-purple: #7c3aed;
   --color-green: #22c55e;
   --color-red: #ef4444;
@@ -70,43 +72,35 @@
 
 /* Base styles */
 html {
-  height: 100%;
   font-size: 16px;
 }
 
 body {
-  height: 100%;
   background: radial-gradient(ellipse at 100% 0%, rgba(255, 97, 10, 0.06) 0%, transparent 85%),
     var(--color-bg);
   color: var(--color-text);
   font-family: var(--font-ui);
   line-height: 1.5;
-  overflow: hidden;
 }
 
-#root {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-}
 
-/* Scrollbar styling */
-* {
+/* Thin scrollbar inside the course shell only */
+.course-shell * {
   scrollbar-width: thin;
   scrollbar-color: var(--color-border) transparent;
 }
-*::-webkit-scrollbar {
+.course-shell *::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
-*::-webkit-scrollbar-track {
+.course-shell *::-webkit-scrollbar-track {
   background: transparent;
 }
-*::-webkit-scrollbar-thumb {
+.course-shell *::-webkit-scrollbar-thumb {
   background: var(--color-border);
   border-radius: 3px;
 }
-*::-webkit-scrollbar-thumb:hover {
+.course-shell *::-webkit-scrollbar-thumb:hover {
   background: var(--color-border-glow);
 }
 

@@ -36,22 +36,38 @@ export function Sidebar() {
       <div className="py-2 flex flex-col flex-1 min-h-0 overflow-y-auto">
         {course.modules.map((mod, mIdx) => {
           const isExpanded = expandedModules.has(mIdx);
+          const isActiveModule = mIdx === pos.m;
 
           return (
             <div key={mod.id}>
               {/* Module header */}
               <button
                 onClick={() => toggleModule(mIdx)}
-                className="w-full flex items-center gap-2 px-3 py-2 cursor-pointer select-none transition-colors hover:bg-white/[0.03] text-left"
+                className={`w-full flex items-center gap-2 px-3 py-2 cursor-pointer select-none transition-colors text-left border-l-2 ${
+                  isActiveModule
+                    ? 'border-l-cyan bg-cyan-glow/40 hover:bg-cyan-glow/60'
+                    : 'border-l-transparent hover:bg-white/[0.03]'
+                }`}
               >
-                <span className="text-[15px] leading-none shrink-0">{mod.icon}</span>
-                <span className="text-[10px] font-bold uppercase tracking-[0.09em] text-text-muted flex-1 min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">
+                <span
+                  className="w-4 h-4 shrink-0 inline-block"
+                  style={{
+                    maskImage: `url(${import.meta.env.BASE_URL + mod.icon})`,
+                    maskSize: 'contain',
+                    maskRepeat: 'no-repeat',
+                    maskPosition: 'center',
+                    backgroundColor: isActiveModule ? 'var(--color-cyan)' : 'var(--color-icon-dim)',
+                  }}
+                />
+                <span className={`text-[10px] font-bold uppercase tracking-[0.09em] flex-1 min-w-0 overflow-hidden text-ellipsis whitespace-nowrap ${
+                  isActiveModule ? 'text-cyan' : 'text-text-muted'
+                }`}>
                   {mod.title}
                 </span>
                 <span
-                  className={`text-[11px] text-text-muted shrink-0 transition-transform duration-200 leading-none ${
+                  className={`text-[11px] shrink-0 transition-transform duration-200 leading-none ${
                     isExpanded ? 'rotate-90' : ''
-                  }`}
+                  } ${isActiveModule ? 'text-cyan' : 'text-text-muted'}`}
                 >
                   ›
                 </span>

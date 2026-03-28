@@ -2,8 +2,8 @@ import { useRef, useEffect, useCallback } from 'react';
 import { EditorView, keymap, lineNumbers } from '@codemirror/view';
 import { EditorState, Prec } from '@codemirror/state';
 import { defaultKeymap, indentWithTab } from '@codemirror/commands';
-import { move } from './move-lang';
-import { moveDark } from './move-theme';
+import { move } from '@/lib/move-lang';
+import { moveDark } from '@/lib/move-theme';
 
 interface CodeEditorProps {
   value: string;

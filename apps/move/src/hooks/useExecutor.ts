@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { executor } from '@/lib/executor';
 import { useCourse } from './useCourse';
-import type { TaskPage, ValidationResult } from '@/lib/types';
+import type { ValidationResult } from '@/lib/types';
 
 export function useExecutor() {
   const { currentPage, setCode, markCompleted } = useCourse();
@@ -11,7 +11,7 @@ export function useExecutor() {
       if (currentPage.type !== 'TASK') {
         return { success: false, error: 'Not a task page' };
       }
-      return executor.validate(code, currentPage as TaskPage);
+      return executor.validate(code, currentPage);
     },
     [currentPage],
   );
