@@ -19,7 +19,7 @@ const typeStyles: Partial<Record<TerminalLine['type'], string>> = {
 
 export function Terminal({ lines, isSuccess, executorMode }: TerminalProps) {
   return (
-    <div className="flex-[1] flex flex-col min-h-[80px] overflow-hidden">
+    <div id="tour-terminal" className="flex-[1] flex flex-col min-h-[80px] overflow-hidden">
       <div className="font-mono text-xs font-semibold tracking-[0.09em] uppercase text-text-muted px-3.5 py-1.5 bg-panel border-b border-border shrink-0 flex items-center justify-between">
         <span>OUTPUT</span>
         {executorMode === 'simulator' && (

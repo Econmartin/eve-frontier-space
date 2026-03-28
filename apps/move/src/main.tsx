@@ -34,6 +34,18 @@ const dAppKit = createDAppKit({
 
 const queryClient = new QueryClient();
 
+// Wallet providers are only mounted around completion pages so the landing
+// page and course pages don't trigger wallet auto-connect on load.
+function WalletProviders() {
+  return (
+    <DAppKitProvider dAppKit={dAppKit}>
+      <VaultProvider>
+        <Outlet />
+      </VaultProvider>
+    </DAppKitProvider>
+  );
+}
+
 function App() {
   return (
     <CourseProvider>
@@ -51,8 +63,10 @@ const router = createBrowserRouter(
           <Route index element={<LessonPage />} />
           <Route path=":moduleId/:lessonId/:pageIdx" element={<LessonPage />} />
         </Route>
-        <Route path="complete" element={<CourseCompletePage />} />
-        <Route path="complete2" element={<Course2CompletePage />} />
+        <Route element={<WalletProviders />}>
+          <Route path="complete" element={<CourseCompletePage />} />
+          <Route path="complete2" element={<Course2CompletePage />} />
+        </Route>
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Route>,
@@ -63,11 +77,7 @@ const router = createBrowserRouter(
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <DAppKitProvider dAppKit={dAppKit}>
-        <VaultProvider>
-          <RouterProvider router={router} unstable_useTransitions={false} />
-        </VaultProvider>
-      </DAppKitProvider>
+      <RouterProvider router={router} unstable_useTransitions={false} />
     </QueryClientProvider>
   </StrictMode>,
 );

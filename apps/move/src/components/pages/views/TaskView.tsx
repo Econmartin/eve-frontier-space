@@ -10,6 +10,7 @@ import { MoveSimulator, type TerminalLine } from '@/lib/simulator';
 import { useCourse } from '@/hooks/useCourse';
 import { useExecutor } from '@/hooks/useExecutor';
 import { pageKey } from '@/hooks/useProgress';
+import { useTour } from '@/hooks/useTour';
 import type { TaskPage } from '@/lib/types';
 
 interface TaskViewProps {
@@ -19,6 +20,7 @@ interface TaskViewProps {
 export function TaskView({ page }: TaskViewProps) {
   const { pos, lessonCode, completed, setCode } = useCourse();
   const { runCode, mode: executorMode } = useExecutor();
+  useTour();
 
   const pKey = pageKey(pos.m, pos.l, pos.p);
   const isCompleted = !!completed[pKey];
@@ -104,6 +106,7 @@ export function TaskView({ page }: TaskViewProps) {
         {/* Run button */}
         <div className="px-3 py-2 bg-panel border-t border-border flex justify-end shrink-0">
           <button
+            id="tour-run-button"
             type="button"
             onClick={handleRun}
             disabled={running}

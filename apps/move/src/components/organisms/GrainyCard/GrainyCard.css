@@ -1,0 +1,19 @@
+.grainy-card {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(to bottom right, #1a0500 0%, #1a0500 20%, #5a1000 50%, #a02800 65%, #d45a1a 90%);
+}
+
+/* Grain layer — feTurbulence noise blended via overlay so it visibly interacts with the gradient */
+.grainy-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background-image: url('./noise.svg');
+  background-size: 200px 200px;
+  background-repeat: repeat;
+  mix-blend-mode: overlay;
+  opacity: 0.55;
+}

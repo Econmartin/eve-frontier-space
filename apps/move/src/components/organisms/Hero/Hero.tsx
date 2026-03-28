@@ -1,54 +1,70 @@
+import { useState, useEffect } from 'react';
 import { ShaderGradientCanvas, ShaderGradient } from '@shadergradient/react';
 import './Hero.css';
 
 export function Hero() {
+  const [shaderReady, setShaderReady] = useState(false);
+
+  useEffect(() => {
+    // Give the shader a moment to initialise before fading it in,
+    // so the CSS fallback is always visible first with no flash.
+    const id = setTimeout(() => setShaderReady(true), 400);
+    return () => clearTimeout(id);
+  }, []);
+
   return (
-    <section
-      className="move-hero-section grid min-h-[70vh] -mt-[76px] items-start"
-    >
-      {/* Background gradient + text */}
+    <section className="move-hero-section grid min-h-[70vh] -mt-[76px] items-start">
       <div className="move-hero-mask relative overflow-hidden rounded-3xl [grid-area:1/1] place-self-stretch">
-        <ShaderGradientCanvas
-          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
-          pixelDensity={1}
-          fov={45}
-          lazyLoad={false}
+        {/* CSS fallback — renders instantly, stays underneath shader */}
+        <div className="move-hero-static-bg absolute inset-0" />
+
+        {/* Shader fades in once ready */}
+        <div
+          className="absolute inset-0 transition-opacity duration-[1500ms] ease-in"
+          style={{ opacity: shaderReady ? 1 : 0 }}
         >
-          <ShaderGradient
-            type="sphere"
-            animate="on"
-            uTime={0}
-            uSpeed={0.3}
-            uStrength={0.3}
-            uDensity={0.8}
-            uFrequency={5.5}
-            uAmplitude={3.2}
-            color1="#ffd1a5"
-            color2="#ff610a"
-            color3="#FAFAE5"
-            wireframe={false}
-            shader="defaults"
-            envPreset="city"
-            lightType="env"
-            brightness={2.1}
-            grain="on"
-            reflection={0.4}
-            positionX={-0.1}
-            positionY={0}
-            positionZ={0}
-            rotationX={0}
-            rotationY={130}
-            rotationZ={70}
-            range="disabled"
-            rangeStart={0}
-            rangeEnd={40}
-            cDistance={0.5}
-            cPolarAngle={180}
-            cAzimuthAngle={270}
-            cameraZoom={15.1}
-          />
-        </ShaderGradientCanvas>
-        {/* <div className="absolute inset-0 bg-black/55" /> */}
+          <ShaderGradientCanvas
+            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
+            pixelDensity={1}
+            fov={45}
+            lazyLoad={false}
+          >
+            <ShaderGradient
+              type="sphere"
+              animate="on"
+              uTime={0}
+              uSpeed={0.3}
+              uStrength={0.3}
+              uDensity={0.8}
+              uFrequency={5.5}
+              uAmplitude={3.2}
+              color1="#ffd1a5"
+              color2="#ff610a"
+              color3="#FAFAE5"
+              wireframe={false}
+              shader="defaults"
+              envPreset="city"
+              lightType="env"
+              brightness={2.1}
+              grain="on"
+              reflection={0.4}
+              positionX={-0.1}
+              positionY={0}
+              positionZ={0}
+              rotationX={0}
+              rotationY={130}
+              rotationZ={70}
+              range="disabled"
+              rangeStart={0}
+              rangeEnd={40}
+              cDistance={0.5}
+              cPolarAngle={180}
+              cAzimuthAngle={270}
+              cameraZoom={15.1}
+            />
+          </ShaderGradientCanvas>
+        </div>
+
         <div className="move-hero-gradient absolute inset-0" />
 
         <div className="relative flex flex-col justify-end h-full pb-32 px-10">
@@ -65,7 +81,6 @@ export function Hero() {
           </p>
         </div>
       </div>
-
     </section>
   );
 }

@@ -6,9 +6,10 @@ Community tools and educational resources for EVE Frontier on Sui.
 
 ```
 apps/
-  home/      # Landing page and app directory  (served at /)
-  move/      # Interactive Move on Sui course   (served at /move)
-  finance/   # DeFi dashboard for eve-bank     (served at /finance)
+  home/      # Community landing page and app directory        (served at /)
+  move/      # Interactive Move on Sui course (two courses,    (served at /move)
+             #   real WASM compiler, on-chain completion)
+  finance/   # DeFi dashboard for the eve-bank contract        (served at /finance)
 
 contracts/
   eve-bank/  # Generic Move smart contract (bank · loans · lottery)

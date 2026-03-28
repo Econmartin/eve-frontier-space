@@ -12,7 +12,7 @@ export function Header() {
     <AppHeader
       homeHref={HOME_APP_HREF}
       center={isCompletePage ? <CompletionTitle /> : isCoursePage ? <CourseBreadcrumb /> : <NavLinks />}
-      right={isCoursePage && !isCompletePage ? <EngineBadge /> : undefined}
+      right={isCoursePage && !isCompletePage ? <span className="max-md:hidden"><EngineBadge /></span> : undefined}
     />
   );
 }
@@ -47,14 +47,14 @@ function CourseBreadcrumb() {
       className="flex items-center justify-center gap-1.5 text-xs text-text-muted min-w-0 overflow-hidden"
       aria-label="Current location"
     >
-      <span className="text-cyan font-medium whitespace-nowrap overflow-hidden text-ellipsis">
+      <span className="max-md:hidden text-cyan font-medium whitespace-nowrap overflow-hidden text-ellipsis">
         {currentModule.title}
       </span>
-      <span className="text-text-dim shrink-0 select-none">›</span>
-      <span className="text-text whitespace-nowrap overflow-hidden text-ellipsis">
+      <span className="max-md:hidden text-text-dim shrink-0 select-none">›</span>
+      <span className="max-md:hidden text-text whitespace-nowrap overflow-hidden text-ellipsis">
         {currentLesson.title}
       </span>
-      <span className="text-text-dim shrink-0 select-none">›</span>
+      <span className="max-md:hidden text-text-dim shrink-0 select-none">›</span>
       <span className="text-text-muted whitespace-nowrap overflow-hidden text-ellipsis">
         {currentPage.title}
       </span>
@@ -68,6 +68,7 @@ function EngineBadge() {
 
   return (
     <div
+      id="tour-engine-badge"
       className={`font-mono text-[10px] tracking-wider px-2.5 py-0.5 rounded-full whitespace-nowrap shrink-0 transition-all duration-300 ${
         isReal
           ? 'text-cyan bg-cyan-glow shadow-[0_0_8px_var(--color-cyan-glow)]'

@@ -30,6 +30,7 @@ export function Sidebar() {
 
   return (
     <nav
+      id="tour-sidebar"
       className="h-full bg-panel border-r border-border flex flex-col"
       aria-label="Course navigation"
     >
@@ -158,6 +159,7 @@ export function Sidebar() {
       {/* Reset page & course */}
       <div className="shrink-0 pt-4 pb-3 px-3 border-t border-border flex flex-col gap-2">
         <button
+          id="tour-reset-page"
           onClick={resetPage}
           className="w-full font-mono text-[10px] font-semibold tracking-wider px-2 py-1.5 rounded border border-border text-text-muted hover:border-amber/50 hover:text-amber transition-colors text-left"
           title="Reset this page: clear code and completion"
@@ -187,6 +189,7 @@ export function Sidebar() {
           </div>
         ) : (
           <button
+            id="tour-reset-course"
             onClick={() => setConfirmReset(true)}
             className="w-full font-mono text-[10px] font-semibold tracking-wider px-2 py-1.5 rounded border border-border text-text-muted hover:border-amber/50 hover:text-amber transition-colors text-left"
             title="Clear all progress and start over"
