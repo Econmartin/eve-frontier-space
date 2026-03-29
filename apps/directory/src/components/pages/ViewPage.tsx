@@ -1,4 +1,11 @@
+/**
+ * Full-screen iframe wrapper for launching EVE Frontier apps in-browser.
+ * Detects wallet popup events (window blur) and shows a dismissible nudge
+ * so users know to check their browser toolbar for pending wallet confirmations.
+ */
 import { useState, useEffect, useRef } from 'react';
+
+const POPUP_HINT_DURATION_MS = 8_000;
 import { useSearchParams, Link } from 'react-router';
 import { ArrowLeft, Wallet } from 'lucide-react';
 
@@ -14,7 +21,7 @@ export function ViewPage() {
       // Window losing focus often means a wallet popup opened
       setPopupHint(true);
       if (hintTimerRef.current) clearTimeout(hintTimerRef.current);
-      hintTimerRef.current = setTimeout(() => setPopupHint(false), 8000);
+      hintTimerRef.current = setTimeout(() => setPopupHint(false), POPUP_HINT_DURATION_MS);
     }
 
     window.addEventListener('blur', handleBlur);
@@ -28,7 +35,7 @@ export function ViewPage() {
     <div className="fixed inset-0 flex flex-col">
       {/* Back button */}
       <Link
-        to="/directory"
+        to="/"
         className="absolute top-3 left-3 z-10 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-black/70 backdrop-blur-sm text-white/90 text-sm hover:bg-black/90 transition-colors"
       >
         <ArrowLeft className="size-4" />

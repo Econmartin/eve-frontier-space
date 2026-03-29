@@ -8,8 +8,9 @@ export default {
 
     // SPA fallback: route to correct app index
     let fallback = '/index.html';
-    if (url.pathname.startsWith('/move'))    fallback = '/move/index.html';
-    if (url.pathname.startsWith('/finance')) fallback = '/finance/index.html';
+    if (url.pathname.startsWith('/move'))       fallback = '/move/index.html';
+    if (url.pathname.startsWith('/finance'))    fallback = '/finance/index.html';
+    if (url.pathname.startsWith('/directory'))  fallback = '/directory/index.html';
 
     return env.ASSETS.fetch(new URL(fallback, url));
   },
