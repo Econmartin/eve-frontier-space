@@ -411,7 +411,7 @@ export function DirectoryPage() {
                       border: `1px solid ${activeFilter === f ? '#ff610a' : 'var(--border)'}`,
                       color: activeFilter === f ? '#ff610a' : 'var(--muted-foreground)',
                     }}>
-                    {f === 'favourites' ? '♥ favourites' : f}
+                    {f === 'favourites' ? <><PlanetIcon size={12} /> favourites</> : f}
                   </button>
                 ))}
               </div>
