@@ -1,0 +1,6 @@
+[package]
+name = "favorites"
+edition = "2024.beta"
+
+[addresses]
+favorites = "0x0"

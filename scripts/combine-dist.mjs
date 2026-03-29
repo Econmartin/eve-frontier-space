@@ -1,9 +1,10 @@
 /**
  * Merges all app builds into a single dist/ for Cloudflare Pages deployment.
  *
- *   dist/           ← home app    (serves /)
- *   dist/move/      ← move app    (serves /move/*)
- *   dist/finance/   ← finance app (serves /finance/*)
+ *   dist/             ← home app       (serves /)
+ *   dist/move/        ← move app       (serves /move/*)
+ *   dist/finance/     ← finance app    (serves /finance/*)
+ *   dist/directory/   ← directory app  (serves /directory/*)
  *
  * Routing is handled by worker.js.
  */
@@ -12,10 +13,11 @@ import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const homeDist    = resolve(root, 'apps/home/dist');
-const moveDist    = resolve(root, 'apps/move/dist');
-const financeDist = resolve(root, 'apps/finance/dist');
-const outDir      = resolve(root, 'dist');
+const homeDist      = resolve(root, 'apps/home/dist');
+const moveDist      = resolve(root, 'apps/move/dist');
+const financeDist   = resolve(root, 'apps/finance/dist');
+const directoryDist = resolve(root, 'apps/directory/dist');
+const outDir        = resolve(root, 'dist');
 
 rmSync(outDir, { recursive: true, force: true });
 mkdirSync(outDir, { recursive: true });
@@ -32,5 +34,10 @@ cpSync(moveDist, moveOut, { recursive: true });
 const financeOut = resolve(outDir, 'finance');
 mkdirSync(financeOut, { recursive: true });
 cpSync(financeDist, financeOut, { recursive: true });
+
+// Directory app at /directory
+const directoryOut = resolve(outDir, 'directory');
+mkdirSync(directoryOut, { recursive: true });
+cpSync(directoryDist, directoryOut, { recursive: true });
 
 console.log('✓ Combined dist ready → dist/');

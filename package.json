@@ -11,10 +11,12 @@
     "dev:move": "npm run dev -w @eve-frontier-space/move",
     "dev:home": "npm run dev -w @eve-frontier-space/home",
     "dev:finance": "npm run dev -w @eve-frontier-space/finance",
+    "dev:directory": "npm run dev -w @eve-frontier-space/directory",
     "build": "turbo run build && node scripts/combine-dist.mjs",
     "build:move": "npm run build -w @eve-frontier-space/move",
     "build:home": "npm run build -w @eve-frontier-space/home",
     "build:finance": "npm run build -w @eve-frontier-space/finance",
+    "build:directory": "npm run build -w @eve-frontier-space/directory",
     "typecheck": "turbo run typecheck",
     "resize-images": "node packages/assets/resize.mjs"
   },
