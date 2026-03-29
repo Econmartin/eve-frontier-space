@@ -6,9 +6,9 @@
  *   dist/finance/     ← finance app    (serves /finance/*)
  *   dist/directory/   ← directory app  (serves /directory/*)
  *
- * Routing is handled by worker.js.
+ * Routing and the OG proxy are handled by _worker.js (copied into dist/).
  */
-import { cpSync, mkdirSync, rmSync } from 'fs';
+import { cpSync, copyFileSync, mkdirSync, rmSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -39,5 +39,8 @@ cpSync(financeDist, financeOut, { recursive: true });
 const directoryOut = resolve(outDir, 'directory');
 mkdirSync(directoryOut, { recursive: true });
 cpSync(directoryDist, directoryOut, { recursive: true });
+
+// Worker (Pages advanced mode — must live in dist/ for wrangler pages dev)
+copyFileSync(resolve(root, '_worker.js'), resolve(outDir, '_worker.js'));
 
 console.log('✓ Combined dist ready → dist/');

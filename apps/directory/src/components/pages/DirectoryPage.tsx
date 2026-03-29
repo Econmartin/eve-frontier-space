@@ -42,14 +42,21 @@ function titleFromDomain(url: string) {
 
 async function fetchOG(url: string): Promise<OGData> {
   try {
-    const res = await fetch(`https://api.microlink.io/?url=${encodeURIComponent(url)}`);
-    const json = await res.json();
-    if (json.status !== 'success') return {};
-    return {
-      title: json.data?.title ?? undefined,
-      description: json.data?.description ?? undefined,
-      image: json.data?.image?.url ?? undefined,
-    };
+    if (import.meta.env.DEV) {
+      // In dev the worker isn't running, fall back to microlink
+      const res = await fetch(`https://api.microlink.io/?url=${encodeURIComponent(url)}`);
+      if (!res.ok) return {};
+      const json = await res.json();
+      if (json.status !== 'success') return {};
+      return {
+        title: json.data?.title ?? undefined,
+        description: json.data?.description ?? undefined,
+        image: json.data?.image?.url ?? undefined,
+      };
+    }
+    const res = await fetch(`/api/og?url=${encodeURIComponent(url)}`);
+    if (!res.ok) return {};
+    return await res.json() as OGData;
   } catch {
     return {};
   }
