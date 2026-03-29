@@ -3,12 +3,31 @@
  * connect/disconnect button. Shows abbreviated wallet address when connected.
  */
 import { AppHeader } from '@eve-frontier-space/ui';
-import { useConnection, abbreviateAddress } from '@evefrontier/dapp-kit';
-import { useCurrentAccount } from '@mysten/dapp-kit-react';
+import { abbreviateAddress } from '@evefrontier/dapp-kit';
+import { useCurrentAccount, useDAppKit, useWallets } from '@mysten/dapp-kit-react';
 
 export function Header() {
-  const { isConnected, handleConnect, handleDisconnect } = useConnection();
   const account = useCurrentAccount();
+  const dAppKit = useDAppKit();
+  const wallets = useWallets();
+  const isConnected = !!account;
+
+  // Prefer the "Eve Vault" popup over the Chrome extension — the extension has
+  // a JWT nonce issue on testnet. Fall back to extension then any wallet.
+  const handleConnect = () => {
+    const popup = wallets.find(w => w.name === 'Eve Vault');
+    const extension = wallets.find(w => w.name === 'EVE Frontier Client Wallet');
+    const wallet = popup ?? extension ?? wallets[0];
+    if (wallet) {
+      localStorage.setItem('eve-dapp-connected', 'true');
+      dAppKit.connectWallet({ wallet });
+    }
+  };
+
+  const handleDisconnect = () => {
+    localStorage.removeItem('eve-dapp-connected');
+    dAppKit.disconnectWallet();
+  };
 
   const walletBtn = isConnected && account ? (
     <button
