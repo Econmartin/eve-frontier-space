@@ -44,7 +44,7 @@ function HeaderActions() {
       <div className="hidden md:flex items-center gap-3">
         <ThemeToggle />
         <a href={MOVE_APP_HREF} className="rounded-lg px-5 py-2 text-sm font-semibold text-black transition-colors bg-[#FAFAE5] hover:bg-[#e8e8d0] no-underline">
-          Learn Move
+          First Move
         </a>
       </div>
       <Sheet>
@@ -65,7 +65,7 @@ function HeaderActions() {
           </SheetHeader>
           <div className="flex flex-col gap-3 px-4 mt-4">
             <a href={MOVE_APP_HREF} className="w-full rounded-lg py-3 text-sm font-semibold text-black text-center transition-colors bg-[#FAFAE5] hover:bg-[#e8e8d0] no-underline">
-              Learn Move
+              First Move
             </a>
             <div className="flex items-center gap-3 mt-2">
               <ThemeToggle />
