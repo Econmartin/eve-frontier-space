@@ -8,7 +8,7 @@
  *
  * Routing and the OG proxy are handled by _worker.js (copied into dist/).
  */
-import { cpSync, copyFileSync, mkdirSync, rmSync } from 'fs';
+import { cpSync, copyFileSync, mkdirSync, rmSync, writeFileSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -42,5 +42,7 @@ cpSync(directoryDist, directoryOut, { recursive: true });
 
 // Worker (Pages advanced mode — must live in dist/ for wrangler pages dev)
 copyFileSync(resolve(root, '_worker.js'), resolve(outDir, '_worker.js'));
+// Tell CF Pages not to serve _worker.js as a public static asset
+writeFileSync(resolve(outDir, '.assetsignore'), '_worker.js\n');
 
 console.log('✓ Combined dist ready → dist/');
