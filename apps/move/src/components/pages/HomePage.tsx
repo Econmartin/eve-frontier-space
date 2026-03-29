@@ -98,7 +98,7 @@ function CoursesSection() {
               </div>
 
               {/* Right — figure with orange glow */}
-              <div className="relative w-44 shrink-0 flex items-end">
+              <div className="relative w-20 md:w-44 shrink-0 flex items-end">
                 {/* Glow behind figure */}
                 <div
                   className="absolute inset-0"
