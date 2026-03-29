@@ -68,6 +68,9 @@ export function Hero() {
         <div className="move-hero-gradient absolute inset-0" />
 
         <div className="relative flex flex-col justify-end h-full pb-32 px-10">
+          <p className="font-mono text-[11px] tracking-[0.15em] uppercase text-[var(--color-cyan)] mb-4 opacity-90">
+            Interactive Course
+          </p>
           <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-3 leading-[0.9] font-heading">
             First Move
           </h1>
