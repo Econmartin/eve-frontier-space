@@ -20,7 +20,7 @@ export function Header() {
 function CompletionTitle() {
   return (
     <span className="font-mono text-xs text-cyan tracking-wider">
-      ◈ Learn Move — Complete
+      ◈ First Move — Complete
     </span>
   );
 }
