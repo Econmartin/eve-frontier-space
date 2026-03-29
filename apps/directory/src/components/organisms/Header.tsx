@@ -25,8 +25,9 @@ export function Header() {
   };
 
   const handleDisconnect = () => {
+    // Eve Vault doesn't implement standard:disconnect — clear state and reload.
     localStorage.removeItem('eve-dapp-connected');
-    dAppKit.disconnectWallet();
+    window.location.reload();
   };
 
   const walletBtn = isConnected && account ? (
