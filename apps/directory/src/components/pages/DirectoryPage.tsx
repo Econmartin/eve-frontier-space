@@ -167,14 +167,25 @@ function AppCard({ app, og, isFavorited, isPending, showFavorite, onToggleFavori
           style={{
             width: 156,
             aspectRatio: '16 / 9',
-            backgroundColor: 'oklch(0.12 0.015 30)',
+            backgroundColor: '#000',
             ...(image ? {
               backgroundImage: `url(${image})`,
-              backgroundSize: 'cover',
+              backgroundSize: 'contain',
               backgroundPosition: 'center',
+              backgroundRepeat: 'no-repeat',
             } : {}),
           }}
         >
+          {image && (
+            <div
+              style={{
+                position: 'absolute',
+                inset: 0,
+                background: 'radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.7) 100%)',
+                pointerEvents: 'none',
+              }}
+            />
+          )}
           {!image && <BokehFallback url={app.url} />}
         </div>
 
