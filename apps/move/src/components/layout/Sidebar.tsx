@@ -173,6 +173,7 @@ export function Sidebar() {
               <button
                 onClick={() => {
                   resetCourse();
+                  localStorage.removeItem('move-tour-v1');
                   setConfirmReset(false);
                 }}
                 className="flex-1 font-mono text-[10px] font-semibold px-2 py-1.5 rounded border border-amber/50 text-amber hover:bg-amber/10 transition-colors"
