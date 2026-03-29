@@ -4,7 +4,7 @@ import { MOVE_APP_HREF } from '@/config';
 
 const RESOURCE_CARDS = [
   {
-    title: 'Learn Move',
+    title: 'First Move',
     description: 'Resources and tutorials for the Move language. Your starting point for building on Sui.',
     image: '/assets/crude.webp',
     href: MOVE_APP_HREF,

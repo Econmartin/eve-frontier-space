@@ -68,14 +68,13 @@ export function Hero() {
         <div className="move-hero-gradient absolute inset-0" />
 
         <div className="relative flex flex-col justify-end h-full pb-32 px-10">
-          <span className="font-mono text-[11px] tracking-[0.15em] uppercase text-[var(--color-cyan)] mb-4 opacity-90">
-            Interactive Course
-          </span>
-          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6 leading-[0.9] font-heading">
-            Learn Move.<br />
-            Build the Frontier.
+          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-3 leading-[0.9] font-heading">
+            First Move
           </h1>
-          <p className="text-base text-white/70 max-w-md leading-relaxed">
+          <p className="text-lg sm:text-xl font-heading font-bold text-white/70 mb-5 leading-tight">
+            Learn Move for EVE Frontier
+          </p>
+          <p className="text-base text-white/50 max-w-md leading-relaxed">
             Go from zero to writing real Sui smart contracts.
             Browser-based, real compiler — no setup required.
           </p>
