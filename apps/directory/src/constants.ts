@@ -12,3 +12,5 @@ export const APPS_JSON_URL =
  */
 export const FAVORITES_PACKAGE_ID =
   (import.meta.env.VITE_FAVORITES_PACKAGE_ID as string | undefined) ?? '';
+
+console.log('[directory] FAVORITES_PACKAGE_ID:', FAVORITES_PACKAGE_ID || '(not set)');
