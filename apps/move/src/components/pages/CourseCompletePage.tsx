@@ -14,6 +14,14 @@ export function CourseCompletePage() {
     if (!isCourse1Completed) navigate('/learn', { replace: true });
   }, [isCourse1Completed, navigate]);
 
+  useEffect(() => {
+    const meta = document.createElement('meta');
+    meta.name = 'robots';
+    meta.content = 'noindex, nofollow';
+    document.head.appendChild(meta);
+    return () => { document.head.removeChild(meta); };
+  }, []);
+
   const course1Modules = COURSE.modules.slice(0, COURSE_1_MODULE_COUNT);
   const course2FirstModule = COURSE.modules[COURSE_1_MODULE_COUNT];
   const totalLessons = course1Modules.reduce((s, m) => s + m.lessons.length, 0);

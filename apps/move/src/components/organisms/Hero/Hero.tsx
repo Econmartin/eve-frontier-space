@@ -73,7 +73,7 @@ export function Hero() {
           </span>
           <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-bold text-white mb-6 leading-[0.9] font-heading">
             Learn Move.<br />
-            Ship on Sui.
+            Build the Frontier.
           </h1>
           <p className="text-base text-white/70 max-w-md leading-relaxed">
             Go from zero to writing real Sui smart contracts.

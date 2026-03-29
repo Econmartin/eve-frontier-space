@@ -14,6 +14,14 @@ export function Course2CompletePage() {
     if (!isCourse2Completed) navigate('/learn', { replace: true });
   }, [isCourse2Completed, navigate]);
 
+  useEffect(() => {
+    const meta = document.createElement('meta');
+    meta.name = 'robots';
+    meta.content = 'noindex, nofollow';
+    document.head.appendChild(meta);
+    return () => { document.head.removeChild(meta); };
+  }, []);
+
   const course2Modules = COURSE.modules.slice(COURSE_1_MODULE_COUNT);
   const totalLessons = course2Modules.reduce((s, m) => s + m.lessons.length, 0);
   const completionDate = loadCourse2CompletionDate() ?? new Date().toLocaleDateString('en-US', {
