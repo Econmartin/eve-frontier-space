@@ -71,10 +71,10 @@ export function Hero() {
           <p className="font-mono text-[11px] tracking-[0.15em] uppercase text-[var(--color-cyan)] mb-4 opacity-90">
             Interactive Course
           </p>
-          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-3 leading-[0.9] font-heading">
+          <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-bold text-white mb-3 leading-[0.9] font-heading">
             First Move
           </h1>
-          <p className="text-lg sm:text-xl font-heading font-bold text-white/70 mb-5 leading-tight">
+          <p className="text-xl sm:text-2xl font-heading font-bold text-white/70 mb-5 leading-tight">
             Learn Move for EVE Frontier
           </p>
           <p className="text-base text-white/50 max-w-md leading-relaxed">
