@@ -25,9 +25,10 @@ export function Header() {
   };
 
   const handleDisconnect = () => {
-    // Eve Vault doesn't implement standard:disconnect — clear state and reload.
     localStorage.removeItem('eve-dapp-connected');
-    window.location.reload();
+    // disconnectWallet clears dapp-kit's own storage key (mysten-dapp-kit:selected-wallet-and-address)
+    // in a finally block, even though Eve Vault doesn't support standard:disconnect.
+    dAppKit.disconnectWallet();
   };
 
   const walletBtn = isConnected && account ? (
