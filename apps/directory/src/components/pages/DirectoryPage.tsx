@@ -324,6 +324,11 @@ export function DirectoryPage() {
 
   const filtered = useMemo(() => {
     const searchTerm = query.toLowerCase();
+    const ogScore = (url: string) => {
+      const og = ogMap[url];
+      if (!og) return 0;
+      return (og.title ? 1 : 0) + (og.image ? 1 : 0) + (og.description ? 1 : 0);
+    };
     return apps.filter(app => {
       const og = ogMap[app.url];
       const matchesFilter =
@@ -336,7 +341,7 @@ export function DirectoryPage() {
         getDomain(app.url).includes(searchTerm) ||
         app.tags.some(tag => tag.includes(searchTerm));
       return matchesFilter && matchesSearch;
-    });
+    }).sort((a, b) => ogScore(b.url) - ogScore(a.url));
   }, [apps, ogMap, query, activeFilter, favorites]);
 
   // When viewing 'all': group into favourites → dapps → rest.
