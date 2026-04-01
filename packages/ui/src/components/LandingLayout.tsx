@@ -1,5 +1,6 @@
 import { useState, useEffect, type ReactNode } from 'react';
 import { AppHeader } from './AppHeader';
+import { VoteBanner } from './VoteBanner';
 
 interface LandingLayoutProps {
   homeHref?: string;
@@ -22,6 +23,7 @@ export function LandingLayout({ homeHref = '/', headerRight, children, footer }:
       <AppHeader homeHref={homeHref} scrolled={scrolled} right={headerRight} />
       {children}
       {footer}
+      <VoteBanner />
     </>
   );
 }
