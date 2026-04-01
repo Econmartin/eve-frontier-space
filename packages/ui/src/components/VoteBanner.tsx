@@ -34,7 +34,7 @@ export function VoteBanner() {
 
       <div className="flex flex-col gap-2">
         <a
-          href="https://vote.deepsurge.xyz/"
+          href="https://vote.deepsurge.xyz/?sort=popular&q=first+move#projects"
           target="_blank"
           rel="noopener noreferrer"
           className="w-full rounded-lg py-2 text-sm font-semibold text-black text-center transition-colors bg-[#FAFAE5] hover:bg-[#e8e8d0] no-underline"
