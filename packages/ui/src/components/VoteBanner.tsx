@@ -6,7 +6,10 @@ export function VoteBanner() {
   if (dismissed) return null;
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 w-80 rounded-2xl border border-white/10 bg-black/95 backdrop-blur-md shadow-2xl p-5 flex flex-col gap-3">
+    <div
+      className="fixed bottom-4 right-4 z-50 w-80 rounded-2xl border border-white/10 backdrop-blur-md shadow-2xl p-5 flex flex-col gap-3"
+      style={{ background: 'linear-gradient(348.41deg, rgba(0, 0, 0, 0.95) 67.55%, rgb(12, 40, 93) 93.7%, rgb(93, 127, 169) 117.48%)' }}
+    >
       <button
         onClick={() => setDismissed(true)}
         className="absolute top-3 right-3 text-white/40 hover:text-white transition-colors"
