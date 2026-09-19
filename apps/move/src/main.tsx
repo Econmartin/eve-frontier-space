@@ -77,7 +77,7 @@ const router = createBrowserRouter(
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} unstable_useTransitions={false} />
+      <RouterProvider router={router} useTransitions={false} />
     </QueryClientProvider>
   </StrictMode>,
 );
