@@ -7,3 +7,4 @@ export { CommunityGallerySection } from './CommunityGallerySection.tsx';
 export { GitHubReposSection } from './GitHubReposSection.tsx';
 export { PlayCtaSection } from './PlayCtaSection.tsx';
 export { Footer } from './Footer.tsx';
+export { HeaderActions, STATION_CREATOR_HREF } from './HeaderActions.tsx';
