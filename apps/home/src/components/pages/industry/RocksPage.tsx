@@ -20,8 +20,8 @@ interface ShareState { url: string; png: Blob; jpg: Blob; busy?: boolean; copied
 const STORE = 'industry.myRocks';
 const GAP_STORE = 'industry.rockGapMinutes';
 const DEFAULT_GAP_MIN = 5;
-/** Only offer to merge rocks mined within this long of each other; anything further apart is clearly another rock. */
-const MERGE_WINDOW_MS = 2 * 3600e3;
+/** Gaps at least this long get their length written on the timeline next to the merge button. */
+const LONG_GAP_MS = 2 * 3600e3;
 const loadGap = () => { try { const v = Number(localStorage.getItem(GAP_STORE)); return v > 0 ? v : DEFAULT_GAP_MIN; } catch { return DEFAULT_GAP_MIN; } };
 const loadHistory = (): Labelled[] => {
   try {
@@ -102,9 +102,8 @@ function RockTimeline({ rows, onMerge, onSplit }: { rows: Labelled[]; onMerge: (
               {next && (
                 <div className="relative flex flex-col items-center justify-end" style={{ width: gapW, height: 60 }}>
                   <span className="absolute left-0 right-0 top-[29px] border-t border-dotted border-foreground/25" />
-                  {gapMs <= MERGE_WINDOW_MS
-                    ? <button onClick={() => onMerge(i)} title={`Same rock? Merge across the ${fmtTime(gapMs / 1000)} gap`} className="relative z-10 size-5 rounded-full bg-background ring-1 ring-foreground/25 grid place-items-center hover:ring-[var(--color-martian-500)]" style={{ marginBottom: 8 }}><Combine className="size-3" /></button>
-                    : <span className="relative z-10 text-[0.6rem] text-muted-foreground bg-background px-1" style={{ marginBottom: 12 }}>{gapMs >= 36e5 * 36 ? `${Math.round(gapMs / 864e5)}d` : fmtTime(gapMs / 1000).split(' ')[0]}</span>}
+                  {gapMs >= LONG_GAP_MS && <span className="absolute top-0 left-0 right-0 text-center text-[0.6rem] text-muted-foreground">{gapMs >= 36e5 * 36 ? `${Math.round(gapMs / 864e5)}d` : fmtTime(gapMs / 1000).split(' ')[0]}</span>}
+                  <button onClick={() => onMerge(i)} title={`Same rock? Merge across the ${fmtTime(gapMs / 1000)} gap`} className="relative z-10 size-5 rounded-full bg-background ring-1 ring-foreground/25 grid place-items-center hover:ring-[var(--color-martian-500)]" style={{ marginBottom: 8 }}><Combine className="size-3" /></button>
                 </div>
               )}
             </div>
@@ -261,7 +260,7 @@ export function RocksPage() {
                     <div className="flex items-baseline justify-between gap-2 flex-wrap">
                       <div className="text-xs text-muted-foreground tabular-nums">{fmtDate(r.start)} · {r.ticks} ticks · {fmtTime((r.end - r.start) / 1000)}</div>
                       <span className="flex items-center gap-2">
-                      {i > 0 && rows[i - 1].start - r.end <= MERGE_WINDOW_MS && <button onClick={() => setRows((rs) => mergeInto(rs, i))} className="inline-flex items-center gap-1 text-xs rounded-lg ring-1 ring-foreground/20 px-2 py-1 hover:bg-muted" title="This was the same rock as the one above"><Combine className="size-3.5" /> merge with previous</button>}
+                      {i > 0 && <button onClick={() => setRows((rs) => mergeInto(rs, i))} className="inline-flex items-center gap-1 text-xs rounded-lg ring-1 ring-foreground/20 px-2 py-1 hover:bg-muted" title="This was the same rock as the one above"><Combine className="size-3.5" /> merge with previous</button>}
                       {pause && <button onClick={() => setRows((rs) => splitAt(rs, i))} className="inline-flex items-center gap-1 text-xs rounded-lg ring-1 ring-foreground/20 px-2 py-1 hover:bg-muted" title={`Two rocks? Split at the longest pause, ${fmtTime(pause.seconds)} in`}><Scissors className="size-3.5" /> split at {fmtTime(pause.seconds)} pause</button>}
                       <button onClick={() => void makeCard(r, cells)} className="inline-flex items-center gap-1 text-xs rounded-lg ring-1 ring-foreground/20 px-2 py-1 hover:bg-muted" title="Make a picture of this rock to share"><Share2 className="size-3.5" /> share</button>
                       <button onClick={() => setRows((rs) => rs.filter((x) => x.key !== r.key))} className="text-muted-foreground hover:text-destructive" aria-label="forget this rock"><Trash2 className="size-3.5" /></button>
