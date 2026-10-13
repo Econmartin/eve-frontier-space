@@ -1,0 +1,36 @@
+{
+  "_comment": "Composite (voxel) asteroids are named and mixed by the server; the client files do not list them. `catalog` is the community composition table (quantity class per regolith); `observed` are full-clear yields in regolith units. Update per cycle.",
+  "cycle": "cycle-7",
+  "materials": {
+    "_comment": "The generator's eight material slots and the regolith each one appears to map to.",
+    "feldspar": 77800, "sulfide": 77811, "ptpd": 77810, "iridosmine": 78426,
+    "methane": 78446, "kerogen": 78447, "aromatic": 78448, "tholin": 78449
+  },
+  "catalog": {
+    "_comment": "Community table, 2026-10. Classes: L large, S small, T trace. Regolith IDs: 77800 Crustal Anorthosite Crystals, 78448 Irradiated Anthraxolite Veins, 78446 Primitive Rime Shards, 78449 Irradiated Cryoconite Nodules, 78447 Primordial Anthraxolite Sludge, 78426 Native Reef Nodules, 77810 Massive Ataxite Matrix, 77811 Hydrated Gossan Matrix.",
+    "Rind":   { "77800": "L" },
+    "Glaze":  { "77800": "L" },
+    "Marrow": { "77800": "L" },
+    "Bone":   { "77800": "S" },
+    "Flint":  { "77800": "S", "77810": "S" },
+    "Spall":  { "77800": "S", "77810": "S", "77811": "S" },
+    "Soot":   { "78448": "L" },
+    "Pitch":  { "78448": "S", "78446": "L", "78449": "L", "78447": "S" },
+    "Grist":  { "78448": "T", "77811": "S" },
+    "Ember":  { "78448": "T", "78449": "L", "78447": "L" },
+    "Mire":   { "78448": "T", "78446": "S", "78449": "L", "78447": "S", "77811": "T" },
+    "Ingot":  { "78426": "L", "77810": "L" },
+    "Spar":   { "77810": "L", "77811": "S" },
+    "Char":   { "78446": "S", "78449": "L", "78447": "L" },
+    "Scale":  { "78447": "L" },
+    "Murk":   { "77811": "L" }
+  },
+  "observed": [
+    {
+      "name": "Mire",
+      "variant": "Hollow Mire",
+      "note": "Full clear reported 2026-10-12. About 10 to 20 units per voxel. Note the Crustal Anorthosite share, which the catalog does not list for Mire.",
+      "yields": { "77800": 15981, "77811": 1023, "78446": 5445, "78447": 9347, "78448": 956, "78449": 4819 }
+    }
+  ]
+}

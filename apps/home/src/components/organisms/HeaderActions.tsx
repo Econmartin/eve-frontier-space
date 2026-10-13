@@ -1,4 +1,4 @@
-import { MOVE_APP_HREF } from '@/config';
+import { INDUSTRY_HOME, MOVE_APP_HREF } from '@/config';
 import { useDarkMode } from '@/hooks/useDarkMode';
 import {
   Sheet,
@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Menu, X } from 'lucide-react';
 
 export const STATION_CREATOR_HREF = '/station-creator';
+export const INDUSTRY_HREF = INDUSTRY_HOME;
 
 function ThemeToggle({ className = '' }: { className?: string }) {
   const { isDark, toggle } = useDarkMode();
@@ -33,6 +34,9 @@ export function HeaderActions() {
     <>
       <div className="hidden md:flex items-center gap-3">
         <ThemeToggle />
+        <a href={INDUSTRY_HREF} className="rounded-lg px-4 py-2 text-sm font-semibold text-white/80 hover:text-white hover:bg-white/10 transition-colors no-underline">
+          Industry
+        </a>
         <a href={STATION_CREATOR_HREF} className="rounded-lg px-4 py-2 text-sm font-semibold text-white/80 hover:text-white hover:bg-white/10 transition-colors no-underline">
           Station Creator
         </a>
@@ -62,6 +66,9 @@ export function HeaderActions() {
             </a>
             <a href={STATION_CREATOR_HREF} className="w-full rounded-lg py-3 text-sm font-semibold text-white text-center transition-colors border border-white/20 hover:bg-white/10 no-underline">
               Station Creator
+            </a>
+            <a href={INDUSTRY_HREF} className="w-full rounded-lg py-3 text-sm font-semibold text-white text-center transition-colors border border-white/20 hover:bg-white/10 no-underline">
+              Industry
             </a>
             <div className="flex items-center gap-3 mt-2">
               <ThemeToggle />

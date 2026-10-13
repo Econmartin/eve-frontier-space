@@ -6,3 +6,9 @@ compatibility_flags = ["nodejs_compat"]
 [assets]
 directory = "./dist"
 binding = "ASSETS"
+
+# Community mining log submissions (see schema.sql). Fill in database_id after `wrangler d1 create eve-frontier-mining`.
+[[d1_databases]]
+binding = "DB"
+database_name = "eve-frontier-mining"
+database_id = "acdcb9ad-b7dc-4143-942b-fdab94c98c81"

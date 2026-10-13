@@ -1,0 +1,9 @@
+{
+  "_comment": "Curated from in-game observation, not from the client files. Update each cycle. Facility IDs are type IDs; builtInSpace lists blueprint IDs that players can run without a facility (ship hulls built in open space).",
+  "cycle": "cycle-7",
+  "facilities": {
+    "deployable": [87119, 87120, 88063, 88064, 88067],
+    "shipModule": [95302, 95486, 97517, 97518]
+  },
+  "builtInSpace": [1224, 1483]
+}
