@@ -14,6 +14,10 @@ export default {
     if (url.pathname === '/api/mining-sessions/summary') {
       return handleMiningSummary(request, env);
     }
+    // Raw mining ticks of a whole log file that passed the checks (for analysis)
+    if (url.pathname === '/api/mining-logs' && request.method === 'POST') {
+      return handleLogSubmit(request, env);
+    }
     // Share cards: a picture of one rock behind /rocks/<id>, unfurled by Discord & co via Open Graph tags
     if (url.pathname === '/api/rock-cards' && request.method === 'POST') {
       return handleCardSubmit(request, env);
@@ -321,4 +325,47 @@ async function handleCardPage(request, id, env) {
   html = html.replace(/<title>[^<]*<\/title>\s*/i, '').replace(/<meta (?:property="og:|name="twitter:)[^>]*>\s*/gi, '');
   html = html.replace('</head>', `  ${tags}\n</head>`);
   return new Response(html, { headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'public, max-age=300' } });
+}
+
+// ---------------- Raw mining logs ----------------
+const MAX_LOG_TICKS = 50000;
+/** Whole-file tick list: ordered, plausible, no outliers. Returns an error string or null. */
+function checkLogTicks(ticks) {
+  if (!Array.isArray(ticks) || !ticks.length || ticks.length > MAX_LOG_TICKS) return 'ticks missing';
+  let last = 0, same = 0;
+  for (const tk of ticks) {
+    if (!Array.isArray(tk) || tk.length !== 3) return 'bad tick';
+    const [t, n, id] = tk;
+    if (!Number.isInteger(t) || !Number.isInteger(n) || !Number.isInteger(id) || n < 1 || n > MAX_TICK_UNITS || id < 1 || t < 1.5e9 || t > 4e9) return 'bad tick';
+    if (t < last) return 'ticks out of order';
+    same = t === last ? same + 1 : 0; if (same >= 8) return 'too many ticks in one second';
+    last = t;
+  }
+  if (outlierTicks(ticks.map((tk) => tk[1])).length) return 'a tick is far above its neighbours';
+  return null;
+}
+async function sha256Hex(text) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+async function handleLogSubmit(request, env) {
+  if (!env.DB) return jsonResponse({ error: 'storage not configured' }, 503);
+  let body;
+  try { body = await request.json(); } catch { return jsonResponse({ error: 'invalid json' }, 400); }
+  const { cycle, sessionStart, ticks } = body || {};
+  if (typeof cycle !== 'string' || cycle.length > 32) return jsonResponse({ error: 'bad cycle' }, 400);
+  const start = Date.parse(sessionStart);
+  if (!start) return jsonResponse({ error: 'bad session start' }, 400);
+  const why = checkLogTicks(ticks);
+  if (why) return jsonResponse({ error: 'log failed checks: ' + why }, 400);
+  if (ticks[0][0] * 1000 < start - 60000) return jsonResponse({ error: 'log failed checks: ticks before session start' }, 400);
+  const who = await ipHash(request);
+  const recent = await env.DB.prepare("SELECT COUNT(*) AS n FROM mining_logs WHERE submitter = ? AND created_at > datetime('now', '-1 day')").bind(who).first();
+  if (recent && recent.n >= 200) return jsonResponse({ error: 'daily limit reached' }, 429);
+  const json = JSON.stringify(ticks);
+  const id = await sha256Hex(json);
+  const units = ticks.reduce((a, tk) => a + tk[1], 0);
+  const res = await env.DB.prepare('INSERT OR IGNORE INTO mining_logs (id, cycle, session_start, first_tick, last_tick, ticks, units, ticks_json, submitter) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')
+    .bind(id, cycle, new Date(start).toISOString(), new Date(ticks[0][0] * 1000).toISOString(), new Date(ticks[ticks.length - 1][0] * 1000).toISOString(), ticks.length, units, json, who).run();
+  return jsonResponse({ ok: true, stored: !!(res.meta && res.meta.changes) }, 201);
 }

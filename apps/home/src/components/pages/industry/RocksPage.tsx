@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { compositeRocks, composites, fmtTime, itemName, priceOf } from '@/lib/industry';
 import { Empty, ItemIcon, Panel, Price, Qty, Section, useIndustrySettings } from './parts';
-import { isSalvage, longestPause, sessionFrom, toSessions, type Session } from './GamelogPanel';
+import { idOfName, isSalvage, longestPause, sessionFrom, toSessions, type Session } from './GamelogPanel';
 import { checkDocument, splitDocuments, type CheckedTick, type LogDocument } from '@/lib/gamelogCheck';
 import { AsteroidPreview, generateFor, seedFrom, slotOf } from './AsteroidPreview';
 import { MATERIAL_COLOR } from '@/lib/asteroidGen';
@@ -19,6 +19,8 @@ interface Labelled extends Session { key: string; rock?: string; prefix: string;
 interface ShareState { url: string; png: Blob; jpg: Blob; busy?: boolean; copied?: 'image' | 'link'; error?: string }
 const STORE = 'industry.myRocks';
 const GAP_STORE = 'industry.rockGapMinutes';
+const SENT_LOGS = 'industry.sentLogs';
+const loadSent = (): string[] => { try { const v = JSON.parse(localStorage.getItem(SENT_LOGS) || '[]'); return Array.isArray(v) ? v : []; } catch { return []; } };
 const DEFAULT_GAP_MIN = 5;
 /** Gaps at least this long get their length written on the timeline next to the merge button. */
 const LONG_GAP_MS = 2 * 3600e3;
@@ -125,7 +127,7 @@ export function RocksPage() {
   const [drag, setDrag] = useState(false);
   const [shares, setShares] = useState<Record<string, ShareState>>({});
   const { docs, ticks, salvage } = useMemo(() => {
-    const docs: (LogDocument & { name: string; duplicateOf?: string })[] = []; const ticks: CheckedTick[] = [];
+    const docs: (LogDocument & { name: string; duplicateOf?: string; /** clean regolith ticks: [unixSec, units, typeID] */ data?: [number, number, number][] })[] = []; const ticks: CheckedTick[] = [];
     // The same session dropped twice (a copy, or a renamed file) would double every rock, so only the first file per session start counts.
     const seen = new Map<number, string>(); let salvage = 0;
     for (const f of files) {
@@ -134,7 +136,9 @@ export function RocksPage() {
         const dup = doc.sessionStart !== undefined ? seen.get(doc.sessionStart) : undefined;
         if (dup) { docs.push({ ...doc, name: f.name, ok: false, duplicateOf: dup }); return; }
         if (doc.sessionStart !== undefined) seen.set(doc.sessionStart, f.name);
-        docs.push({ ...doc, name: f.name }); ticks.push(...own.filter((t) => { if (isSalvage(t.name)) { salvage++; return false; } return true; }));
+        const rockTicks = own.filter((t) => { if (isSalvage(t.name)) { salvage++; return false; } return true; });
+        const data = doc.ok ? rockTicks.flatMap((t) => { const id = idOfName(t.name); return id ? [[Math.round(t.t / 1000), t.n, id] as [number, number, number]] : []; }) : undefined;
+        docs.push({ ...doc, name: f.name, data }); ticks.push(...rockTicks);
       });
     }
     return { docs, ticks: ticks.sort((a, b) => a.t - b.t), salvage };
@@ -150,6 +154,17 @@ export function RocksPage() {
     });
   }, [ticks, gap]);
   useEffect(() => { saveHistory(rows); }, [rows]);
+  // Every file that passed the checks shares its mining ticks once (time, units, material) for the community dataset.
+  const [sentLogs, setSentLogs] = useState<string[]>(loadSent);
+  useEffect(() => {
+    for (const d of docs) {
+      if (!d.ok || !d.data?.length || d.sessionStart === undefined) continue;
+      const key = new Date(d.sessionStart).toISOString();
+      if (sentLogs.includes(key)) continue;
+      setSentLogs((l) => { const next = [...l, key].slice(-500); try { localStorage.setItem(SENT_LOGS, JSON.stringify(next)); } catch { /* ignore */ } return next; });
+      void fetch('/api/mining-logs', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ cycle: composites.cycle, sessionStart: key, ticks: d.data }) }).catch(() => { /* best effort */ });
+    }
+  }, [docs, sentLogs]);
   useEffect(() => { try { localStorage.setItem(GAP_STORE, String(gapMin)); } catch { /* ignore */ } }, [gapMin]);
   const load = async (list: FileList | File[]) => {
     const arr = [...list].filter((f) => /\.txt$/i.test(f.name));
@@ -234,7 +249,7 @@ export function RocksPage() {
             ))}
           </ul>
         )}
-        <p className="text-xs text-muted-foreground font-sans">Only the mining lines are read, in your browser, and your rocks are remembered in this browser so you can come back to them. Files are checked before a rock can be submitted, and the server checks again. A submitted rock stores its ticks (time, units, material), totals, and the name you give it. No character names, nothing else from the log.</p>
+        <p className="text-xs text-muted-foreground font-sans">Only the mining lines are read, in your browser, and your rocks are remembered in this browser so you can come back to them. When a file passes the checks, its mining ticks (time, units, material) are shared with the community dataset, and a rock you label and submit adds its name. No character names, nothing else from the log, ever leaves your machine.</p>
       </Panel>
 
       {!rows.length ? (
