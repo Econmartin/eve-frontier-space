@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { compositeRocks, composites, fmtTime, itemName, priceOf } from '@/lib/industry';
 import { Empty, ItemIcon, Panel, Price, Qty, Section, useIndustrySettings } from './parts';
-import { longestPause, sessionFrom, toSessions, type Session } from './GamelogPanel';
+import { isSalvage, longestPause, sessionFrom, toSessions, type Session } from './GamelogPanel';
 import { checkDocument, splitDocuments, type CheckedTick, type LogDocument } from '@/lib/gamelogCheck';
 import { AsteroidPreview, generateFor, seedFrom, slotOf } from './AsteroidPreview';
 import { MATERIAL_COLOR } from '@/lib/asteroidGen';
@@ -23,7 +23,21 @@ const DEFAULT_GAP_MIN = 5;
 /** Only offer to merge rocks mined within this long of each other; anything further apart is clearly another rock. */
 const MERGE_WINDOW_MS = 2 * 3600e3;
 const loadGap = () => { try { const v = Number(localStorage.getItem(GAP_STORE)); return v > 0 ? v : DEFAULT_GAP_MIN; } catch { return DEFAULT_GAP_MIN; } };
-const loadHistory = (): Labelled[] => { try { const v = JSON.parse(localStorage.getItem(STORE) || '[]'); return Array.isArray(v) ? v : []; } catch { return []; } };
+const loadHistory = (): Labelled[] => {
+  try {
+    const v = JSON.parse(localStorage.getItem(STORE) || '[]');
+    if (!Array.isArray(v)) return [];
+    // Rocks remembered before salvage was filtered out: rebuild from their ticks, drop pure-salvage ones.
+    return (v as Labelled[]).flatMap((r) => {
+      if (r.log) {
+        const log = r.log.filter((t) => !isSalvage(t.name));
+        if (!log.length) return [];
+        return log.length === r.log.length ? [r] : [{ ...r, ...sessionFrom(log), verified: r.verified }];
+      }
+      return r.materials.every((m) => isSalvage(m.name)) ? [] : [r];
+    });
+  } catch { return []; }
+};
 const saveHistory = (rows: Labelled[]) => { try { localStorage.setItem(STORE, JSON.stringify(rows.slice(0, 200))); } catch { /* private mode or full */ } };
 
 /** Merge adjacent sessions into one (same rock mined with a pause). */
@@ -34,16 +48,16 @@ function mergeInto(list: Labelled[], i: number): Labelled[] {
   for (const x of [...a.materials, ...b.materials]) { const cur = m.get(x.name); m.set(x.name, { n: (cur?.n ?? 0) + x.n, id: x.id }); }
   const materials = [...m.entries()].map(([name, v]) => ({ name, n: v.n, id: v.id })).sort((x, y) => y.n - x.n);
   const log = a.log && b.log ? [...a.log, ...b.log].sort((x, y) => x.t - y.t) : undefined;
-  const merged: Labelled = { ...a, start: Math.min(a.start, b.start), end: Math.max(a.end, b.end), ticks: a.ticks + b.ticks, total: materials.reduce((s, x) => s + x.n, 0), materials, log, verified: !!(a.verified && b.verified), key: a.key + '+' + b.key, status: undefined };
+  const merged: Labelled = { ...a, rock: a.rock ?? b.rock, prefix: a.prefix || b.prefix, start: Math.min(a.start, b.start), end: Math.max(a.end, b.end), ticks: a.ticks + b.ticks, total: materials.reduce((s, x) => s + x.n, 0), materials, log, verified: !!(a.verified && b.verified), key: a.key + '+' + b.key, status: undefined };
   return [...list.slice(0, i - 1), merged, ...list.slice(i + 1)].sort((x, y) => y.start - x.start);
 }
 
-/** Split a session at its longest pause into two rocks; the first keeps the label. */
+/** Split a session at its longest pause into two rocks; both keep the label so nothing has to be re-entered. */
 function splitAt(list: Labelled[], i: number): Labelled[] {
   const r = list[i]; const cut = r.log && longestPause(r.log);
   if (!r.log || !cut) return list;
   const first = { ...sessionFrom(r.log.slice(0, cut.at)), key: r.key + 'a', rock: r.rock, prefix: r.prefix, status: undefined };
-  const second = { ...sessionFrom(r.log.slice(cut.at)), key: r.key + 'b', prefix: '', status: undefined };
+  const second = { ...sessionFrom(r.log.slice(cut.at)), key: r.key + 'b', rock: r.rock, prefix: r.prefix, status: undefined };
   return [...list.slice(0, i), first, second, ...list.slice(i + 1)].sort((a, b) => b.start - a.start);
 }
 
@@ -111,20 +125,20 @@ export function RocksPage() {
   const [rows, setRows] = useState<Labelled[]>(loadHistory);
   const [drag, setDrag] = useState(false);
   const [shares, setShares] = useState<Record<string, ShareState>>({});
-  const { docs, ticks } = useMemo(() => {
+  const { docs, ticks, salvage } = useMemo(() => {
     const docs: (LogDocument & { name: string; duplicateOf?: string })[] = []; const ticks: CheckedTick[] = [];
     // The same session dropped twice (a copy, or a renamed file) would double every rock, so only the first file per session start counts.
-    const seen = new Map<number, string>();
+    const seen = new Map<number, string>(); let salvage = 0;
     for (const f of files) {
       splitDocuments(f.text).forEach((lines, k) => {
         const { doc, ticks: own } = checkDocument(lines, k + 1);
         const dup = doc.sessionStart !== undefined ? seen.get(doc.sessionStart) : undefined;
         if (dup) { docs.push({ ...doc, name: f.name, ok: false, duplicateOf: dup }); return; }
         if (doc.sessionStart !== undefined) seen.set(doc.sessionStart, f.name);
-        docs.push({ ...doc, name: f.name }); ticks.push(...own);
+        docs.push({ ...doc, name: f.name }); ticks.push(...own.filter((t) => { if (isSalvage(t.name)) { salvage++; return false; } return true; }));
       });
     }
-    return { docs, ticks: ticks.sort((a, b) => a.t - b.t) };
+    return { docs, ticks: ticks.sort((a, b) => a.t - b.t), salvage };
   }, [files]);
   useEffect(() => {
     if (!ticks.length) return;
@@ -204,7 +218,7 @@ export function RocksPage() {
           <input type="file" accept=".txt" multiple className="hidden" onChange={(e) => { if (e.target.files) void load(e.target.files); e.target.value = ''; }} />
         </label>
         <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-          <span>{files.length} file{files.length === 1 ? '' : 's'} · {ticks.length} mining ticks → {rows.length} rock{rows.length === 1 ? '' : 's'}</span>
+          <span>{files.length} file{files.length === 1 ? '' : 's'} · {ticks.length} mining ticks → {rows.length} rock{rows.length === 1 ? '' : 's'}{salvage > 0 && <span className="opacity-70"> · {salvage} salvage tick{salvage === 1 ? '' : 's'} ignored</span>}</span>
           <span className="ml-auto flex items-center gap-2" title="Ticks closer together than this count as the same rock. You can still split or merge rocks below."><label htmlFor="rock-gap">same rock if mined within</label><input id="rock-gap" type="number" min={0.5} step={0.5} value={gapMin} onChange={(e) => setGapMin(Math.max(0.5, Number(e.target.value) || DEFAULT_GAP_MIN))} className="h-7 w-16 rounded-lg bg-background ring-1 ring-foreground/15 px-2 text-xs tabular-nums" /> min</span>
           {files.length > 0 && <button onClick={() => setFiles([])} className="inline-flex items-center gap-1 hover:text-destructive"><Trash2 className="size-3.5" /> clear files</button>}
           {rows.length > 0 && <button onClick={() => { if (confirm('Forget all rocks remembered in this browser?')) { setRows([]); setFiles([]); } }} className="inline-flex items-center gap-1 hover:text-destructive"><Trash2 className="size-3.5" /> forget history</button>}

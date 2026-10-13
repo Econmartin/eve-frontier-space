@@ -12,6 +12,9 @@ export interface Tick { t: number; n: number; name: string; /** 1 when the sourc
 export interface Session { start: number; end: number; ticks: number; total: number; materials: { name: string; n: number; id?: number }[]; log?: Tick[]; /** every tick came from a complete log that passed checks */ verified?: boolean }
 
 const byName = new Map(industryItems.map((i) => [i.name.toLowerCase(), i.id]));
+const regolithNames = new Set(industryItems.filter((i) => i.regolith).map((i) => i.name.toLowerCase()));
+/** The mining channel also logs salvaging (Debris and the like); only regolith comes out of a rock. Unknown names are kept. */
+export const isSalvage = (name: string) => { const k = name.toLowerCase(); return byName.has(k) && !regolithNames.has(k); };
 
 export function parseGamelog(text: string): Tick[] {
   const out: Tick[] = [];

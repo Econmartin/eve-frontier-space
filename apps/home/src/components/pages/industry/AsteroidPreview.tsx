@@ -42,6 +42,8 @@ export function generateFor(shares: { id: number; qty: number }[], seed: number,
     const cells = build(radius);
     if (Math.abs(cells.length - target) < Math.abs(best.length - target)) best = cells; else break;
   }
+  // Small bodies can come out short (the smallest radius is not always ~20 cells), so grow until there is enough to trim.
+  for (let i = 0; i < 8 && best.length < target; i++) { radius = Math.min(14, radius + Math.max(0.4, radius * 0.2)); best = build(radius); }
   // The generator cannot go below ~20 cells, and the search lands within a few of the target, so shave the
   // outermost cells off to make the count exact. Tiny partial clears become a small chunk rather than a whole body.
   if (best.length > target) best = best.map((c) => [c, Math.hypot(c[0], c[1], c[2])] as const).sort((a, b) => a[1] - b[1]).slice(0, target).map(([c]) => c);
