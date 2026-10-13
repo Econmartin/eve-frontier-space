@@ -53,12 +53,11 @@
 </head>
 <body>
   <script>
-    // Apply dark mode before first paint to prevent flash.
-    // Priority: localStorage override > system preference.
+    // Apply the theme before first paint to prevent flash: dark unless the visitor chose light.
     (function() {
-      var stored = localStorage.getItem('theme');
-      var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      if (stored === 'dark' || (!stored && prefersDark)) {
+      var stored = null;
+      try { stored = localStorage.getItem('theme'); } catch (e) {}
+      if (stored !== 'light') {
         document.documentElement.classList.add('dark');
       }
     })();

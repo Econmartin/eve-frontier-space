@@ -10,10 +10,11 @@ function getEffectiveDark(theme: Theme): boolean {
 }
 
 export function useDarkMode() {
+  // Dark by default; "light" only when the visitor picked it. ("system" stays available for callers.)
   const [theme, setThemeState] = useState<Theme>(() => {
     const stored = localStorage.getItem('theme');
     if (stored === 'light' || stored === 'dark') return stored;
-    return 'system';
+    return 'dark';
   });
 
   const isDark = getEffectiveDark(theme);
