@@ -14,6 +14,20 @@ export default {
     if (url.pathname === '/api/mining-sessions/summary') {
       return handleMiningSummary(request, env);
     }
+    // Share cards: a picture of one rock behind /rocks/<id>, unfurled by Discord & co via Open Graph tags
+    if (url.pathname === '/api/rock-cards' && request.method === 'POST') {
+      return handleCardSubmit(request, env);
+    }
+    const cardApi = url.pathname.match(/^\/api\/rock-cards\/([A-Za-z0-9]{8,16})(\.jpg)?$/);
+    if (cardApi) return handleCardGet(cardApi[1], !!cardApi[2], env);
+    const cardPage = url.pathname.match(/^\/rocks\/([A-Za-z0-9]{8,16})$/);
+    if (cardPage && request.method === 'GET') {
+      const page = await handleCardPage(request, cardPage[1], env);
+      if (page) return page;
+      // unknown card: the app shows its "not here any more" message, with a 404 so crawlers do not index it
+      const index = await env.ASSETS.fetch(new URL('/index.html', url));
+      return new Response(index.body, { status: 404, headers: { 'content-type': 'text/html; charset=utf-8' } });
+    }
 
     // Try the actual static asset first
     const response = await env.ASSETS.fetch(request);
@@ -221,4 +235,90 @@ async function handleMiningSummary(request, env) {
   }
   for (const r of Object.values(rocks)) for (const g of Object.values(r.regoliths)) { g.share = g.shareSum / r.samples; g.presence = g.seen / r.samples; delete g.shareSum; }
   return jsonResponse({ rocks, total: results.length }, 200, { 'Cache-Control': 'public, max-age=60' });
+}
+
+// ---------------- Share cards ----------------
+const CARD_ID = /^[A-Za-z0-9]{8,16}$/;
+const MAX_CARD_BYTES = 600000;
+const CARD_META_KEYS = ['rock', 'prefix', 'units', 'voxels', 'ticks', 'start', 'end', 'seed', 'peak', 'materials'];
+function newCardId() {
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+  const bytes = crypto.getRandomValues(new Uint8Array(10));
+  return [...bytes].map((b) => alphabet[b % alphabet.length]).join('');
+}
+function cleanCardMeta(meta) {
+  if (!meta || typeof meta !== 'object') return null;
+  const out = {};
+  out.rock = meta.rock == null ? null : (typeof meta.rock === 'string' && ROCK_NAME.test(meta.rock) ? meta.rock : null);
+  out.prefix = typeof meta.prefix === 'string' && meta.prefix.length <= 16 ? meta.prefix : '';
+  for (const k of ['units', 'voxels', 'ticks', 'seed']) { const v = Number(meta[k]); if (!Number.isInteger(v) || v < 0 || v > 1e9) return null; out[k] = v; }
+  const peak = Number(meta.peak); if (Number.isInteger(peak) && peak > 0 && peak <= MAX_TICK_UNITS) out.peak = peak;
+  for (const k of ['start', 'end']) { const t = Date.parse(meta[k]); if (!t) return null; out[k] = new Date(t).toISOString(); }
+  const mats = meta.materials && typeof meta.materials === 'object' ? Object.entries(meta.materials).filter(([k, v]) => /^\d{1,8}$/.test(k) && Number.isInteger(v) && v > 0 && v < 1e8).slice(0, 16) : [];
+  if (!mats.length) return null;
+  out.materials = Object.fromEntries(mats);
+  for (const k of Object.keys(out)) if (!CARD_META_KEYS.includes(k)) delete out[k];
+  return out;
+}
+async function handleCardSubmit(request, env) {
+  if (!env.DB) return jsonResponse({ error: 'storage not configured' }, 503);
+  let body;
+  try { body = await request.json(); } catch { return jsonResponse({ error: 'invalid json' }, 400); }
+  const meta = cleanCardMeta(body && body.meta);
+  if (!meta) return jsonResponse({ error: 'bad meta' }, 400);
+  if (typeof body.image !== 'string' || body.image.length > MAX_CARD_BYTES * 1.4) return jsonResponse({ error: 'bad image' }, 400);
+  let bytes;
+  try { bytes = Uint8Array.from(atob(body.image), (c) => c.charCodeAt(0)); } catch { return jsonResponse({ error: 'bad image' }, 400); }
+  if (bytes.length < 1000 || bytes.length > MAX_CARD_BYTES || bytes[0] !== 0xff || bytes[1] !== 0xd8 || bytes[2] !== 0xff) return jsonResponse({ error: 'image must be a JPEG under 600 KB' }, 400);
+  const who = await ipHash(request);
+  const recent = await env.DB.prepare("SELECT COUNT(*) AS n FROM rock_cards WHERE submitter = ? AND created_at > datetime('now', '-1 day')").bind(who).first();
+  if (recent && recent.n >= 50) return jsonResponse({ error: 'daily limit reached' }, 429);
+  const id = newCardId();
+  await env.DB.prepare('INSERT INTO rock_cards (id, meta, image, submitter) VALUES (?, ?, ?, ?)').bind(id, JSON.stringify(meta), bytes.buffer, who).run();
+  return jsonResponse({ id }, 201);
+}
+async function handleCardGet(id, asImage, env) {
+  if (!env.DB || !CARD_ID.test(id)) return jsonResponse({ error: 'not found' }, 404);
+  const row = await env.DB.prepare(asImage ? 'SELECT image FROM rock_cards WHERE id = ?' : 'SELECT meta, created_at FROM rock_cards WHERE id = ?').bind(id).first();
+  if (!row) return jsonResponse({ error: 'not found' }, 404);
+  if (asImage) {
+    // D1 hands BLOBs back as an ArrayBuffer in production and as a plain array locally
+    const img = row.image instanceof ArrayBuffer ? row.image : Array.isArray(row.image) ? new Uint8Array(row.image) : row.image;
+    return new Response(img, { headers: { 'content-type': 'image/jpeg', 'cache-control': 'public, max-age=31536000, immutable' } });
+  }
+  let meta = {}; try { meta = JSON.parse(row.meta); } catch { /* ignore */ }
+  return jsonResponse({ id, created: row.created_at, ...meta }, 200, { 'Cache-Control': 'public, max-age=3600' });
+}
+const cardTitle = (meta) => `${meta.prefix ? meta.prefix[0].toUpperCase() + meta.prefix.slice(1) + ' ' : ''}${meta.rock || 'Unlabelled rock'}`;
+const escapeHtml = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+/** The SPA index with this card's Open Graph tags in place of the site defaults; null when the id is unknown. */
+async function handleCardPage(request, id, env) {
+  if (!env.DB || !CARD_ID.test(id)) return null;
+  const row = await env.DB.prepare('SELECT meta FROM rock_cards WHERE id = ?').bind(id).first();
+  if (!row) return null;
+  let meta; try { meta = JSON.parse(row.meta); } catch { return null; }
+  const url = new URL(request.url);
+  const title = `${cardTitle(meta)} · ${Number(meta.units).toLocaleString('en-US')} units`;
+  const description = `${Number(meta.voxels).toLocaleString('en-US')} voxels${meta.peak ? `, biggest ${meta.peak} units` : ''}, mined in EVE Frontier. See the rock and what came out of it.`;
+  const image = `${url.origin}/api/rock-cards/${id}.jpg`;
+  const tags = [
+    `<title>${escapeHtml(title)} | EVE Frontier Community</title>`,
+    `<meta property="og:type" content="website" />`,
+    `<meta property="og:title" content="${escapeHtml(title)}" />`,
+    `<meta property="og:description" content="${escapeHtml(description)}" />`,
+    `<meta property="og:url" content="${escapeHtml(url.origin + url.pathname)}" />`,
+    `<meta property="og:image" content="${escapeHtml(image)}" />`,
+    `<meta property="og:image:width" content="1200" />`,
+    `<meta property="og:image:height" content="630" />`,
+    `<meta name="twitter:card" content="summary_large_image" />`,
+    `<meta name="twitter:title" content="${escapeHtml(title)}" />`,
+    `<meta name="twitter:description" content="${escapeHtml(description)}" />`,
+    `<meta name="twitter:image" content="${escapeHtml(image)}" />`,
+    `<meta name="theme-color" content="#ff610a" />`,
+  ].join('\n  ');
+  const index = await env.ASSETS.fetch(new URL('/index.html', url));
+  let html = await index.text();
+  html = html.replace(/<title>[^<]*<\/title>\s*/i, '').replace(/<meta (?:property="og:|name="twitter:)[^>]*>\s*/gi, '');
+  html = html.replace('</head>', `  ${tags}\n</head>`);
+  return new Response(html, { headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'public, max-age=300' } });
 }

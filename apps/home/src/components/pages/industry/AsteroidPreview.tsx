@@ -48,6 +48,29 @@ export function generateFor(shares: { id: number; qty: number }[], seed: number,
   return best;
 }
 
+/** Scene, camera and spinning group for a voxel grid; the camera frames rocks of radius ~5 and up. */
+function buildScene(cells: Cell[]) {
+  const scene = new THREE.Scene();
+  const extent = cells.reduce((m, c) => Math.max(m, Math.hypot(c[0], c[1], c[2])), 0) + 0.8;
+  const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 200); camera.position.set(0, 0, Math.max(5.5, extent) * 3.6);
+  scene.add(new THREE.HemisphereLight(0xdfe8ff, 0x101418, 1.0)); const sun = new THREE.DirectionalLight(0xffffff, 1.1); sun.position.set(8, 12, 10); scene.add(sun);
+  const geo = new THREE.BoxGeometry(0.92, 0.92, 0.92); const mat = new THREE.MeshStandardMaterial({ roughness: 0.85, metalness: 0.05 });
+  const mesh = new THREE.InstancedMesh(geo, mat, Math.max(1, cells.length)); const m = new THREE.Matrix4(); const col = new THREE.Color();
+  cells.forEach((c, i) => { m.makeTranslation(c[0], c[1], c[2]); mesh.setMatrixAt(i, m); const rgb = (MATERIAL_COLOR as Record<string, number[]>)[c[3]] ?? [0.5, 0.5, 0.5]; col.setRGB(rgb[0], rgb[1], rgb[2]); mesh.setColorAt(i, col); });
+  mesh.count = cells.length; const group = new THREE.Group(); group.add(mesh); scene.add(group);
+  return { scene, camera, group, dispose: () => { geo.dispose(); mat.dispose(); } };
+}
+
+/** Render a voxel body once into a fresh canvas (share cards). */
+export function renderRockToCanvas(cells: Cell[], size: number, yaw = 0.6): HTMLCanvasElement {
+  const canvas = document.createElement('canvas'); canvas.width = size; canvas.height = size;
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, preserveDrawingBuffer: true }); renderer.setPixelRatio(1); renderer.setSize(size, size, false);
+  const { scene, camera, group, dispose } = buildScene(cells);
+  group.rotation.set(0.45, yaw, 0); renderer.render(scene, camera);
+  dispose(); renderer.dispose();
+  return canvas;
+}
+
 /** Small self-contained three.js view of a voxel grid. */
 export function AsteroidPreview({ cells, size = 220, spin = true, className }: { cells: Cell[]; size?: number; spin?: boolean; className?: string }) {
   const ref = useRef<HTMLCanvasElement>(null);
@@ -55,18 +78,11 @@ export function AsteroidPreview({ cells, size = 220, spin = true, className }: {
   useEffect(() => {
     const canvas = ref.current; if (!canvas) return;
     const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true }); renderer.setPixelRatio(Math.min(devicePixelRatio, 2)); renderer.setSize(size, size, false);
-    const scene = new THREE.Scene();
-    const extent = cells.reduce((m, c) => Math.max(m, Math.hypot(c[0], c[1], c[2])), 0) + 0.8;
-    const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 200); camera.position.set(0, 0, Math.max(5.5, extent) * 3.6); // rocks under a ~5-cell radius look smaller in the frame
-    scene.add(new THREE.HemisphereLight(0xdfe8ff, 0x101418, 1.0)); const sun = new THREE.DirectionalLight(0xffffff, 1.1); sun.position.set(8, 12, 10); scene.add(sun);
-    const geo = new THREE.BoxGeometry(0.92, 0.92, 0.92); const mat = new THREE.MeshStandardMaterial({ roughness: 0.85, metalness: 0.05 });
-    const mesh = new THREE.InstancedMesh(geo, mat, Math.max(1, cells.length)); const m = new THREE.Matrix4(); const col = new THREE.Color();
-    cells.forEach((c, i) => { m.makeTranslation(c[0], c[1], c[2]); mesh.setMatrixAt(i, m); const rgb = (MATERIAL_COLOR as Record<string, number[]>)[c[3]] ?? [0.5, 0.5, 0.5]; col.setRGB(rgb[0], rgb[1], rgb[2]); mesh.setColorAt(i, col); });
-    mesh.count = cells.length; const group = new THREE.Group(); group.add(mesh); scene.add(group);
+    const { scene, camera, group, dispose } = buildScene(cells);
     let raf = 0; let t = 0; let alive = true;
     const loop = () => { if (!alive) return; t += 0.006; group.rotation.set(0.45, spin ? t : 0.6, 0); renderer.render(scene, camera); raf = requestAnimationFrame(loop); };
     loop();
-    return () => { alive = false; cancelAnimationFrame(raf); geo.dispose(); mat.dispose(); renderer.dispose(); };
+    return () => { alive = false; cancelAnimationFrame(raf); dispose(); renderer.dispose(); };
   }, [key, size, spin, cells]);
   return <canvas ref={ref} width={size} height={size} className={className} style={{ width: size, height: size }} aria-label="asteroid preview" />;
 }

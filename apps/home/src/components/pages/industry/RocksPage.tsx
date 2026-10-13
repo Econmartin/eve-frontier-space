@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { CheckCircle2, Combine, FileWarning, Scissors, Trash2, Upload } from 'lucide-react';
+import { CheckCircle2, Combine, Copy, Download, FileWarning, Link2, Scissors, Share2, Trash2, Upload } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { compositeRocks, composites, fmtTime, itemName, priceOf } from '@/lib/industry';
@@ -8,12 +8,15 @@ import { longestPause, sessionFrom, toSessions, type Session } from './GamelogPa
 import { checkDocument, splitDocuments, type CheckedTick, type LogDocument } from '@/lib/gamelogCheck';
 import { AsteroidPreview, generateFor, seedFrom, slotOf } from './AsteroidPreview';
 import { MATERIAL_COLOR } from '@/lib/asteroidGen';
+import { blobToBase64, canvasToBlob, renderRockCard } from './shareCard';
+import { cardTitle } from './RockSharePage';
 
 const fmtDate = (ms: number) => new Date(ms).toISOString().slice(0, 16).replace('T', ' ');
 const ROCK_NAMES = compositeRocks.map((r) => r.name);
 const PREFIXES = ['', 'hollow', 'shocked', 'deep', 'core', 'prime'];
 
-interface Labelled extends Session { key: string; rock?: string; prefix: string; status?: 'sent' | 'error' }
+interface Labelled extends Session { key: string; rock?: string; prefix: string; status?: 'sent' | 'error'; /** id of the share card uploaded for this rock, if any */ shareId?: string }
+interface ShareState { url: string; png: Blob; jpg: Blob; busy?: boolean; copied?: 'image' | 'link'; error?: string }
 const STORE = 'industry.myRocks';
 const GAP_STORE = 'industry.rockGapMinutes';
 const DEFAULT_GAP_MIN = 5;
@@ -45,6 +48,8 @@ function splitAt(list: Labelled[], i: number): Labelled[] {
 }
 
 const PX_PER_MIN = 3;
+/** largest single voxel in a rock, 0 when the ticks are not known */
+const peakOf = (r: Labelled) => (r.log ? r.log.reduce((m, t) => Math.max(m, t.n), 0) : 0);
 const cssColor = (id?: number) => { const slot = id ? slotOf(id) : undefined; const c = slot ? (MATERIAL_COLOR as Record<string, number[]>)[slot] : undefined; return c ? `rgb(${c.map((v) => Math.round(v * 255)).join(' ')})` : 'rgb(120 120 120)'; };
 const shortUnits = (n: number) => (n >= 10000 ? `${Math.round(n / 1000)}k` : n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n));
 const fmtClock = (ms: number) => new Date(ms).toISOString().slice(11, 16);
@@ -105,6 +110,7 @@ export function RocksPage() {
   // rows = previously seen rocks (localStorage) plus whatever is pasted now; labels and submit state survive by start time
   const [rows, setRows] = useState<Labelled[]>(loadHistory);
   const [drag, setDrag] = useState(false);
+  const [shares, setShares] = useState<Record<string, ShareState>>({});
   const { docs, ticks } = useMemo(() => {
     const docs: (LogDocument & { name: string; duplicateOf?: string })[] = []; const ticks: CheckedTick[] = [];
     // The same session dropped twice (a copy, or a renamed file) would double every rock, so only the first file per session start counts.
@@ -151,6 +157,42 @@ export function RocksPage() {
     } catch { setRows((rs) => rs.map((x) => (x.key === r.key ? { ...x, status: 'error' } : x))); }
   };
 
+  /** Draw the share picture for a rock (kept in memory until the page is left). */
+  const makeCard = async (r: Labelled, cells: ReturnType<typeof generateFor>) => {
+    if (shares[r.key]) { setShares((m) => ({ ...m, [r.key]: { ...m[r.key], copied: undefined, error: undefined } })); return; }
+    try {
+      const canvas = await renderRockCard({
+        cells, title: cardTitle(r), stats: `${r.total.toLocaleString()} units · ${r.ticks.toLocaleString()} voxel${r.ticks === 1 ? '' : 's'}`,
+        when: `${fmtDate(r.start).slice(0, 10)} · ${fmtTime((r.end - r.start) / 1000)} of mining${peakOf(r) ? ` · biggest voxel ${peakOf(r)} units` : ''}`,
+        materials: r.materials.map((m) => ({ name: m.name, n: m.n, color: cssColor(m.id) })), total: r.total,
+      });
+      const [png, jpg] = await Promise.all([canvasToBlob(canvas, 'image/png'), canvasToBlob(canvas, 'image/jpeg', 0.86)]);
+      setShares((m) => ({ ...m, [r.key]: { url: URL.createObjectURL(png), png, jpg } }));
+    } catch (e) { setShares((m) => ({ ...m, [r.key]: { ...(m[r.key] ?? { url: '', png: new Blob(), jpg: new Blob() }), error: e instanceof Error ? e.message : 'could not draw the card' } })); }
+  };
+  const copyImage = async (r: Labelled) => {
+    const sh = shares[r.key]; if (!sh) return;
+    try { await navigator.clipboard.write([new ClipboardItem({ 'image/png': sh.png })]); setShares((m) => ({ ...m, [r.key]: { ...m[r.key], copied: 'image' } })); }
+    catch { setShares((m) => ({ ...m, [r.key]: { ...m[r.key], error: 'your browser blocked copying the image; download it instead' } })); }
+  };
+  const shareLinkOf = (id: string) => `${location.origin}/rocks/${id}`;
+  const copyLink = async (r: Labelled) => {
+    const sh = shares[r.key]; if (!sh) return;
+    let id = r.shareId;
+    if (!id) {
+      setShares((m) => ({ ...m, [r.key]: { ...m[r.key], busy: true, error: undefined } }));
+      try {
+        const meta = { rock: r.rock && r.rock !== 'Unknown' ? r.rock : null, prefix: r.prefix || '', units: r.total, voxels: r.ticks, ticks: r.ticks, start: new Date(r.start).toISOString(), end: new Date(r.end).toISOString(), seed: seedFrom(r.start), peak: peakOf(r), materials: Object.fromEntries(r.materials.filter((m) => m.id).map((m) => [m.id, m.n])) };
+        const res = await fetch('/api/rock-cards', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ meta, image: await blobToBase64(sh.jpg) }) });
+        if (!res.ok) throw new Error((await res.json().catch(() => ({})) as { error?: string }).error || 'could not save the card');
+        id = (await res.json() as { id: string }).id;
+        setRows((rs) => rs.map((x) => (x.key === r.key ? { ...x, shareId: id } : x)));
+      } catch (e) { setShares((m) => ({ ...m, [r.key]: { ...m[r.key], busy: false, error: e instanceof Error ? e.message : 'could not save the card' } })); return; }
+    }
+    try { await navigator.clipboard.writeText(shareLinkOf(id)); } catch { /* shown below anyway */ }
+    setShares((m) => ({ ...m, [r.key]: { ...m[r.key], busy: false, copied: 'link' } }));
+  };
+
   return (
     <div className="flex flex-col gap-4">
       <Panel className="flex flex-col gap-3">
@@ -193,12 +235,13 @@ export function RocksPage() {
               const cells = generateFor(r.materials.filter((m) => m.id).map((m) => ({ id: m.id!, qty: m.n })), seed, r.prefix, r.ticks);
               const longest = r.log && r.log.length > 1 ? longestPause(r.log) : null;
               const pause = longest && longest.seconds >= 30 ? longest : null; // a split only makes sense across a real pause
+              const peak = r.log ? r.log.reduce((m, t) => Math.max(m, t.n), 0) : 0; // largest single voxel
               const val = r.materials.reduce((s, m) => s + (m.id ? (priceOf(m.id) ?? 0) * m.n : 0), 0);
               return (
                 <Panel key={r.key} id={'rock-' + r.key} className="p-4 grid gap-4 sm:grid-cols-[220px_minmax(0,1fr)]">
                   <div className="flex flex-col items-center gap-2">
                     <AsteroidPreview cells={cells} size={220} className="rounded-xl bg-black/40" />
-                    <div className="text-[0.65rem] text-muted-foreground tabular-nums">{cells.length} voxel{cells.length === 1 ? '' : 's'} · {Math.round(r.total / Math.max(1, r.ticks))} units each</div>
+                    <div className="text-[0.65rem] text-muted-foreground tabular-nums">{cells.length} voxel{cells.length === 1 ? '' : 's'}{peak ? ` · biggest ${peak} units` : ''}</div>
                   </div>
                   <div className="flex flex-col gap-2 min-w-0">
                     <div className="flex items-baseline justify-between gap-2 flex-wrap">
@@ -206,6 +249,7 @@ export function RocksPage() {
                       <span className="flex items-center gap-2">
                       {i > 0 && rows[i - 1].start - r.end <= MERGE_WINDOW_MS && <button onClick={() => setRows((rs) => mergeInto(rs, i))} className="inline-flex items-center gap-1 text-xs rounded-lg ring-1 ring-foreground/20 px-2 py-1 hover:bg-muted" title="This was the same rock as the one above"><Combine className="size-3.5" /> merge with previous</button>}
                       {pause && <button onClick={() => setRows((rs) => splitAt(rs, i))} className="inline-flex items-center gap-1 text-xs rounded-lg ring-1 ring-foreground/20 px-2 py-1 hover:bg-muted" title={`Two rocks? Split at the longest pause, ${fmtTime(pause.seconds)} in`}><Scissors className="size-3.5" /> split at {fmtTime(pause.seconds)} pause</button>}
+                      <button onClick={() => void makeCard(r, cells)} className="inline-flex items-center gap-1 text-xs rounded-lg ring-1 ring-foreground/20 px-2 py-1 hover:bg-muted" title="Make a picture of this rock to share"><Share2 className="size-3.5" /> share</button>
                       <button onClick={() => setRows((rs) => rs.filter((x) => x.key !== r.key))} className="text-muted-foreground hover:text-destructive" aria-label="forget this rock"><Trash2 className="size-3.5" /></button>
                       </span>
                     </div>
@@ -233,6 +277,18 @@ export function RocksPage() {
                       {r.status === 'error' && <Badge variant="destructive">could not save, try again later</Badge>}
                       {!r.verified && r.status !== 'sent' && <span className="text-xs text-muted-foreground" title="Only rocks read from a complete log file that passed the checks can join the catalog">from a fragment or an unchecked log, so it stays local</span>}
                     </div>
+                    {shares[r.key] && (
+                      <div className="flex flex-col gap-2 pt-2 border-t border-foreground/10">
+                        {shares[r.key].url && <img src={shares[r.key].url} alt={`share card for ${cardTitle(r)}`} className="w-full max-w-[420px] rounded-lg ring-1 ring-foreground/15" />}
+                        <div className="flex flex-wrap items-center gap-2 text-xs">
+                          <button onClick={() => void copyImage(r)} disabled={!shares[r.key].url} className="inline-flex items-center gap-1 rounded-lg ring-1 ring-foreground/20 px-2 py-1 hover:bg-muted disabled:opacity-40"><Copy className="size-3.5" /> {shares[r.key].copied === 'image' ? 'copied, paste it in Discord' : 'copy image'}</button>
+                          {shares[r.key].url && <a href={shares[r.key].url} download={`rock-${(r.rock || 'unlabelled').toLowerCase()}-${fmtDate(r.start).slice(0, 10)}.png`} className="inline-flex items-center gap-1 rounded-lg ring-1 ring-foreground/20 px-2 py-1 hover:bg-muted no-underline"><Download className="size-3.5" /> download</a>}
+                          <button onClick={() => void copyLink(r)} disabled={!shares[r.key].url || shares[r.key].busy} className="inline-flex items-center gap-1 rounded-lg ring-1 ring-foreground/20 px-2 py-1 hover:bg-muted disabled:opacity-40" title="Upload the card and get a link that unfurls with the picture"><Link2 className="size-3.5" /> {shares[r.key].busy ? 'saving…' : shares[r.key].copied === 'link' ? 'link copied' : r.shareId ? 'copy link' : 'copy link (uploads the card)'}</button>
+                          {r.shareId && <a href={shareLinkOf(r.shareId)} className="text-muted-foreground truncate max-w-[260px]">{shareLinkOf(r.shareId).replace(/^https?:\/\//, '')}</a>}
+                          {shares[r.key].error && <Badge variant="destructive">{shares[r.key].error}</Badge>}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </Panel>
               );
