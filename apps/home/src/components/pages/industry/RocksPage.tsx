@@ -22,6 +22,8 @@ const GAP_STORE = 'industry.rockGapMinutes';
 const SENT_LOGS = 'industry.sentLogs';
 const loadSent = (): string[] => { try { const v = JSON.parse(localStorage.getItem(SENT_LOGS) || '[]'); return Array.isArray(v) ? v : []; } catch { return []; } };
 const DEFAULT_GAP_MIN = 5;
+/** rock cards per page; the timeline strip always shows every rock */
+const PAGE_SIZE = 10;
 /** Gaps at least this long get their length written on the timeline next to the merge button. */
 const LONG_GAP_MS = 2 * 3600e3;
 const loadGap = () => { try { const v = Number(localStorage.getItem(GAP_STORE)); return v > 0 ? v : DEFAULT_GAP_MIN; } catch { return DEFAULT_GAP_MIN; } };
@@ -71,8 +73,28 @@ const shortUnits = (n: number) => (n >= 10000 ? `${Math.round(n / 1000)}k` : n >
 const fmtClock = (ms: number) => new Date(ms).toISOString().slice(11, 16);
 const fmtDay = (ms: number) => new Date(ms).toISOString().slice(0, 10);
 
+/** Prev / numbered / next controls for the rock list. */
+function Pager({ page, pageCount, total, onPage }: { page: number; pageCount: number; total: number; onPage: (n: number) => void }) {
+  const btn = 'h-8 min-w-8 px-2 rounded-lg text-xs ring-1 ring-foreground/15 hover:bg-muted disabled:opacity-40 disabled:hover:bg-transparent transition-colors';
+  // show every page up to 9, otherwise the ends plus a window around the current page
+  const pages = pageCount <= 9 ? [...Array(pageCount).keys()] : [...new Set([0, 1, page - 1, page, page + 1, pageCount - 2, pageCount - 1].filter((n) => n >= 0 && n < pageCount))].sort((a, b) => a - b);
+  return (
+    <nav className="mt-4 flex flex-wrap items-center justify-center gap-1.5" aria-label="rock pages">
+      <button className={btn} disabled={page === 0} onClick={() => onPage(page - 1)}>‹ newer</button>
+      {pages.map((n, k) => (
+        <span key={n} className="contents">
+          {k > 0 && n - pages[k - 1] > 1 && <span className="px-1 text-xs text-muted-foreground">…</span>}
+          <button className={cn(btn, n === page && 'bg-[var(--color-martian-500)] text-black ring-transparent hover:bg-[var(--color-martian-500)]')} aria-current={n === page ? 'page' : undefined} onClick={() => onPage(n)}>{n + 1}</button>
+        </span>
+      ))}
+      <button className={btn} disabled={page >= pageCount - 1} onClick={() => onPage(page + 1)}>older ›</button>
+      <span className="ml-2 text-xs text-muted-foreground tabular-nums">{page * PAGE_SIZE + 1}–{Math.min(total, (page + 1) * PAGE_SIZE)} of {total}</span>
+    </nav>
+  );
+}
+
 /** Every rock on one scrollable strip, oldest on the left; merge in the gaps, split inside a rock. */
-function RockTimeline({ rows, onMerge, onSplit }: { rows: Labelled[]; onMerge: (i: number) => void; onSplit: (i: number) => void }) {
+function RockTimeline({ rows, onMerge, onSplit, onJump }: { rows: Labelled[]; onMerge: (i: number) => void; onSplit: (i: number) => void; onJump: (i: number) => void }) {
   const asc = [...rows].reverse();
   return (
     <div className="overflow-x-auto pb-2 -mx-1 px-1">
@@ -93,7 +115,7 @@ function RockTimeline({ rows, onMerge, onSplit }: { rows: Labelled[]; onMerge: (
               <div className="relative flex flex-col items-center" style={{ width }}>
                 {newDay && <span className="absolute -top-5 left-0 text-[0.6rem] text-muted-foreground whitespace-nowrap">{fmtDay(r.start)}</span>}
                 <span className="text-[0.65rem] tabular-nums leading-none mb-1">{shortUnits(r.total)}</span>
-                <button onClick={() => document.getElementById('rock-' + r.key)?.scrollIntoView({ behavior: 'smooth', block: 'center' })} title={`${r.rock ?? 'unlabelled'} · ${r.total.toLocaleString()} units · ${fmtTime((r.end - r.start) / 1000)}`}
+                <button onClick={() => onJump(rows.findIndex((x) => x.key === r.key))} title={`${r.rock ?? 'unlabelled'} · ${r.total.toLocaleString()} units · ${fmtTime((r.end - r.start) / 1000)}`}
                   className={cn('relative h-9 w-full overflow-hidden rounded-md ring-1 flex hover:ring-[var(--color-martian-500)] transition-shadow', r.status === 'sent' ? 'ring-emerald-500/60' : r.verified ? 'ring-foreground/25' : 'ring-amber-500/50')}>
                   {r.materials.map((m) => <span key={m.name} style={{ width: `${(100 * m.n) / r.total}%`, background: cssColor(m.id) }} className="h-full block" />)}
                   {pause && <span className="absolute inset-y-0 border-l border-dashed border-background/80" style={{ left: `${pauseAt * 100}%` }} />}
@@ -124,6 +146,12 @@ export function RocksPage() {
   const gap = gapMin * 60;
   // rows = previously seen rocks (localStorage) plus whatever is pasted now; labels and submit state survive by start time
   const [rows, setRows] = useState<Labelled[]>(loadHistory);
+  const [page, setPage] = useState(0);
+  const pageCount = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
+  const cur = Math.min(page, pageCount - 1);
+  const pageStart = cur * PAGE_SIZE;
+  /** show the page holding rock `i`, then scroll its card into view once it is mounted */
+  const jumpTo = (i: number) => { if (i < 0) return; setPage(Math.floor(i / PAGE_SIZE)); const key = rows[i]?.key; window.setTimeout(() => document.getElementById('rock-' + key)?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50); };
   const [drag, setDrag] = useState(false);
   const [shares, setShares] = useState<Record<string, ShareState>>({});
   const { docs, ticks, salvage } = useMemo(() => {
@@ -145,6 +173,7 @@ export function RocksPage() {
   }, [files]);
   useEffect(() => {
     if (!ticks.length) return;
+    setPage(0);
     setRows((prev) => {
       const fresh = toSessions(ticks, gap).map((s) => { const old = prev.find((p) => p.start === s.start); return { ...s, key: String(s.start), rock: old?.rock, prefix: old?.prefix ?? '', status: old?.status === 'sent' ? 'sent' as const : undefined }; });
       const starts = new Set(fresh.map((f) => f.start));
@@ -255,10 +284,11 @@ export function RocksPage() {
       {!rows.length ? (
         <Empty>Every rock you mined shows up here as a voxel body built from the materials you pulled out of it, with the same generator the game uses. Tell us which rock it was and it joins the community catalog.</Empty>
       ) : (
-        <Section title={`Your rocks · ${rows.length}`} aside={<span className="text-xs text-muted-foreground normal-case tracking-normal">{rows.filter((r) => r.status === 'sent').length} submitted · {rows.filter((r) => !r.rock).length} unlabelled</span>} className="mb-0">
-          <Panel className="p-3 mb-3"><RockTimeline rows={rows} onMerge={(i) => setRows((rs) => mergeInto(rs, i))} onSplit={(i) => setRows((rs) => splitAt(rs, i))} /></Panel>
+        <Section title={<span id="rocks-top">Your rocks · {rows.length}</span>} aside={<span className="text-xs text-muted-foreground normal-case tracking-normal">{rows.filter((r) => r.status === 'sent').length} submitted · {rows.filter((r) => !r.rock).length} unlabelled{pageCount > 1 ? ` · page ${cur + 1} of ${pageCount}` : ''}</span>} className="mb-0">
+          <Panel className="p-3 mb-3"><RockTimeline rows={rows} onMerge={(i) => setRows((rs) => mergeInto(rs, i))} onSplit={(i) => setRows((rs) => splitAt(rs, i))} onJump={jumpTo} /></Panel>
           <div className="grid gap-3 lg:grid-cols-2">
-            {rows.map((r, i) => {
+            {rows.slice(pageStart, pageStart + PAGE_SIZE).map((r, j) => {
+              const i = pageStart + j;
               const seed = seedFrom(r.start);
               const cells = generateFor(r.materials.filter((m) => m.id).map((m) => ({ id: m.id!, qty: m.n })), seed, r.prefix, r.ticks);
               const longest = r.log && r.log.length > 1 ? longestPause(r.log) : null;
@@ -322,6 +352,7 @@ export function RocksPage() {
               );
             })}
           </div>
+          {pageCount > 1 && <Pager page={cur} pageCount={pageCount} total={rows.length} onPage={(n) => { setPage(n); document.getElementById('rocks-top')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }} />}
           <p className="text-xs text-muted-foreground font-sans mt-3">Bodies are generated with the game's own voxel rules from what you mined: every rock you picked up after a voxel popped is one voxel, coloured by the shares you pulled out. A partial clear shows as a smaller rock. The look is representative, not the exact rock. Pick a prefix if the name in game had one, such as Hollow Mire.</p>
         </Section>
       )}
