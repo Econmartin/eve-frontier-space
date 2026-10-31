@@ -111,7 +111,6 @@ export function MinePage() {
               <p className="text-xs text-muted-foreground font-sans leading-relaxed">A composite asteroid is a voxel body generated from a server-side recipe: a shape, a prefix such as hollow or shocked, and layers of up to eight materials placed by depth. Mining removes voxels, so the mix you get is the materials you cut through. The server names them and picks the mix, so the client files cannot list them; this catalog is player knowledge.</p>
               <div className="text-[0.65rem] tracking-[0.16em] uppercase text-muted-foreground">The eight material slots</div>
               <ul className="text-xs flex flex-col gap-1">{compositeMaterials.map((mm) => <li key={mm.material} className="flex items-center justify-between gap-2"><span className="text-muted-foreground">{mm.material}</span><button onClick={() => pick(mm.regolith)} className="inline-flex items-center gap-1.5 hover:text-[var(--color-martian-500)]"><ItemIcon id={mm.regolith} size={18} />{itemName(mm.regolith)}</button></li>)}</ul>
-              <a href="/tools/asteroid-lab.html" className="text-xs text-[var(--color-martian-500)] no-underline">Open the asteroid lab to generate one →</a>
             </Panel>
           </div>
         )}

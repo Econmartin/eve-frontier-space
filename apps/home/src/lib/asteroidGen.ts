@@ -2,7 +2,7 @@
 /**
  * EVE Frontier composite (voxel) asteroid generator, ported from the client's
  * spacecomponents.common.components.compositeasteroid and verified voxel-for-voxel
- * against it (see tools/asteroid-lab/verify). Kept in sync with packages/assets/tools/asteroid-lab.html.
+ * against it (see tools/asteroid-lab/verify). Kept in sync with tools/asteroid-lab/asteroid-lab.html.
  */
 export type Material = 'iridosmine' | 'ptpd' | 'sulfide' | 'feldspar' | 'methane' | 'kerogen' | 'tholin' | 'aromatic';
 export interface ProfileMaterial { material: Material; weight: number; morphology: 'massive' | 'disseminated' | 'vein' | 'nodular'; self_affinity?: number }
