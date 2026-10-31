@@ -92,15 +92,17 @@ export function FacilityBadges({ recipe }: { recipe: Recipe }) {
 export const ItemAvailabilityBadge = ({ id }: { id: number }) => (itemAvailable(id) ? null : <NotInGame />);
 
 export function RecipeCard({ recipe, highlight, compact }: { recipe: Recipe; highlight?: number; compact?: boolean }) {
+  // A breakdown's primary type is the ore going in, so lead with the output being looked at.
+  const title = recipe.outputs.some((o) => o.id === highlight) ? highlight! : recipe.product;
   return (
     <div className="rounded-xl bg-card ring-1 ring-foreground/10 p-4 flex flex-col gap-3">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex items-center gap-3">
-          <ItemIcon id={recipe.product} size={40} className="rounded-lg" />
+          <ItemIcon id={title} size={40} className="rounded-lg" />
           <div className="min-w-0">
             <div className="text-[0.65rem] tracking-[0.16em] uppercase text-muted-foreground">Blueprint {recipe.id}</div>
             <div className="font-heading text-lg leading-tight truncate">
-              <ItemLink id={recipe.product} className={highlight === recipe.product ? 'text-[var(--color-martian-500)]' : ''} />
+              <ItemLink id={title} className={highlight === title ? 'text-[var(--color-martian-500)]' : ''} />
             </div>
           </div>
         </div>

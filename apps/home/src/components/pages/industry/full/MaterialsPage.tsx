@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { computeYield, conversionsFor, FAMILY_HINTS, facilityName, shownFacilityNames, fmtTime, industryItems, isBaseInput, itemName, itemOf, recipeAvailable, regolithFamilies, regoliths, reprocessing, rockFor, rocks, compositeMaterials, compositeRocks, composites, rocksWith, CLASS_LABEL, priceOf, valueOf, type QtyClass, type Item } from '@/lib/industry';
+import { computeYield, conversionsFor, FAMILY_HINTS, facilityName, shownFacilityNames, fmtTime, industryItems, isBaseInput, itemName, itemOf, recipeAvailable, regolithFamilies, regoliths, reprocessing, rockFor, rocks, compositeMaterials, compositeRocks, composites, rocksWith, CLASS_RANK, CLASS_LABEL, priceOf, valueOf, type QtyClass, type Item } from '@/lib/industry';
 import { Empty, FacilityBadges, IOList, ItemIcon, ItemLink, ItemPicker, NumberField, Panel, Price, Qty, Section, SuggestionChips, useIndustrySettings } from '../parts';
 
 /** Step 1: pick a rock, see what comes out of it. */
@@ -54,7 +54,7 @@ export function MinePage() {
             </button>
           ); })}
         </div>
-        <p className="text-xs text-muted-foreground font-sans mt-2">Composite asteroids as named in game, with what they contain, from the community table for {composites.cycle}, corrected with measured clears from My rocks (last updated {composites.seen?.updated}). Percentages are estimates from those clears; large, small, and trace come from the table where nobody has cleared one yet; exact numbers depend on the rock's voxel layers. Mined one? <Link to="/industry/rocks" className="text-[var(--color-martian-500)]">Add your log in My rocks</Link> and the averages here grow.</p>
+        <p className="text-xs text-muted-foreground font-sans mt-2">Composite asteroids as named in game, with what they contain, from the community list for {composites.cycle}, updated with real clears from My rocks (last updated {composites.seen?.updated}). Percentages are estimates from those clears; large, small, and trace are the community's call where nobody has cleared one yet; exact numbers depend on the rock's voxel layers. Mined one? <Link to="/industry/rocks" className="text-[var(--color-martian-500)]">Add your log in My rocks</Link> and the averages here grow.</p>
 
         {comp && (
           <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(0,1fr)_340px]">
@@ -69,11 +69,12 @@ export function MinePage() {
                       <span className={cn('shrink-0 rounded-full px-2 h-5 inline-flex items-center text-[0.6rem] uppercase tracking-wider', clsStyle[mat.cls])}>{mat.share != null ? `est. ${Math.round(mat.share)}%` : CLASS_LABEL[mat.cls]}</span>
                     </div>
                     <div className="text-[0.65rem] text-muted-foreground">
-                      {mat.share == null ? (comp.seen ? 'in the table, not seen in clears yet' : 'from the community table')
-                        : !mat.tableCls ? <span className="text-[var(--color-martian-500)]">seen in clears, not in the table</span>
-                        : mat.tableCls !== mat.cls ? `measured ${CLASS_LABEL[mat.cls]}, table says ${CLASS_LABEL[mat.tableCls]}`
-                        : `measured ${CLASS_LABEL[mat.cls]}, matches the table`}
-                      {comp.seen?.clears && mat.presence != null ? ` · in ${mat.presence} of ${comp.seen.clears} clear${comp.seen.clears === 1 ? '' : 's'}` : ''}
+                      {mat.share == null
+                        ? (comp.seen ? 'On the community list, not found in a clear yet' : 'From the community list')
+                        : <>{comp.seen?.clears && mat.presence != null ? `Found in ${mat.presence} of ${comp.seen.clears} clears` : 'Found in small samples'}
+                          {!mat.tableCls ? <span className="text-[var(--color-martian-500)]"> · new find</span>
+                            : mat.tableCls !== mat.cls ? ` · ${CLASS_RANK[mat.cls] < CLASS_RANK[mat.tableCls] ? 'more' : 'less'} than the community list says`
+                            : ' · matches the community list'}</>}
                     </div>
                     {c ? <div className="text-xs text-foreground/75">{c.inputs[0].qty} → {c.outputs.map((o) => `${o.qty} ${itemName(o.id)}`).join(', ')}</div> : <div className="text-xs text-muted-foreground">no refine recipe yet</div>}
                     {priceOf(mat.id) != null && <div className="text-xs"><Price n={priceOf(mat.id)!} per="unit raw" /></div>}
@@ -85,7 +86,7 @@ export function MinePage() {
                   {comp.seen.clears ? `Estimated from ${comp.seen.clears} clear${comp.seen.clears === 1 ? '' : 's'} of 100+ voxels` : `Estimated from ${comp.seen.samples} small sample${comp.seen.samples === 1 ? '' : 's'}, so treat them as rough`} · {comp.seen.voxels.toLocaleString()} voxels · {comp.seen.pilots} pilot{comp.seen.pilots === 1 ? '' : 's'}.{(comp.seen.clears < 3 || comp.seen.pilots < 2) ? ' Early numbers, likely to move.' : ''}
                   {comp.seen.variants && <ul className="mt-2 flex flex-col gap-1">{Object.entries(comp.seen.variants).map(([v, x]) => <li key={v}><span className="capitalize font-semibold">{v}</span> ({x.clears} clears): {Object.entries(x.shares).filter(([, pct]) => pct >= 3).map(([id, pct]) => `${itemName(Number(id))} est. ${Math.round(pct)}%`).join(', ')}</li>)}</ul>}
                 </div>
-              ) : <div className="text-xs text-muted-foreground font-sans">No clears of this rock yet, so this is the community table only. Add yours in My rocks.</div>}
+              ) : <div className="text-xs text-muted-foreground font-sans">No clears of this rock yet, so this is the community list only. Add yours in My rocks.</div>}
               {community?.[comp.name] && (() => { const c = community[comp.name]; const rows = Object.entries(c.regoliths).map(([id, g]) => ({ id: Number(id), ...g })).sort((a, b) => b.share - a.share); return (
                 <div className="pt-3 border-t border-foreground/10">
                   <div className="flex items-baseline justify-between gap-2 mb-2"><div className="text-[0.65rem] tracking-[0.16em] uppercase text-muted-foreground">Community clears · {c.samples} sample{c.samples === 1 ? '' : 's'}</div><span className="text-xs text-foreground/75 tabular-nums">{c.units.toLocaleString()} units logged</span></div>

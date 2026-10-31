@@ -36,13 +36,13 @@ export function HomeFooter() {
           </div>
 
           <div className="text-left text-xs text-slate-500 mb-6">
-            Built by pilots, not CCP.
+            Built by pilots, not Fenris Creations.
           </div>
 
           <div className="text-slate-500 text-xs text-left max-w-2xl leading-relaxed border-t border-slate-800 pt-6 space-y-2">
             <p>
-              This site is community-built and is not affiliated with or endorsed by CCP. EVE Frontier and all related
-              trademarks and IP are the property of CCP and EVE Frontier.
+              This site is community-built and is not affiliated with or endorsed by Fenris Creations. EVE Frontier and all related
+              trademarks and IP are the property of Fenris Creations and EVE Frontier.
             </p>
           </div>
         </div>

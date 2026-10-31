@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router';
-import { industryItems, itemName, itemOf, producedBy, recipeAvailable, starterProducts } from '@/lib/industry';
+import { industryItems, itemName, itemOf, producedBy, rankRecipes, recipeAvailable, starterProducts } from '@/lib/industry';
 import { Empty, Select, ItemIcon, ItemPicker, Panel, RecipeCard, Section, SuggestionChips, useIndustrySettings, useVisible } from '../parts';
 import { GraphPanel, GraphPlaceholder, buildItemGraph } from './graph';
 
@@ -12,7 +12,7 @@ export function MakePage() {
   const setDepth = (v: string) => { const p = new URLSearchParams(params); p.set('depth', v); setParams(p, { replace: true }); };
   const { showUnavailable } = useIndustrySettings();
   const pool = useMemo(() => industryItems.filter((i) => (producedBy.get(i.id) ?? []).some((r) => showUnavailable || recipeAvailable(r))), [showUnavailable]);
-  const made = useVisible(id ? (producedBy.get(id) ?? []).filter((r) => r.product === id) : []);
+  const made = useVisible(id ? rankRecipes(id, producedBy.get(id) ?? []) : []);
   const pick = (iid: number) => { const p = new URLSearchParams(params); p.set('item', String(iid)); setParams(p, { replace: true }); };
   return (
     <div className="flex flex-col gap-4">

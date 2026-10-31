@@ -57,7 +57,7 @@ function Overview() {
   const { showUnavailable } = useIndustrySettings();
   const live = recipes.filter((r) => showUnavailable || recipeAvailable(r));
   const stats = [
-    ['recipes', live.length], ['craftable items', new Set(live.map((r) => r.product)).size], ['base inputs', [...new Set(live.flatMap((r) => r.inputs.map((i) => i.id)))].filter(isBaseInput).length], ['facilities', [...new Set(live.flatMap((r) => r.facilities.map((f) => f.id)))].filter(facilityLive).length],
+    ['recipes', live.length], ['craftable items', new Set(live.flatMap((r) => r.outputs.map((o) => o.id))).size], ['base inputs', [...new Set(live.flatMap((r) => r.inputs.map((i) => i.id)))].filter(isBaseInput).length], ['facilities', [...new Set(live.flatMap((r) => r.facilities.map((f) => f.id)))].filter(facilityLive).length],
   ] as const;
   return (
     <div className="flex flex-col gap-6">

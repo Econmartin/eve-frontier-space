@@ -80,7 +80,7 @@ export interface CompositeMaterial {
   presence?: number;
 }
 export interface CompositeRock { name: string; materials: CompositeMaterial[]; seen?: SeenRock }
-const CLASS_RANK: Record<QtyClass, number> = { L: 0, S: 1, T: 2 };
+export const CLASS_RANK: Record<QtyClass, number> = { L: 0, S: 1, T: 2 };
 const classOfShare = (pct: number): QtyClass => (pct >= 25 ? 'L' : pct >= 5 ? 'S' : 'T');
 /** measured shares below this are noise, not a material worth listing */
 const MIN_SHARE = 1;
@@ -217,7 +217,7 @@ export function defaultRecipeFor(id: number, options: Recipe[] = producedBy.get(
 const tierCache = new Map<string, number>();
 export function itemTier(id: number, showUnavailable = false, trail: Set<number> = new Set()): number {
   const key = `${id}|${showUnavailable}`; const hit = tierCache.get(key); if (hit !== undefined) return hit;
-  const rs = (producedBy.get(id) ?? []).filter((r) => r.product === id && (showUnavailable || recipeAvailable(r)) && !isRepackCycle(r, id));
+  const rs = (producedBy.get(id) ?? []).filter((r) => (showUnavailable || recipeAvailable(r)) && !isRepackCycle(r, id));
   if (!rs.length || trail.has(id)) return 0;
   const next = new Set(trail).add(id);
   const tier = 1 + Math.min(...rs.map((r) => Math.max(0, ...r.inputs.map((i) => itemTier(i.id, showUnavailable, next)))));
@@ -226,7 +226,7 @@ export function itemTier(id: number, showUnavailable = false, trail: Set<number>
 /** Early products: in game, tier 1 or 2, most widely used first. The first things a new pilot can make. */
 export function starterProducts(limit = 12, showUnavailable = false): Item[] {
   return industryItems
-    .filter((i) => !i.regolith && i.category !== 'Asteroid' && itemAvailable(i.id) && producedBy.has(i.id))
+    .filter((i) => !i.regolith && i.category !== 'Asteroid' && itemAvailable(i.id) && (producedBy.get(i.id) ?? []).some((r) => r.product === i.id))
     .map((i) => ({ i, tier: itemTier(i.id, showUnavailable), uses: (usedIn.get(i.id) ?? []).filter((r) => showUnavailable || recipeAvailable(r)).length }))
     .filter((x) => x.tier >= 1 && x.tier <= 2)
     .sort((a, b) => a.tier - b.tier || b.uses - a.uses || a.i.name.localeCompare(b.i.name))
@@ -310,7 +310,7 @@ export function makeOptions(hold: Map<number, number>, pool: Recipe[]): MakeOpti
 /** products with more than one distinct recipe among `pool` (usually one per facility class) */
 export function multiRecipeProductsIn(pool: Recipe[]): Item[] {
   const by = new Map<number, number>();
-  for (const r of pool) by.set(r.product, (by.get(r.product) ?? 0) + 1);
+  for (const r of pool) for (const o of r.outputs) by.set(o.id, (by.get(o.id) ?? 0) + 1);
   return [...by.entries()].filter(([, n]) => n > 1).map(([id]) => itemOf(id)).sort((a, b) => a.name.localeCompare(b.name));
 }
 
