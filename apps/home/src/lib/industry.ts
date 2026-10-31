@@ -42,12 +42,38 @@ export const consumedBy = (id: number): number[] => data.consumedBy?.[String(id)
 /** Composite (voxel) asteroids: server-named, mixed yields. Catalog from the community, clears from play. */
 export type QtyClass = 'L' | 'S' | 'T';
 export interface CompositeObservation { name: string; variant?: string; note?: string; yields: Record<string, number> }
-export const composites = compositesRaw as unknown as { cycle: string; materials: Record<string, number | string>; catalog: Record<string, Record<string, QtyClass> | string>; observed: CompositeObservation[] };
-export interface CompositeRock { name: string; materials: { id: number; cls: QtyClass }[] }
+export interface RockVariant { clears: number; shares: Record<string, number> }
+export interface SeenRock { clears: number; samples: number; pilots: number; voxels: number; shares: Record<string, number>; presence: Record<string, number>; variants?: Record<string, RockVariant> }
+export const composites = compositesRaw as unknown as { cycle: string; materials: Record<string, number | string>; catalog: Record<string, Record<string, QtyClass> | string>; observed: CompositeObservation[]; seen?: { updated: string; rocks: Record<string, SeenRock> } };
+export interface CompositeMaterial {
+  id: number;
+  /** best current estimate: measured when a clear of 100+ voxels exists, otherwise the community table */
+  cls: QtyClass;
+  /** what the community table says; undefined when the table does not list this material */
+  tableCls?: QtyClass;
+  /** measured % of units, when any clears exist */
+  share?: number;
+  /** big clears this material appeared in */
+  presence?: number;
+}
+export interface CompositeRock { name: string; materials: CompositeMaterial[]; seen?: SeenRock }
 const CLASS_RANK: Record<QtyClass, number> = { L: 0, S: 1, T: 2 };
+const classOfShare = (pct: number): QtyClass => (pct >= 25 ? 'L' : pct >= 5 ? 'S' : 'T');
+/** measured shares below this are noise, not a material worth listing */
+const MIN_SHARE = 1;
 export const compositeRocks: CompositeRock[] = Object.entries(composites.catalog)
   .filter(([k, v]) => !k.startsWith('_') && typeof v === 'object')
-  .map(([name, v]) => ({ name, materials: Object.entries(v as Record<string, QtyClass>).map(([id, cls]) => ({ id: Number(id), cls })).sort((a, b) => CLASS_RANK[a.cls] - CLASS_RANK[b.cls]) }))
+  .map(([name, v]) => {
+    const table = v as Record<string, QtyClass>; const seen = composites.seen?.rocks[name];
+    const ids = new Set([...Object.keys(table), ...Object.entries(seen?.shares ?? {}).filter(([, pct]) => pct >= MIN_SHARE).map(([id]) => id)]);
+    const materials = [...ids].map((id): CompositeMaterial => {
+      const share = seen?.shares[id]; const tableCls = table[id];
+      // small scrapes only sample the outer shell, so only a big clear may override the table
+      const cls = seen?.clears ? classOfShare(share ?? 0) : tableCls ?? classOfShare(share ?? 0);
+      return { id: Number(id), cls, tableCls, share, presence: seen?.presence[id] };
+    }).sort((a, b) => (b.share ?? -1) - (a.share ?? -1) || CLASS_RANK[a.cls] - CLASS_RANK[b.cls]);
+    return { name, materials, seen };
+  })
   .sort((a, b) => a.name.localeCompare(b.name));
 export const CLASS_LABEL: Record<QtyClass, string> = { L: 'large', S: 'small', T: 'trace' };
 /** rocks whose catalog entry includes this regolith, best class first */
@@ -87,6 +113,11 @@ export const facilityLive = (id: number) => facilityKind(id) === 'deployable' ||
 export const builtInSpace = (r: Recipe) => BUILT_IN_SPACE.has(r.id);
 /** A recipe is available when it runs on a facility that exists in game, or is built in space. Unassigned recipes count as unavailable. */
 export const recipeAvailable = (r: Recipe) => builtInSpace(r) || r.facilities.some((f) => facilityLive(f.id));
+/** Facility names to print for a recipe: only those in game, unless the recipe has none (then all, so "not in game" rows still say where). */
+export const shownFacilityNames = (r: Recipe): string[] => {
+  const live = r.facilities.filter((f) => facilityLive(f.id));
+  return [...new Set((live.length ? live : r.facilities).map((f) => facilityName(f.id)))];
+};
 /** kept for callers that only care about "is anything about this recipe live" */
 export const recipeLive = recipeAvailable;
 /** An item is in game when it is published, is not an unavailable facility, and (if craftable) has at least one available recipe. */

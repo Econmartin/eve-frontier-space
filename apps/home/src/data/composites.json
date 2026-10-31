@@ -3,34 +3,245 @@
   "cycle": "cycle-7",
   "materials": {
     "_comment": "The generator's eight material slots and the regolith each one appears to map to.",
-    "feldspar": 77800, "sulfide": 77811, "ptpd": 77810, "iridosmine": 78426,
-    "methane": 78446, "kerogen": 78447, "aromatic": 78448, "tholin": 78449
+    "feldspar": 77800,
+    "sulfide": 77811,
+    "ptpd": 77810,
+    "iridosmine": 78426,
+    "methane": 78446,
+    "kerogen": 78447,
+    "aromatic": 78448,
+    "tholin": 78449
   },
   "catalog": {
     "_comment": "Community table, 2026-10. Classes: L large, S small, T trace. Regolith IDs: 77800 Crustal Anorthosite Crystals, 78448 Irradiated Anthraxolite Veins, 78446 Primitive Rime Shards, 78449 Irradiated Cryoconite Nodules, 78447 Primordial Anthraxolite Sludge, 78426 Native Reef Nodules, 77810 Massive Ataxite Matrix, 77811 Hydrated Gossan Matrix.",
-    "Rind":   { "77800": "L" },
-    "Glaze":  { "77800": "L" },
-    "Marrow": { "77800": "L" },
-    "Bone":   { "77800": "S" },
-    "Flint":  { "77800": "S", "77810": "S" },
-    "Spall":  { "77800": "S", "77810": "S", "77811": "S" },
-    "Soot":   { "78448": "L" },
-    "Pitch":  { "78448": "S", "78446": "L", "78449": "L", "78447": "S" },
-    "Grist":  { "78448": "T", "77811": "S" },
-    "Ember":  { "78448": "T", "78449": "L", "78447": "L" },
-    "Mire":   { "78448": "T", "78446": "S", "78449": "L", "78447": "S", "77811": "T" },
-    "Ingot":  { "78426": "L", "77810": "L" },
-    "Spar":   { "77810": "L", "77811": "S" },
-    "Char":   { "78446": "S", "78449": "L", "78447": "L" },
-    "Scale":  { "78447": "L" },
-    "Murk":   { "77811": "L" }
+    "Rind": {
+      "77800": "L"
+    },
+    "Glaze": {
+      "77800": "L"
+    },
+    "Marrow": {
+      "77800": "L"
+    },
+    "Bone": {
+      "77800": "S"
+    },
+    "Flint": {
+      "77800": "S",
+      "77810": "S"
+    },
+    "Spall": {
+      "77800": "S",
+      "77810": "S",
+      "77811": "S"
+    },
+    "Soot": {
+      "78448": "L"
+    },
+    "Pitch": {
+      "78448": "S",
+      "78446": "L",
+      "78449": "L",
+      "78447": "S"
+    },
+    "Grist": {
+      "78448": "T",
+      "77811": "S"
+    },
+    "Ember": {
+      "78448": "T",
+      "78449": "L",
+      "78447": "L"
+    },
+    "Mire": {
+      "78448": "T",
+      "78446": "S",
+      "78449": "L",
+      "78447": "S",
+      "77811": "T"
+    },
+    "Ingot": {
+      "78426": "L",
+      "77810": "L"
+    },
+    "Spar": {
+      "77810": "L",
+      "77811": "S"
+    },
+    "Char": {
+      "78446": "S",
+      "78449": "L",
+      "78447": "L"
+    },
+    "Scale": {
+      "78447": "L"
+    },
+    "Murk": {
+      "77811": "L"
+    }
   },
   "observed": [
     {
       "name": "Mire",
       "variant": "Hollow Mire",
       "note": "Full clear reported 2026-10-12. About 10 to 20 units per voxel. Note the Crustal Anorthosite share, which the catalog does not list for Mire.",
-      "yields": { "77800": 15981, "77811": 1023, "78446": 5445, "78447": 9347, "78448": 956, "78449": 4819 }
+      "yields": {
+        "77800": 15981,
+        "77811": 1023,
+        "78446": 5445,
+        "78447": 9347,
+        "78448": 956,
+        "78449": 4819
+      }
     }
-  ]
+  ],
+  "seen": {
+    "_comment": "Measured from community clears (scripts/game-data/update_rock_stats.py). Shares are % of units from clears of 100+ voxels.",
+    "updated": "2026-10-31",
+    "rocks": {
+      "Bone": {
+        "clears": 6,
+        "samples": 7,
+        "pilots": 2,
+        "voxels": 2571,
+        "shares": {
+          "77800": 99.0,
+          "77810": 1.0,
+          "78448": 0.0
+        },
+        "presence": {
+          "77800": 6,
+          "77810": 1,
+          "78448": 1
+        }
+      },
+      "Flint": {
+        "clears": 0,
+        "samples": 3,
+        "pilots": 1,
+        "voxels": 46,
+        "shares": {
+          "77810": 58.5,
+          "77800": 41.5
+        },
+        "presence": {
+          "77800": 2,
+          "77810": 3
+        }
+      },
+      "Grist": {
+        "clears": 11,
+        "samples": 16,
+        "pilots": 1,
+        "voxels": 4349,
+        "shares": {
+          "77800": 39.5,
+          "78448": 24.1,
+          "77810": 11.9,
+          "78447": 9.7,
+          "77811": 9.5,
+          "78449": 5.3
+        },
+        "presence": {
+          "77800": 11,
+          "78447": 11,
+          "78448": 11,
+          "78449": 11,
+          "77810": 7,
+          "77811": 10
+        },
+        "variants": {
+          "plain": {
+            "clears": 3,
+            "shares": {
+              "77800": 32.9,
+              "77811": 26.0,
+              "78448": 21.1,
+              "78449": 15.8,
+              "78447": 4.1
+            }
+          },
+          "prime": {
+            "clears": 8,
+            "shares": {
+              "77800": 40.2,
+              "78448": 24.5,
+              "77810": 13.2,
+              "78447": 10.4,
+              "77811": 7.6,
+              "78449": 4.1
+            }
+          }
+        }
+      },
+      "Mire": {
+        "clears": 1,
+        "samples": 3,
+        "pilots": 3,
+        "voxels": 3010,
+        "shares": {
+          "77800": 42.0,
+          "78447": 24.8,
+          "78446": 14.6,
+          "78449": 13.1,
+          "78448": 2.9,
+          "77811": 2.7
+        },
+        "presence": {
+          "77800": 1,
+          "78446": 1,
+          "78447": 1,
+          "78448": 1,
+          "78449": 1,
+          "77811": 1
+        }
+      },
+      "Murk": {
+        "clears": 1,
+        "samples": 1,
+        "pilots": 1,
+        "voxels": 472,
+        "shares": {
+          "77811": 94.9,
+          "77800": 5.1
+        },
+        "presence": {
+          "77800": 1,
+          "77811": 1
+        }
+      },
+      "Pitch": {
+        "clears": 4,
+        "samples": 6,
+        "pilots": 2,
+        "voxels": 916,
+        "shares": {
+          "78448": 47.1,
+          "78447": 21.4,
+          "78446": 16.7,
+          "78449": 14.8
+        },
+        "presence": {
+          "78448": 4,
+          "78449": 4,
+          "78446": 4,
+          "78447": 4
+        }
+      },
+      "Spall": {
+        "clears": 0,
+        "samples": 2,
+        "pilots": 1,
+        "voxels": 168,
+        "shares": {
+          "77800": 81.9,
+          "77810": 18.1
+        },
+        "presence": {
+          "77800": 2,
+          "77810": 2
+        }
+      }
+    }
+  }
 }

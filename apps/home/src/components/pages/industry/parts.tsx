@@ -72,8 +72,13 @@ export function FacilityBadge({ id }: { id: number }) {
 
 export function FacilityBadges({ recipe }: { recipe: Recipe }) {
   const seen = new Set<string>();
-  const ids = recipe.facilities.map((f) => f.id).filter((id) => { const k = `${facilityName(id)}|${facilityKind(id)}`; if (seen.has(k)) return false; seen.add(k); return true; });
+  const { showUnavailable } = useIndustrySettings();
   const available = recipeAvailable(recipe);
+  // a recipe that runs in game only lists the facilities that exist; dead ones (Field Printer…) stay behind the toggle
+  const ids = recipe.facilities.map((f) => f.id).filter((id) => {
+    if (available && !showUnavailable && facilityKind(id) === 'unavailable') return false;
+    const k = `${facilityName(id)}|${facilityKind(id)}`; if (seen.has(k)) return false; seen.add(k); return true;
+  });
   return (
     <div className="flex flex-wrap gap-1">
       {builtInSpace(recipe) && <Badge className="gap-1 bg-[var(--color-ocean-500)]/15 text-[var(--color-ocean-700)] dark:text-[var(--color-ocean-300)]" title="Players build this directly in open space, no structure needed."><Rocket className="size-3" /> built in space</Badge>}
