@@ -4,7 +4,6 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { computeYield, conversionsFor, FAMILY_HINTS, facilityName, shownFacilityNames, fmtTime, industryItems, isBaseInput, itemName, itemOf, recipeAvailable, regolithFamilies, regoliths, reprocessing, rockFor, rocks, compositeMaterials, compositeRocks, composites, rocksWith, CLASS_LABEL, priceOf, valueOf, type QtyClass, type Item } from '@/lib/industry';
 import { Empty, FacilityBadges, IOList, ItemIcon, ItemLink, ItemPicker, NumberField, Panel, Price, Qty, Section, SuggestionChips, useIndustrySettings } from '../parts';
-import { GamelogPanel } from '../GamelogPanel';
 
 /** Step 1: pick a rock, see what comes out of it. */
 export function MinePage() {
@@ -35,7 +34,10 @@ export function MinePage() {
     }
     return [...m.entries()].sort((a, b) => itemName(a[0]).localeCompare(itemName(b[0])));
   }, [showUnavailable]);
-  const shown = regoliths.filter((r) => family === 'all' || r.group === family);
+  // regoliths nothing refines yet stay behind the "show not in game" toggle
+  const usable = regoliths.filter((r) => showUnavailable || conv(r.id).length > 0);
+  const families = regolithFamilies.filter((f) => usable.some((r) => r.group === f));
+  const shown = usable.filter((r) => family === 'all' || r.group === family);
 
   return (
     <div className="flex flex-col gap-2">
@@ -157,8 +159,11 @@ export function MinePage() {
         {rock && rockConv.length > 0 && <p className="text-xs text-muted-foreground font-sans mt-2">Click an output to see what it becomes in step 2.</p>}
       </Section>
 
-      <Section title="Read your own game log">
-        <GamelogPanel onPickMaterial={pick} />
+      <Section title="Mined something already?">
+        <Panel className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm text-muted-foreground font-sans">Drop your game logs into My rocks to see every rock you mined, rebuilt in 3D, and add it to the community numbers.</p>
+          <Link to="/industry/rocks" className="no-underline shrink-0 text-center rounded-xl bg-foreground text-background px-4 py-2 text-sm font-semibold hover:opacity-85 transition-opacity">Open My rocks →</Link>
+        </Panel>
       </Section>
 
       <Section title="Which regolith to mine for a material">
@@ -181,7 +186,7 @@ export function MinePage() {
 
       <Section title={`Regolith atlas · ${shown.length}`} aside={
         <div className="flex flex-wrap gap-1.5 justify-end">
-          {['all', ...regolithFamilies].map((f) => <button key={f} onClick={() => setFamily(f)} className={cn('rounded-full px-3 h-7 text-xs ring-1 transition-colors', family === f ? 'bg-[var(--color-martian-500)] text-black ring-transparent' : 'ring-foreground/15 hover:bg-muted')}>{f === 'all' ? 'All' : f.replace(' Regoliths', '')}</button>)}
+          {['all', ...families].map((f) => <button key={f} onClick={() => setFamily(f)} className={cn('rounded-full px-3 h-7 text-xs ring-1 transition-colors', family === f ? 'bg-[var(--color-martian-500)] text-black ring-transparent' : 'ring-foreground/15 hover:bg-muted')}>{f === 'all' ? 'All' : f.replace(' Regoliths', '')}</button>)}
         </div>}>
         {family !== 'all' && FAMILY_HINTS[family] && <p className="text-sm text-muted-foreground font-sans mb-4 max-w-2xl">{FAMILY_HINTS[family]}</p>}
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">

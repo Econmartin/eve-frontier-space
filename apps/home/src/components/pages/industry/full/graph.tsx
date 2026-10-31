@@ -1,8 +1,8 @@
 /** Shared React Flow canvas and graph builders for the industry pages. */
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, type ReactNode } from 'react';
 import { useNavigate } from 'react-router';
 import {
-  Background, Controls, Handle, MiniMap, Position, ReactFlow, ReactFlowProvider, useReactFlow,
+  Background, Controls, Handle, Position, ReactFlow, ReactFlowProvider, useReactFlow,
   type Edge, type Node, type NodeProps, type NodeTypes,
 } from '@xyflow/react';
 import dagre from '@dagrejs/dagre';
@@ -208,8 +208,16 @@ function Canvas({ nodes, edges, onItem }: { nodes: GNode[]; edges: Edge[]; onIte
       nodesDraggable nodesConnectable={false} elementsSelectable={false} minZoom={0.2} maxZoom={2} fitView>
       <Background gap={24} size={1} color="color-mix(in oklab, var(--foreground) 12%, transparent)" />
       <Controls showInteractive={false} className="!bg-card !text-foreground !shadow-md [&>button]:!bg-card [&>button]:!border-foreground/10 [&>button]:!fill-foreground" />
-      <MiniMap pannable zoomable className="!bg-card" nodeColor={(n) => (n.type === 'recipe' || n.type === 'facility' ? '#ff610a' : 'color-mix(in oklab, var(--foreground) 35%, transparent)')} maskColor="color-mix(in oklab, var(--background) 70%, transparent)" />
     </ReactFlow>
+  );
+}
+
+/** Same frame as GraphPanel with no graph in it, so picking the first item moves nothing on the page. */
+export function GraphPlaceholder({ children, className }: { children: ReactNode; className?: string }) {
+  return (
+    <div className={cn('rounded-2xl ring-1 ring-foreground/10 bg-background flex items-center justify-center p-6 text-sm text-muted-foreground font-sans overflow-auto', className ?? 'h-[60dvh] min-h-[420px]')}>
+      <div className="max-w-xl">{children}</div>
+    </div>
   );
 }
 

@@ -1,8 +1,8 @@
 import { useSearchParams } from 'react-router';
 import { cn } from '@/lib/utils';
 import { industryItems, itemName, producedBy, recipeAvailable, starterProducts } from '@/lib/industry';
-import { Empty, ItemPicker, Panel, Select, SuggestionChips, useIndustrySettings } from '../parts';
-import { GraphPanel, buildItemGraph, type Mode } from './graph';
+import { ItemPicker, Panel, Select, SuggestionChips, useIndustrySettings } from '../parts';
+import { GraphPanel, GraphPlaceholder, buildItemGraph, type Mode } from './graph';
 
 /** Reference view: the full graph with every control. */
 export function GraphPage() {
@@ -31,9 +31,9 @@ export function GraphPage() {
         <div className="flex items-center gap-2"><span className="text-xs tracking-[0.16em] uppercase text-muted-foreground">Levels</span><Select ariaLabel="Depth" value={String(depth)} onChange={(v) => set({ depth: v })} options={[1, 2, 3, 4, 5].map((n) => ({ value: String(n), label: String(n) }))} /></div>
       </Panel>
       {!root ? (
-        <Empty>Pick an item to draw its production graph. "Made from" walks upstream to raw materials, "Used in" walks outward through everything that consumes it. Click a node to re-centre, double-click to open the item.
+        <GraphPlaceholder className="h-[72dvh] min-h-[480px]">Pick an item to draw its production graph. "Made from" walks upstream to raw materials, "Used in" walks outward through everything that consumes it. Click a node to re-centre, double-click to open the item.
           <SuggestionChips label="Try one" items={starterProducts(10, showUnavailable)} onPick={(it) => set({ item: String(it.id), mode: undefined, depth: undefined })} />
-        </Empty>
+        </GraphPlaceholder>
       ) : (
         <GraphPanel className="h-[72dvh] min-h-[480px]" build={() => buildItemGraph(root, { mode, depth, showUnavailable, productsOnly })} deps={[root, mode, depth, showUnavailable, productsOnly]}
           onItem={(id) => { if (id !== root) set({ item: String(id) }); }}

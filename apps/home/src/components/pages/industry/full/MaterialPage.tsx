@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useSearchParams } from 'react-router';
 import { fmtTime, industryItems, isBaseInput, itemName, itemOf, itemTier, recipeAvailable, usedIn } from '@/lib/industry';
 import { Empty, Select, FacilityBadges, ItemIcon, ItemLink, ItemPicker, Panel, Qty, Section, SuggestionChips, useIndustrySettings, useVisible } from '../parts';
-import { GraphPanel, buildItemGraph } from './graph';
+import { GraphPanel, GraphPlaceholder, buildItemGraph } from './graph';
 
 /** Step 2: pick a material, see what it becomes. */
 export function MaterialPage() {
@@ -19,20 +19,26 @@ export function MaterialPage() {
     <div className="flex flex-col gap-4">
       <Panel className="flex flex-col gap-3">
         <ItemPicker pool={pool} placeholder="Which material? Silica Grains, Iron-Rich Nodules, Carbon Weave…" onPick={(it) => pick(it.id)} clearOnPick={false} value={id ? itemName(id) : ''} />
-        {!id && <SuggestionChips label="Refined materials, most used first" items={suggestions} onPick={(it) => pick(it.id)} />}
+        <SuggestionChips label="Refined materials, most used first" items={suggestions} onPick={(it) => pick(it.id)} />
       </Panel>
       {!id ? (
-        <Empty>Pick something you refined or picked up. The graph shows every product it goes into; raise "steps out" to follow those products further. The table lists each recipe with how much it needs.</Empty>
+        <>
+          <div className="flex items-center gap-3 min-h-11">
+            <div className="size-11 rounded-lg bg-foreground/5" />
+            <div><div className="text-xs tracking-[0.16em] uppercase text-muted-foreground">Pick a material</div><h2 className="text-2xl font-bold leading-none">What it becomes</h2></div>
+          </div>
+          <GraphPlaceholder>Pick something you refined or picked up. The graph shows every product it goes into; raise "steps out" to follow those products further. The table below lists each recipe with how much it needs.</GraphPlaceholder>
+        </>
       ) : (
         <>
-          <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex items-center gap-3 flex-wrap min-h-11">
             <ItemIcon id={id} size={44} className="rounded-lg" />
             <div><div className="text-xs tracking-[0.16em] uppercase text-muted-foreground">{itemOf(id).group}</div><h2 className="text-2xl font-bold leading-none">What {itemName(id)} becomes</h2></div>
             <div className="ml-auto flex items-center gap-2"><span className="text-xs tracking-[0.16em] uppercase text-muted-foreground">Steps out</span><Select ariaLabel="Depth" value={String(depth)} onChange={setDepth} options={[1, 2, 3, 4].map((n) => ({ value: String(n), label: String(n) }))} /></div>
           </div>
           <GraphPanel build={() => buildItemGraph(id, { mode: 'down', depth, showUnavailable, productsOnly: true, perItem: 10 })} deps={[id, depth, showUnavailable]} onItem={pick}
             note="Products only: each arrow is a recipe, labelled with the facility and the input-to-output quantities per run. Click a product to follow it further." />
-          <Section title={`Used directly in · ${uses.length}`} className="mb-0">
+          <Section title={`Used directly in · ${uses.length}`} className="mb-0 min-h-[60dvh]">
             {uses.length ? (
               <Panel className="p-0 overflow-hidden">
                 <table className="w-full text-sm">
