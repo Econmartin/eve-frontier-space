@@ -7,6 +7,14 @@ export default {
       return handleOGProxy(request);
     }
 
+    // Game-derived assets live in D1, not in the public repo (see scripts/game-data/upload_assets.py)
+    if (url.pathname === '/api/industry-data') return handleGameAsset('industry-data', env, 300);
+    const icon = url.pathname.match(/^\/industry\/icons\/(\d{1,12})\.png$/);
+    if (icon) {
+      const stat = await env.ASSETS.fetch(request); // icons that are in the repo are plain static files
+      return stat.status !== 404 ? stat : handleGameAsset(`icon/${icon[1]}`, env, 86400);
+    }
+
     // Community mining sessions (industry tool): submit labelled rocks, read per-rock summary
     if (url.pathname === '/api/mining-sessions' && request.method === 'POST') {
       return handleMiningSubmit(request, env);
@@ -124,6 +132,17 @@ function decodeEntities(str) {
     .replace(/&#39;/g, "'")
     .replace(/&apos;/g, "'")
     .replace(/&nbsp;/g, ' ');
+}
+
+/** One game asset from D1, stitched back together from its parts. */
+async function handleGameAsset(asset, env, maxAge) {
+  if (!env.DB) return new Response('not found', { status: 404 });
+  const { results } = await env.DB.prepare('SELECT content_type, body FROM game_assets WHERE asset = ?1 ORDER BY part').bind(asset).all();
+  if (!results.length) return new Response('not found', { status: 404 });
+  const parts = results.map((r) => new Uint8Array(r.body));
+  const body = new Uint8Array(parts.reduce((n, p) => n + p.length, 0));
+  let at = 0; for (const p of parts) { body.set(p, at); at += p.length; }
+  return new Response(body, { headers: { 'content-type': results[0].content_type, 'cache-control': `public, max-age=${maxAge}, stale-while-revalidate=604800` } });
 }
 
 function jsonResponse(data, status = 200, extraHeaders = {}) {

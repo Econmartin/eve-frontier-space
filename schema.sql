@@ -41,3 +41,14 @@ CREATE TABLE IF NOT EXISTS mining_logs (
   submitter      TEXT                        -- salted hash of the client IP, for rate limiting only
 );
 CREATE INDEX IF NOT EXISTS mining_logs_session ON mining_logs (cycle, session_start);
+
+-- Game-derived assets for the industry pages (recipe dataset, item icons). They live here rather than in the
+-- public repo; scripts/game-data/upload_assets.py fills the table and the worker serves it. Large assets are
+-- split into parts because D1 caps the length of a single SQL statement.
+CREATE TABLE IF NOT EXISTS game_assets (
+  asset         TEXT    NOT NULL,            -- 'industry-data' or 'icon/<typeID>'
+  part          INTEGER NOT NULL DEFAULT 0,
+  content_type  TEXT    NOT NULL,
+  body          BLOB    NOT NULL,
+  PRIMARY KEY (asset, part)
+);

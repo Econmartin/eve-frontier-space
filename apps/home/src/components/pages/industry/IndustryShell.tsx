@@ -2,7 +2,7 @@ import { NavLink, Outlet, useLocation } from 'react-router';
 import { AppHeader } from '@eve-frontier-space/ui';
 import { PageWrapper } from '@/components/templates/index.ts';
 import { HeaderActions, Footer } from '@/components/organisms/index.ts';
-import { availability, clientVersion } from '@/lib/industry';
+import { availability, clientVersion, industryDataReady } from '@/lib/industry';
 import { INDUSTRY_FULL } from '@/config';
 import { useEffect, useState } from 'react';
 import { IndustrySettingsContext } from './parts';
@@ -66,7 +66,7 @@ export function IndustryShell() {
           </div>
         </header>
 
-        <nav className="sticky top-2 z-40 mb-6 -mx-1 overflow-x-auto flex items-center justify-between gap-3">
+        <nav className="sticky top-2 z-40 mb-6 -mx-1 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
           <div className="flex items-center gap-2 mx-1">
             {INDUSTRY_FULL && <div className="inline-flex gap-0.5 rounded-2xl bg-black/95 dark:bg-white/5 backdrop-blur-md p-1">
               {STEPS.map((t, i) => (
@@ -87,6 +87,7 @@ export function IndustryShell() {
           </label>}
         </nav>
 
+        {!industryDataReady && <p className="mb-4 rounded-xl ring-1 ring-amber-500/40 bg-amber-500/5 px-4 py-2 text-sm font-sans">Recipe data could not be loaded just now, so most of these tools will look empty. My rocks still works. Try reloading in a moment.</p>}
         <Outlet />
       </main>
       <div className="px-4 sm:px-6 lg:px-8 pb-4 sm:pb-6 lg:pb-8"><Footer /></div>

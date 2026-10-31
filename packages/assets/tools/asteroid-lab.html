@@ -1,0 +1,335 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Asteroid Lab</title>
+<meta name="description" content="Local re-implementation of the EVE Frontier composite (voxel) asteroid generator, with sliders for every parameter the client exposes.">
+<style>
+  :root { --bg:#0b0d10; --panel:#14181d; --line:#262c34; --text:#e6e9ee; --muted:#8b95a3; --accent:#7cc4ff; }
+  * { box-sizing: border-box; }
+  html, body { margin:0; height:100%; background:var(--bg); color:var(--text); font: 14px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  #app { display:grid; grid-template-columns: 340px 1fr; height:100vh; }
+  #side { background:var(--panel); border-right:1px solid var(--line); overflow:auto; padding:14px 16px; }
+  #view { position:relative; }
+  canvas { display:block; width:100%; height:100%; }
+  h1 { font-size:16px; margin:0 0 4px; }
+  .sub { color:var(--muted); font-size:12px; margin-bottom:12px; }
+  fieldset { border:1px solid var(--line); border-radius:8px; margin:0 0 12px; padding:8px 12px 10px; }
+  legend { color:var(--muted); font-size:12px; padding:0 4px; }
+  label { display:grid; grid-template-columns: 92px 1fr 52px; gap:8px; align-items:center; margin:6px 0; font-size:13px; }
+  label.wide { grid-template-columns: 92px 1fr; }
+  input[type=range] { width:100%; }
+  input[type=number], select, textarea, button { background:#0e1115; color:var(--text); border:1px solid var(--line); border-radius:6px; padding:4px 6px; font:inherit; }
+  textarea { width:100%; min-height:150px; font: 12px/1.35 ui-monospace, SFMono-Regular, Menlo, monospace; }
+  button { cursor:pointer; }
+  button.primary { background:var(--accent); color:#06121c; border-color:transparent; font-weight:600; }
+  .row { display:flex; gap:8px; flex-wrap:wrap; margin-top:6px; }
+  .val { color:var(--muted); font-variant-numeric: tabular-nums; text-align:right; }
+  #stats { font-size:12px; }
+  #stats table { width:100%; border-collapse:collapse; }
+  #stats td { padding:2px 0; }
+  .sw { display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:6px; vertical-align:-1px; }
+  #hud { position:absolute; left:12px; top:10px; font-size:12px; color:var(--muted); pointer-events:none; }
+  .note { color:var(--muted); font-size:12px; margin-top:4px; }
+  details summary { cursor:pointer; color:var(--muted); font-size:12px; }
+  code { font: 12px ui-monospace, Menlo, monospace; color:#b7e0ff; }
+  @media (max-width: 820px) { #app { grid-template-columns: 1fr; grid-template-rows: auto 1fr; } #side { border-right:0; border-bottom:1px solid var(--line); max-height:55vh; } }
+</style>
+</head>
+<body>
+<div id="app">
+  <aside id="side">
+    <h1>Asteroid Lab</h1>
+    <div class="sub">EVE Frontier composite asteroid generator, ported from the client (cycle-7). Same hash, noise, shapes, prefixes and placement rules. The server-only part is which materials a belt gets.</div>
+
+    <fieldset><legend>Body</legend>
+      <label>Seed <input id="seed" type="number" min="0" step="1" value="1337"> <button id="rnd" title="random seed">⟳</button></label>
+      <label class="wide">Archetype <select id="archetype">
+        <option value="cutaway">cutaway (sphere, quadrant removed)</option>
+        <option value="differentiated">differentiated (sphere, layered)</option>
+        <option value="dtype">dtype (sphere, volatile-rich)</option>
+        <option value="chondrite">chondrite (sphere, mixed)</option>
+        <option value="bilobed">bilobed</option>
+        <option value="rubble">rubble pile</option>
+        <option value="wall">wall</option></select></label>
+      <label class="wide">Prefix <select id="prefix">
+        <option value="">none</option><option value="prime">prime (calmer surface)</option><option value="shocked">shocked (shattered shards)</option>
+        <option value="deep">deep (sliced cap + craters)</option><option value="core">core (eroded to core)</option><option value="hollow">hollow (cavity + bore)</option></select></label>
+      <label>Grid dim <input id="dim" type="range" min="9" max="25" step="2" value="17"> <span class="val" id="dimv">17</span></label>
+      <label>Radius <input id="radius" type="range" min="2" max="11" step="0.5" value="6"> <span class="val" id="radiusv">6</span></label>
+      <label>Noise <input id="noise" type="range" min="0" max="4" step="0.05" value="1.6"> <span class="val" id="noisev">1.6</span></label>
+      <label>Spacing (m) <input id="spacing" type="range" min="10" max="80" step="1" value="35"> <span class="val" id="spacingv">35</span></label>
+      <div class="note">Game defaults: dim 17, radius 6, noise 1.6, spacing 35 m. Server recipes may override any of them per asteroid type.</div>
+    </fieldset>
+
+    <fieldset><legend>Materials</legend>
+      <label class="wide">Source <select id="matmode">
+        <option value="builtin">archetype rule (no profile)</option>
+        <option value="profile">layer profile (server-style recipe)</option></select></label>
+      <div id="profilebox" style="display:none">
+        <label class="wide">Preset <select id="preset"></select></label>
+        <textarea id="profile" spellcheck="false"></textarea>
+        <div class="row"><button id="applyProfile" class="primary">Apply profile</button></div>
+        <div class="note">Layers are matched by <code>depthLo</code> (deepest first). In each layer the heaviest <code>massive</code> material is the matrix; others are placed by morphology: <code>disseminated</code> (hash scatter), <code>vein</code> (winding fbm band), <code>nodular</code> (fbm blobs, <code>self_affinity</code> 0..1), <code>massive</code> (smooth fbm). Weight × layer voxels = target count.</div>
+      </div>
+    </fieldset>
+
+    <fieldset><legend>View</legend>
+      <label>Cross-section <input id="slice" type="range" min="0" max="1" step="0.01" value="1"> <span class="val" id="slicev">off</span></label>
+      <label class="wide">Colour by <select id="colorby"><option value="material">material</option><option value="depth">depth (surface → core)</option></select></label>
+      <div class="row"><button id="spin">auto-rotate</button><button id="reset">reset view</button></div>
+    </fieldset>
+
+    <fieldset><legend>Result</legend><div id="stats"></div></fieldset>
+
+    <details><summary>Constants from the client</summary>
+      <div class="note">
+        VOXEL_ORE_SCALE 0.0036 · MINING_MAX_CYCLES 3 · jitter ±0.03 depth · prefix salts: shocked 1001, deep 2002, core 3003, prime 4004, hollow 5005 · elongation salt 2654435769 · rubble salt 2246822507 · rubble smooth 0.15·R · wall half-width 2 · vein wind 0.55 · debris chunk ≥ 8 voxels · bulk density: prime 1.05, others 1.0.<br>
+        Ore per voxel = max(1, round(effective_density(material) × 0.0036 × radius_scale³ × bulk_density)). Effective densities live in a server-only substrate table.
+      </div>
+    </details>
+  </aside>
+  <main id="view"><div id="hud">drag to orbit · wheel to zoom</div><canvas id="c"></canvas></main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// ===================== Python-compatible random.Random (MT19937) =====================
+class PyRandom {
+  constructor(seed){ this.mt = new Uint32Array(624); this.idx = 624; this.seed(seed); }
+  initGenrand(s){ const mt=this.mt; mt[0]=s>>>0; for(let i=1;i<624;i++){ const p=mt[i-1]^(mt[i-1]>>>30); mt[i]=(Math.imul(1812433253,p)+i)>>>0; } }
+  initByArray(key){ this.initGenrand(19650218); const mt=this.mt, n=624; let i=1,j=0,k=Math.max(n,key.length);
+    for(;k;k--){ const p=mt[i-1]^(mt[i-1]>>>30); mt[i]=((mt[i]^Math.imul(p,1664525))+key[j]+j)>>>0; i++; j++; if(i>=n){mt[0]=mt[n-1]; i=1;} if(j>=key.length) j=0; }
+    for(k=n-1;k;k--){ const p=mt[i-1]^(mt[i-1]>>>30); mt[i]=((mt[i]^Math.imul(p,1566083941))-i)>>>0; i++; if(i>=n){mt[0]=mt[n-1]; i=1;} }
+    mt[0]=0x80000000; this.idx=624; }
+  seed(n){ let b=BigInt(n); if(b<0n) b=-b; const key=[]; if(b===0n) key.push(0); while(b>0n){ key.push(Number(b&0xffffffffn)); b>>=32n; } this.initByArray(key); }
+  genrand(){ const mt=this.mt; if(this.idx>=624){ for(let i=0;i<624;i++){ const y=(mt[i]&0x80000000)|(mt[(i+1)%624]&0x7fffffff); mt[i]=mt[(i+397)%624]^(y>>>1)^((y&1)?0x9908b0df:0); } this.idx=0; }
+    let y=mt[this.idx++]; y^=y>>>11; y^=(y<<7)&0x9d2c5680; y^=(y<<15)&0xefc60000; y^=y>>>18; return y>>>0; }
+  random(){ const a=this.genrand()>>>5, b=this.genrand()>>>6; return (a*67108864+b)/9007199254740992; }
+  getrandbits(k){ return k===0?0:(this.genrand()>>>(32-k)); }
+  randbelow(n){ const k=32-Math.clz32(n); let r=this.getrandbits(k); while(r>=n) r=this.getrandbits(k); return r; }
+  uniform(a,b){ return a+(b-a)*this.random(); }
+  randint(a,b){ return a+this.randbelow(b-a+1); }
+  randrange(n){ return this.randbelow(n); }
+  choice(seq){ return seq[this.randbelow(seq.length)]; }
+  shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=this.randbelow(i+1); const t=a[i]; a[i]=a[j]; a[j]=t; } }
+}
+function pyround(x){ const f=Math.floor(x); if(x-f===0.5) return (f%2===0)?f:f+1; return Math.round(x); }
+
+// ===================== Generator (port of spacecomponents.common.components.compositeasteroid) =====================
+const JITTER=0.03, TWO_PI=2*Math.PI, ELONG_SALT=2654435769n, RUBBLE_SALT=2246822507n, RUBBLE_SMOOTH=0.15, WALL_HALF=2.0, VEIN_WIND=0.55;
+const PREFIX_SALT={shocked:1001, deep:2002, core:3003, prime:4004, hollow:5005};
+const WALL_MATERIALS=['feldspar','sulfide','iridosmine','methane','ptpd','kerogen','tholin','aromatic'];
+const MATERIAL_COLOR={iridosmine:[1,1,1], ptpd:[0.35,0.55,1], sulfide:[1,0.85,0], feldspar:[1,0.35,0.75], methane:[0,0.9,1], kerogen:[0.35,0.95,0.2], tholin:[1,0.4,0.05], aromatic:[0.7,0.15,1]};
+
+function vhash(ix,iy,iz,seed){
+  let h=(Math.imul(ix,73856093)^Math.imul(iy,19349663)^Math.imul(iz,83492791)^Math.imul(seed|0,2654435761|0))>>>0;
+  h=Math.imul(h^(h>>>15),2246822519|0)>>>0;
+  h=Math.imul(h^(h>>>13),3266489917|0)>>>0;
+  h=((h^(h>>>16))&16777215);
+  return h/16777215;
+}
+function vnoise(x,y,z,seed){
+  const ix=Math.floor(x), iy=Math.floor(y), iz=Math.floor(z);
+  const fx=x-ix, fy=y-iy, fz=z-iz;
+  const ux=fx*fx*(3-2*fx), uy=fy*fy*(3-2*fy), uz=fz*fz*(3-2*fz);
+  const c000=vhash(ix,iy,iz,seed), c100=vhash(ix+1,iy,iz,seed), c010=vhash(ix,iy+1,iz,seed), c110=vhash(ix+1,iy+1,iz,seed);
+  const c001=vhash(ix,iy,iz+1,seed), c101=vhash(ix+1,iy,iz+1,seed), c011=vhash(ix,iy+1,iz+1,seed), c111=vhash(ix+1,iy+1,iz+1,seed);
+  const x00=c000+(c100-c000)*ux, x10=c010+(c110-c010)*ux, x01=c001+(c101-c001)*ux, x11=c011+(c111-c011)*ux;
+  const y0=x00+(x10-x00)*uy, y1=x01+(x11-x01)*uy;
+  return y0+(y1-y0)*uz;
+}
+function fbm3(x,y,z,seed){ let amp=0.5,tot=0,nrm=0; for(let o=0;o<3;o++){ tot+=amp*vnoise(x,y,z,(seed+o*101)|0); nrm+=amp; x*=2;y*=2;z*=2; amp*=0.5; } return tot/nrm; }
+function nameSalt(name){ let h=2166136261; for(const b of new TextEncoder().encode(name)){ h=Math.imul(h^b,16777619)>>>0; } return h>>>0; }
+
+// composition rules (no profile)
+function compDifferentiated(depth){ for(const [k,lo] of [['iridosmine',0.82],['ptpd',0.64],['sulfide',0.5],['feldspar',0.38],['methane',0.28],['kerogen',0.18],['tholin',0.06]]) if(depth>=lo) return k; return 'aromatic'; }
+function compDtype(depth){ return depth>=0.55?'methane':depth>=0.32?'kerogen':depth>=0.1?'tholin':'aromatic'; }
+function compChondrite(depth,rng){ if(depth<0.06) return 'aromatic'; const x=rng.random(); return x<0.12?'feldspar':x<0.2?'kerogen':'sulfide'; }
+function compWall(depth,rng){ return WALL_MATERIALS[rng.randrange(WALL_MATERIALS.length)]; }
+const COMP_FNS={cutaway:compDifferentiated, differentiated:compDifferentiated, dtype:compDtype, chondrite:compChondrite, bilobed:compDifferentiated, rubble:compDifferentiated, wall:compWall};
+const CUTAWAY={cutaway:true, differentiated:false, dtype:false, chondrite:false, bilobed:false, rubble:false, wall:false};
+
+// shapes: return depth fraction (0 surface .. 1 core) or null
+function shapeSphere(dx,dy,dz,R,noise){
+  const r=Math.sqrt(dx*dx+dy*dy+dz*dz); const n=r>1e-6?[dx/r,dy/r,dz/r]:[0,0,0];
+  const thr=R+noise*(0.6*Math.sin(2.3*n[0]+1)+0.6*Math.cos(2.9*n[1]+0.5)+0.5*Math.sin(3.1*n[2]+2));
+  if(r>thr) return null; return Math.max(0,Math.min(1,1-r/R));
+}
+function shapeBilobed(dx,dy,dz,R,noise){
+  const off=0.55*R, rl=0.7*R; let best=null;
+  for(const cxx of [-off,off]){ const ddx=dx-cxx; const rr=Math.sqrt(ddx*ddx+dy*dy+dz*dz); const n=rr>1e-6?[ddx/rr,dy/rr,dz/rr]:[0,0,0];
+    const thr=rl+noise*0.7*(Math.sin(2.5*n[0])+Math.cos(2.7*n[1])); if(rr<=thr){ const d=1-rr/rl; if(best===null||d>best) best=d; } }
+  return best===null?null:Math.max(0,Math.min(1,best));
+}
+function shapeWall(dx,dy,dz){ if(dz!==0||Math.abs(dx)>WALL_HALF||Math.abs(dy)>WALL_HALF) return null; return 0.5; }
+function shapeRubble(dx,dy,dz,R,noise,lobes){
+  if(!lobes) lobes=[[0,0,0,R*0.85]]; const k=R*RUBBLE_SMOOTH; let e=null;
+  for(const [cx,cy,cz,lr] of lobes){ const ddx=dx-cx,ddy=dy-cy,ddz=dz-cz; const ei=Math.sqrt(ddx*ddx+ddy*ddy+ddz*ddz)-lr;
+    if(e===null){ e=ei; continue; } if(k<=0){ e=Math.min(ei,e); continue; }
+    let h=k-Math.abs(e-ei); h=(h>0?h:0)/k; e=Math.min(ei,e)-h*h*h*k/6.0; }
+  if(noise>0&&e>noise*0.6*3.0) return null;
+  const r=Math.sqrt(dx*dx+dy*dy+dz*dz); const n=r>1e-6?[dx/r,dy/r,dz/r]:[0,0,0];
+  const wobble=noise*0.6*(Math.sin(3.0*n[0]+1)+Math.cos(3.5*n[1])+Math.sin(2.5*n[2]+2));
+  if(e>wobble) return null; return Math.max(0,Math.min(1,1-r/R));
+}
+function randUnit(rng){ for(;;){ const x=rng.uniform(-1,1),y=rng.uniform(-1,1),z=rng.uniform(-1,1); const s=x*x+y*y+z*z; if(1e-6<s&&s<=1.0){ const inv=Math.pow(s,-0.5); return [x*inv,y*inv,z*inv]; } } }
+function rubbleLobes(R,seed){ const rng=new PyRandom(BigInt(seed)^RUBBLE_SALT); const lobes=[[0,0,0,R*rng.uniform(0.5,0.62)]];
+  const n=rng.randint(3,7); for(let i=0;i<n;i++){ const u=randUnit(rng); const off=R*0.6*rng.uniform(0.3,1.0); lobes.push([u[0]*off,u[1]*off,u[2]*off,R*rng.uniform(0.3,0.5)]); } return lobes; }
+function rotMatrix(ax,ay,az){ const sa=Math.sin(ax),ca=Math.cos(ax),sb=Math.sin(ay),cb=Math.cos(ay),sg=Math.sin(az),cg=Math.cos(az);
+  return [[cb*cg, sa*sb*cg-ca*sg, ca*sb*cg+sa*sg],[cb*sg, sa*sb*sg+ca*cg, ca*sb*sg-sa*cg],[-sb, sa*cb, ca*cb]]; }
+
+// profiled placement
+function planLayers(layers){ const plan=[];
+  for(const layer of layers){ const mats=layer.materials||[]; if(!mats.length) continue;
+    const massive=mats.filter(m=>m.morphology==='massive'); const pool=massive.length?massive:mats;
+    let matrix=pool[0]; for(const m of pool){ if(m.weight>matrix.weight||(m.weight===matrix.weight&&m.material>matrix.material)) matrix=m; } matrix=matrix.material;
+    const acc=mats.filter(m=>m.material!==matrix).sort((a,b)=> (b.weight-a.weight)|| (a.material<b.material?-1:a.material>b.material?1:0));
+    plan.push([+layer.depthLo, matrix, acc]); }
+  plan.sort((a,b)=>b[0]-a[0]); return plan; }
+function layerIndex(depth,plan){ for(let k=0;k<plan.length;k++) if(depth>=plan[k][0]) return k; return plan.length?plan.length-1:-1; }
+function score(morph,mat,px,py,pz,gx,gy,gz,s){
+  if(morph==='disseminated') return vhash(gx,gy,gz,s);
+  if(morph==='vein'){ const cyc=2.6+(s%3)*0.45; const wx=vnoise(px*1.4,py*1.4,pz*1.4,s)-0.5, wy=vnoise(px*1.4+5,py*1.4+5,pz*1.4+5,s)-0.5, wz=vnoise(px*1.4+9,py*1.4+9,pz*1.4+9,s)-0.5;
+    const f=fbm3(px*cyc+wx*VEIN_WIND, py*cyc+wy*VEIN_WIND, pz*cyc+wz*VEIN_WIND, (s+13)|0); return -Math.abs(f-0.5); }
+  if(morph==='nodular'){ let sa=mat.self_affinity||0; sa=sa<0?0:sa>1?1:sa; const fq=3.5+6.0*(1-sa); return fbm3(px*fq,py*fq,pz*fq,(s+3)|0); }
+  return fbm3(px*1.1,py*1.1,pz*1.1,(s+7)|0);
+}
+function scored(pool,mat,morph,voxels,r,seed){ const s=Number((BigInt(seed)+BigInt(nameSalt(mat.material)))&0xffffffffn); const out=[];
+  for(const i of pool){ const v=voxels[i]; out.push([score(morph,mat,v[0]/r,v[1]/r,v[2]/r,v[3],v[4],v[5],s),i]); }
+  out.sort((a,b)=>(b[0]-a[0])||(a[1]-b[1])); return out; }
+function placeProfiled(voxels,plan,radius,seed){ const r=radius||1.0; const out=new Array(voxels.length).fill(null); const byLayer=new Map();
+  voxels.forEach((v,i)=>{ const k=layerIndex(v[6],plan); if(!byLayer.has(k)) byLayer.set(k,[]); byLayer.get(k).push(i); });
+  plan.forEach(([lo,matrix,accessories],k)=>{ const idxs=byLayer.get(k); if(!idxs||!idxs.length) return; const n=idxs.length;
+    const diss=accessories.filter(m=>m.morphology==='disseminated'), clumped=accessories.filter(m=>m.morphology!=='disseminated'); const claimed=new Set();
+    for(const mat of diss){ const target=pyround(mat.weight*n); if(target<=0) continue; let placed=0;
+      for(const [,i] of scored(idxs,mat,'disseminated',voxels,r,seed)){ if(placed>=target) break; if(claimed.has(i)) continue; out[i]=mat.material; claimed.add(i); placed++; } }
+    let remaining=idxs.filter(i=>!claimed.has(i));
+    for(const mat of clumped){ if(!remaining.length) break; const target=pyround(mat.weight*n); if(target<=0) continue; const taken=new Set();
+      for(const [,i] of scored(remaining,mat,mat.morphology,voxels,r,seed).slice(0,target)){ out[i]=mat.material; taken.add(i); }
+      remaining=remaining.filter(i=>!taken.has(i)); }
+    for(const i of remaining) out[i]=matrix; });
+  return out; }
+
+// prefix deformations on grid cells [dx,dy,dz,material,depth]
+function prefixDeep(grid,radius,seed){ const rng=new PyRandom(BigInt(seed)+BigInt(PREFIX_SALT.deep)); const u=randUnit(rng); const d=radius*rng.uniform(0.1,0.42);
+  const kept=grid.filter(c=>c[0]*u[0]+c[1]*u[1]+c[2]*u[2]<=d); const craters=[]; const nc=rng.choice([0,0,1,2]);
+  for(let i=0;i<nc;i++){ const cu=randUnit(rng); craters.push([cu[0]*radius,cu[1]*radius,cu[2]*radius,Math.pow(radius*rng.uniform(0.3,0.55),2)]); }
+  if(!craters.length) return kept; return kept.filter(c=>!craters.some(([ax,ay,az,r2])=>(c[0]-ax)**2+(c[1]-ay)**2+(c[2]-az)**2<r2)); }
+function prefixShocked(grid,radius,seed,dim){ const rng=new PyRandom(BigInt(seed)+BigInt(PREFIX_SALT.shocked)); const shards=[]; const n=rng.randint(3,8);
+  for(let i=0;i<n;i++){ const u=randUnit(rng); const f=rng.uniform(0.15,0.8); const cx=u[0]*radius*f,cy=u[1]*radius*f,cz=u[2]*radius*f; const d=Math.sqrt(cx*cx+cy*cy+cz*cz)||1.0; const push=rng.uniform(1.5,5.0);
+    shards.push([cx,cy,cz,pyround(cx/d*push),pyround(cy/d*push),pyround(cz/d*push)]); }
+  const lim=(dim-1)/2.0-0.5; const out=[];
+  for(const cell of grid){ const [dx,dy,dz]=cell; let bi=0,bd=1e30; shards.forEach((sh,i)=>{ const dd=(dx-sh[0])**2+(dy-sh[1])**2+(dz-sh[2])**2; if(dd<bd){bd=dd;bi=i;} });
+    const nx=dx+shards[bi][3], ny=dy+shards[bi][4], nz=dz+shards[bi][5]; if(nx<-lim||nx>lim||ny<-lim||ny>lim||nz<-lim||nz>lim) continue; out.push([nx,ny,nz,cell[3],cell[4]]); }
+  return out; }
+function connectedToCore(cells){ if(!cells.length) return cells; const key=c=>pyround(c[0]*2)+','+pyround(c[1]*2)+','+pyround(c[2]*2); const index=new Map(); cells.forEach((c,i)=>index.set(key(c),i));
+  let seedI=0,best=Infinity; cells.forEach((c,i)=>{ const d=c[0]**2+c[1]**2+c[2]**2; if(d<best){best=d;seedI=i;} });
+  const keep=new Array(cells.length).fill(false); keep[seedI]=true; const stack=[seedI]; const offs=[[2,0,0],[-2,0,0],[0,2,0],[0,-2,0],[0,0,2],[0,0,-2]];
+  while(stack.length){ const c=cells[stack.pop()]; const kx=pyround(c[0]*2),ky=pyround(c[1]*2),kz=pyround(c[2]*2);
+    for(const [ox,oy,oz] of offs){ const j=index.get((kx+ox)+','+(ky+oy)+','+(kz+oz)); if(j===undefined||keep[j]) continue; keep[j]=true; stack.push(j); } }
+  return cells.filter((c,i)=>keep[i]); }
+function prefixCore(grid,radius,seed){ const salt=PREFIX_SALT.core; const rng=new PyRandom(BigInt(seed)+BigInt(salt)); const keepDepth=rng.uniform(0.4,0.55), plate=rng.uniform(0.72,0.85); const out=[];
+  for(const cell of grid){ const [dx,dy,dz]=cell; const r=Math.sqrt(dx*dx+dy*dy+dz*dz); if(1.0-r/radius>=keepDepth||vnoise(dx*0.5,dy*0.5,dz*0.5,salt)>plate) out.push(cell); }
+  return connectedToCore(out); }
+function prefixHollow(grid,radius,seed){ const rng=new PyRandom(BigInt(seed)+BigInt(PREFIX_SALT.hollow)); const u=randUnit(rng); const off=radius*rng.uniform(0.1,0.4); const cx=u[0]*off,cy=u[1]*off,cz=u[2]*off;
+  const cav2=Math.pow(radius*rng.uniform(0.25,0.45),2); const b=randUnit(rng); const bore2=Math.pow(radius*rng.uniform(0.09,0.16),2); const out=[];
+  for(const cell of grid){ const [dx,dy,dz]=cell; if((dx-cx)**2+(dy-cy)**2+(dz-cz)**2<cav2) continue; const t=dx*b[0]+dy*b[1]+dz*b[2];
+    if(t>0){ const px=dx-t*b[0],py=dy-t*b[1],pz=dz-t*b[2]; if(px*px+py*py+pz*pz<bore2) continue; } out.push(cell); }
+  return out; }
+const DEFORM_FNS={shocked:prefixShocked, deep:prefixDeep, core:prefixCore, hollow:prefixHollow};
+
+function buildGrid({archetype,dim,radius,noise,seed,profile,prefix}){
+  const pfx=(prefix||'').toLowerCase();
+  if(pfx==='prime') noise*=new PyRandom(BigInt(seed)+BigInt(PREFIX_SALT.prime)).uniform(0.25,0.55);
+  let shape={cutaway:shapeSphere,differentiated:shapeSphere,dtype:shapeSphere,chondrite:shapeSphere,bilobed:shapeBilobed,rubble:shapeRubble,wall:shapeWall}[archetype]||shapeSphere;
+  const cutaway=(archetype in CUTAWAY)?CUTAWAY[archetype]:true;
+  if(archetype==='rubble'){ const lobes=rubbleLobes(radius,seed); shape=(dx,dy,dz,R,nz)=>shapeRubble(dx,dy,dz,R,nz,lobes); }
+  const profiled=!!(profile&&profile.layers&&profile.layers.length); let plan=null, composition=null;
+  if(profiled) plan=planLayers(profile.layers); else composition=COMP_FNS[archetype]||compDifferentiated;
+  let scales=null, rot=null;
+  if(archetype!=='wall'){ const erng=new PyRandom(BigInt(seed)^ELONG_SALT); const b=erng.uniform(0.6,0.95), c=erng.uniform(0.5,0.85); const norm=Math.pow(b*c,1/3);
+    scales=[1.0/norm,b/norm,c/norm]; erng.shuffle(scales); rot=rotMatrix(erng.uniform(0,TWO_PI),erng.uniform(0,TWO_PI),erng.uniform(0,TWO_PI)); }
+  const rng=new PyRandom(seed); const centre=(dim-1)/2.0; const bound2=Math.pow(centre-1.5,2); const grid=[]; const voxels=[];
+  for(let gx=0;gx<dim;gx++){ const dx=gx-centre, dx2=dx*dx; if(dx2>bound2) continue;
+    for(let gy=0;gy<dim;gy++){ const dy=gy-centre, xy2=dx2+dy*dy; if(xy2>bound2) continue; const span=Math.sqrt(bound2-xy2);
+      let lo=Math.ceil(centre-span)-1, hi=Math.floor(centre+span)+1; if(lo<0) lo=0; if(hi>dim-1) hi=dim-1;
+      for(let gz=lo;gz<=hi;gz++){ const dz=gz-centre; if(xy2+dz*dz>bound2) continue; if(cutaway&&dx>0.0&&dz<0.0) continue;
+        let pex,pey,pez; if(rot){ const px=rot[0][0]*dx+rot[0][1]*dy+rot[0][2]*dz, py=rot[1][0]*dx+rot[1][1]*dy+rot[1][2]*dz, pz=rot[2][0]*dx+rot[2][1]*dy+rot[2][2]*dz; pex=px/scales[0]; pey=py/scales[1]; pez=pz/scales[2]; } else { pex=dx; pey=dy; pez=dz; }
+        let depth=shape(pex,pey,pez,radius,noise,rng); if(depth===null) continue;
+        depth=Math.max(0,Math.min(1,depth+rng.uniform(-JITTER,JITTER)));
+        if(profiled) voxels.push([dx,dy,dz,gx,gy,gz,depth]); else grid.push([dx,dy,dz,composition(depth,rng),depth]); } } }
+  let out=grid;
+  if(profiled){ const mats=placeProfiled(voxels,plan,radius,seed); out=voxels.map((v,i)=>[v[0],v[1],v[2],mats[i],v[6]]); }
+  if(pfx in DEFORM_FNS) out=DEFORM_FNS[pfx](out,radius,seed,dim);
+  return out;
+}
+
+// ===================== Presets =====================
+const PRESETS={
+  "Metallic: ataxite body, platinum nodules": {layers:[
+    {depthLo:0.0, depthHi:0.45, materials:[{material:"feldspar",weight:1.0,morphology:"massive"},{material:"sulfide",weight:0.18,morphology:"vein"},{material:"kerogen",weight:0.06,morphology:"disseminated"}]},
+    {depthLo:0.45, depthHi:1.0, materials:[{material:"iridosmine",weight:1.0,morphology:"massive"},{material:"ptpd",weight:0.25,morphology:"nodular",self_affinity:0.7},{material:"sulfide",weight:0.1,morphology:"vein"}]}]},
+  "Carbonaceous: kerogen with tholin crust": {layers:[
+    {depthLo:0.0, depthHi:0.25, materials:[{material:"tholin",weight:1.0,morphology:"massive"},{material:"aromatic",weight:0.2,morphology:"disseminated"}]},
+    {depthLo:0.25, depthHi:1.0, materials:[{material:"kerogen",weight:1.0,morphology:"massive"},{material:"methane",weight:0.15,morphology:"nodular",self_affinity:0.3},{material:"aromatic",weight:0.1,morphology:"vein"}]}]},
+  "Volatile: methane ice, feldspar inclusions": {layers:[
+    {depthLo:0.0, depthHi:1.0, materials:[{material:"methane",weight:1.0,morphology:"massive"},{material:"feldspar",weight:0.12,morphology:"nodular",self_affinity:0.9},{material:"tholin",weight:0.08,morphology:"disseminated"}]}]},
+  "Sulfide: gossan veins through silicate": {layers:[
+    {depthLo:0.0, depthHi:1.0, materials:[{material:"feldspar",weight:1.0,morphology:"massive"},{material:"sulfide",weight:0.3,morphology:"vein"},{material:"ptpd",weight:0.05,morphology:"disseminated"}]}]},
+};
+
+// ===================== Scene =====================
+const canvas=document.getElementById('c');
+const renderer=new THREE.WebGLRenderer({canvas, antialias:true}); renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+const scene=new THREE.Scene(); scene.background=new THREE.Color(0x0b0d10);
+const camera=new THREE.PerspectiveCamera(45,1,0.1,1000); camera.position.set(0,0,34);
+scene.add(new THREE.HemisphereLight(0xcfe3ff,0x101418,0.9)); const sun=new THREE.DirectionalLight(0xffffff,0.9); sun.position.set(8,12,10); scene.add(sun);
+const group=new THREE.Group(); scene.add(group); let mesh=null;
+let rotX=0.4, rotY=0.6, dist=34, dragging=false, lx=0, ly=0, autoSpin=false;
+canvas.addEventListener('pointerdown',e=>{dragging=true;lx=e.clientX;ly=e.clientY;canvas.setPointerCapture(e.pointerId);});
+canvas.addEventListener('pointerup',()=>dragging=false); canvas.addEventListener('pointercancel',()=>dragging=false);
+canvas.addEventListener('pointermove',e=>{ if(!dragging) return; rotY+=(e.clientX-lx)*0.01; rotX+=(e.clientY-ly)*0.01; rotX=Math.max(-1.5,Math.min(1.5,rotX)); lx=e.clientX; ly=e.clientY; });
+canvas.addEventListener('wheel',e=>{ e.preventDefault(); dist=Math.max(8,Math.min(120,dist*(1+e.deltaY*0.001))); },{passive:false});
+function resize(){ const w=canvas.clientWidth,h=canvas.clientHeight; if(canvas.width!==Math.floor(w*renderer.getPixelRatio())||canvas.height!==Math.floor(h*renderer.getPixelRatio())){ renderer.setSize(w,h,false); camera.aspect=w/h; camera.updateProjectionMatrix(); } }
+function animate(){ requestAnimationFrame(animate); resize(); if(autoSpin&&!dragging) rotY+=0.004; group.rotation.set(rotX,rotY,0); camera.position.set(0,0,dist); renderer.render(scene,camera); }
+animate();
+
+// ===================== UI =====================
+const $=id=>document.getElementById(id);
+const ctl={seed:$('seed'),archetype:$('archetype'),prefix:$('prefix'),dim:$('dim'),radius:$('radius'),noise:$('noise'),spacing:$('spacing'),matmode:$('matmode'),profile:$('profile'),preset:$('preset'),slice:$('slice'),colorby:$('colorby')};
+for(const k of Object.keys(PRESETS)){ const o=document.createElement('option'); o.value=k; o.textContent=k; ctl.preset.appendChild(o); }
+ctl.profile.value=JSON.stringify(PRESETS[Object.keys(PRESETS)[0]],null,1);
+let currentGrid=[]; let currentProfile=null;
+function params(){ return {archetype:ctl.archetype.value, dim:+ctl.dim.value, radius:+ctl.radius.value, noise:+ctl.noise.value, seed:Math.max(0,Math.floor(+ctl.seed.value||0)), prefix:ctl.prefix.value, profile:ctl.matmode.value==='profile'?currentProfile:null}; }
+function depthColor(d){ const c=new THREE.Color(); c.setHSL(0.6-0.6*d,0.8,0.25+0.45*d); return c; }
+function render(){
+  $('dimv').textContent=ctl.dim.value; $('radiusv').textContent=ctl.radius.value; $('noisev').textContent=ctl.noise.value; $('spacingv').textContent=ctl.spacing.value;
+  const p=params(); const t0=performance.now(); currentGrid=buildGrid(p); const ms=performance.now()-t0;
+  if(mesh){ group.remove(mesh); mesh.geometry.dispose(); mesh.material.dispose(); }
+  const slice=+ctl.slice.value; const centre=(p.dim-1)/2; const lim=(slice>=1)?Infinity:(-centre+slice*2*centre);
+  const shown=currentGrid.filter(c=>c[1]<=lim); $('slicev').textContent=slice>=1?'off':slice.toFixed(2);
+  const geo=new THREE.BoxGeometry(0.92,0.92,0.92); const mat=new THREE.MeshStandardMaterial({roughness:0.85,metalness:0.05});
+  mesh=new THREE.InstancedMesh(geo,mat,Math.max(1,shown.length)); const m=new THREE.Matrix4(); const col=new THREE.Color();
+  shown.forEach((c,i)=>{ m.makeTranslation(c[0],c[1],c[2]); mesh.setMatrixAt(i,m); if(ctl.colorby.value==='depth') col.copy(depthColor(c[4])); else { const rgb=MATERIAL_COLOR[c[3]]||[0.5,0.5,0.5]; col.setRGB(rgb[0],rgb[1],rgb[2]); } mesh.setColorAt(i,col); });
+  mesh.count=shown.length; mesh.instanceMatrix.needsUpdate=true; if(mesh.instanceColor) mesh.instanceColor.needsUpdate=true; group.add(mesh);
+  // stats
+  const counts={}; for(const c of currentGrid) counts[c[3]]=(counts[c[3]]||0)+1; const n=currentGrid.length; const sp=+ctl.spacing.value;
+  const rows=Object.entries(counts).sort((a,b)=>b[1]-a[1]).map(([k,v])=>{ const rgb=MATERIAL_COLOR[k]||[0.5,0.5,0.5]; const css=`rgb(${rgb.map(x=>Math.round(x*255)).join(',')})`; return `<tr><td><span class="sw" style="background:${css}"></span>${k}</td><td class="val">${v}</td><td class="val">${(100*v/n).toFixed(1)}%</td></tr>`; }).join('');
+  const extent=n?Math.max(...currentGrid.map(c=>Math.max(Math.abs(c[0]),Math.abs(c[1]),Math.abs(c[2])))):0;
+  $('stats').innerHTML=`<table><tr><td>solid voxels</td><td class="val">${n}</td><td class="val">${ms.toFixed(0)} ms</td></tr><tr><td>voxel edge</td><td class="val">${sp} m</td><td class="val">≈${(2*extent*sp+sp).toFixed(0)} m across</td></tr><tr><td>volume</td><td class="val" colspan="2">${(n*sp*sp*sp/1e6).toFixed(2)} million m³</td></tr>${rows}</table>`;
+}
+function applyProfile(){ try{ currentProfile=JSON.parse(ctl.profile.value); ctl.profile.style.borderColor='var(--line)'; }catch(e){ ctl.profile.style.borderColor='#ff6b6b'; return; } render(); }
+ctl.preset.addEventListener('change',()=>{ ctl.profile.value=JSON.stringify(PRESETS[ctl.preset.value],null,1); applyProfile(); });
+$('applyProfile').addEventListener('click',applyProfile);
+ctl.matmode.addEventListener('change',()=>{ $('profilebox').style.display=ctl.matmode.value==='profile'?'block':'none'; if(ctl.matmode.value==='profile'&&!currentProfile) applyProfile(); else render(); });
+for(const k of ['seed','archetype','prefix','dim','radius','noise','spacing','slice','colorby']) ctl[k].addEventListener('input',render);
+$('rnd').addEventListener('click',()=>{ ctl.seed.value=Math.floor(Math.random()*4294967295); render(); });
+$('spin').addEventListener('click',()=>autoSpin=!autoSpin);
+$('reset').addEventListener('click',()=>{ rotX=0.4; rotY=0.6; dist=34; });
+currentProfile=PRESETS[Object.keys(PRESETS)[0]];
+render();
+</script>
+</body>
+</html>

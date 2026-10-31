@@ -6,6 +6,7 @@
 import publicRaw from '@/data/industry.public.json';
 import availabilityRaw from '@/data/availability.json';
 import compositesRaw from '@/data/composites.json';
+import { INDUSTRY_FULL } from '@/config';
 
 export interface Item {
   id: number; name: string; group: string; category: string;
@@ -19,8 +20,30 @@ export interface Reprocessing { id: number; portionSize: number | null; material
 export interface Rock { id: number; output: number; belt: 'inner' | 'outer' | null }
 interface IndustryData { clientVersion: string; items: Record<string, Item>; recipes: Recipe[]; facilities: Facility[]; reprocessing: Reprocessing[]; rocks?: Rock[]; consumedBy?: Record<string, number[]> }
 
-const fullRaw = import.meta.glob('../data/full/industry.json', { eager: true }) as Record<string, { default: unknown }>;
-const data = (Object.values(fullRaw)[0]?.default ?? publicRaw) as unknown as IndustryData;
+export interface ChangeBrief { id: number; product: string; time: number; inputs: string[]; outputs: string[]; facilities: string[] }
+export interface ChangeEntry { version: string; date: string; note?: string; counts: Record<string, number>; added: ChangeBrief[]; removed: ChangeBrief[]; changed: { id: number; product: string; before: ChangeBrief; after: ChangeBrief; fields: string[] }[] }
+type LoadedData = IndustryData & { changelog?: { entries: ChangeEntry[] } };
+
+/** The full dataset is not in the repo: dev reads the extractor's files, production asks the worker. */
+async function loadFull(): Promise<LoadedData | null> {
+  if (!INDUSTRY_FULL) return null;
+  if (import.meta.env.DEV) {
+    const files = import.meta.glob('../data/full/*.json') as Record<string, () => Promise<{ default: unknown }>>;
+    if (files['../data/full/industry.json']) {
+      const [d, c] = await Promise.all([files['../data/full/industry.json'](), files['../data/full/changelog.json']?.()]);
+      return { ...(d.default as IndustryData), changelog: c?.default as LoadedData['changelog'] };
+    }
+  }
+  try {
+    const r = await fetch('/api/industry-data', { signal: AbortSignal.timeout(10_000) });
+    return r.ok ? ((await r.json()) as LoadedData) : null;
+  } catch { return null; } // My rocks still works on the regolith subset
+}
+const full = await loadFull();
+const data = (full ?? publicRaw) as unknown as LoadedData;
+/** false when the full section is on but its data could not be fetched */
+export const industryDataReady = !INDUSTRY_FULL || !!full;
+export const changeEntries: ChangeEntry[] = data.changelog?.entries ?? [];
 
 export const clientVersion = data.clientVersion;
 export const items = new Map<number, Item>(Object.values(data.items).map((i) => [i.id, i]));

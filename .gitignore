@@ -56,8 +56,8 @@ scripts/game-data/.build/
 # wrangler local state (D1, cache)
 .wrangler/
 
-# industry: only the public rocks subset is committed; full pages, data and icons stay local
-apps/home/src/components/pages/industry/full/
+# industry: game-derived data and icons stay out of this public repo (they are served from D1)
+/data/
 apps/home/src/data/full/
 packages/assets/industry/icons/*
 !packages/assets/industry/icons/77800.png
