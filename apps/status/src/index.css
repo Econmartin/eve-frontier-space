@@ -26,7 +26,7 @@
   --color-martian-500: #ff610a;
 
   /* Status: normal is the site's own ink; problems get the EVE palette's loud colours. Each level also has its own
-     pixel shape, pattern and word, so colour is never the only signal. Light values hold 4.5:1 on white and cream. */
+     icon, bar height and word, so colour is never the only signal. Light values hold 4.5:1 on white and #f6f6f9. */
   --operational: #333447; /* crude-900 */
   --degraded: #b83a00;    /* martian, darkened for text contrast */
   --offline: #c2185b;     /* pink */

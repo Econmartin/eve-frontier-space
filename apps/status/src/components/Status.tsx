@@ -1,76 +1,14 @@
+import { CircleCheck, CircleHelp, OctagonX, TriangleAlert, Wrench } from 'lucide-react';
 import { LEVEL_LABEL, type Level } from '../../shared/status.ts';
 
-/**
- * Pixel-art status glyphs on a 9x9 grid. Each level has its own silhouette, so the shape alone tells them apart:
- * check, triangle with "!", bold X, hollow diamond, question mark.
- */
-const GLYPHS: Record<Level, string[]> = {
-  operational: [
-    '.........',
-    '........#',
-    '.......##',
-    '#.....##.',
-    '##...##..',
-    '.##.##...',
-    '..###....',
-    '...#.....',
-    '.........',
-  ],
-  degraded: [
-    '....#....',
-    '...###...',
-    '...#.#...',
-    '..##.##..',
-    '.###.###.',
-    '.#######.',
-    '####.####',
-    '#########',
-    '.........',
-  ],
-  offline: [
-    '##.....##',
-    '###...###',
-    '.###.###.',
-    '..#####..',
-    '...###...',
-    '..#####..',
-    '.###.###.',
-    '###...###',
-    '##.....##',
-  ],
-  maintenance: [
-    '....#....',
-    '...###...',
-    '..##.##..',
-    '.##...##.',
-    '##.....##',
-    '.##...##.',
-    '..##.##..',
-    '...###...',
-    '....#....',
-  ],
-  unknown: [
-    '..#####..',
-    '.##...##.',
-    '.##...##.',
-    '.....##..',
-    '....##...',
-    '....##...',
-    '.........',
-    '....##...',
-    '....##...',
-  ],
-};
-
-function PixelGlyph({ rows, size, className }: { rows: string[]; size: number; className: string }) {
-  const rects: React.ReactElement[] = [];
-  rows.forEach((row, y) => [...row].forEach((c, x) => c === '#' && rects.push(<rect key={`${x}-${y}`} x={x} y={y} width={1} height={1} />)));
-  return (
-    <svg aria-hidden="true" viewBox="0 0 9 9" width={size} height={size} shapeRendering="crispEdges" fill="currentColor" className={className}>
-      {rects}
-    </svg>
-  );
-}
+/** Lucide, like the rest of the site. Each level has its own shape: check circle, triangle, octagon, wrench, question. */
+const ICON = {
+  operational: CircleCheck,
+  degraded: TriangleAlert,
+  offline: OctagonX,
+  maintenance: Wrench,
+  unknown: CircleHelp,
+} as const;
 
 const TEXT: Record<Level, string> = {
   operational: 'text-operational',
@@ -80,10 +18,9 @@ const TEXT: Record<Level, string> = {
   unknown: 'text-unknown',
 };
 
-/** Sizes snap to whole pixels of the 9x9 grid (18, 27, 36…) so the pixels stay crisp. */
 export function StatusIcon({ level, size = 18, className = '' }: { level: Level; size?: number; className?: string }) {
-  const snapped = Math.max(9, Math.round(size / 9) * 9);
-  return <PixelGlyph rows={GLYPHS[level]} size={snapped} className={`${TEXT[level]} shrink-0 ${className}`} />;
+  const I = ICON[level];
+  return <I aria-hidden="true" size={size} strokeWidth={2.25} className={`${TEXT[level]} shrink-0 ${className}`} />;
 }
 
 export function StatusLabel({ level, className = '' }: { level: Level; className?: string }) {

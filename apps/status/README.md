@@ -35,13 +35,13 @@ monitor back off that host (for `Retry-After`, or two minutes) and report the af
 
 | Level | Meaning | Shape |
 |---|---|---|
-| Operational | Working within thresholds | pixel check mark |
-| Degraded | Working but slow, late or low | pixel triangle with "!" |
-| Offline | Not working | pixel X |
-| Maintenance | Inside a scheduled downtime window | pixel diamond |
-| Unknown | **Our** probe could not measure it. Never used to mean "down" | pixel question mark |
+| Operational | Working within thresholds | check in a circle |
+| Degraded | Working but slow, late or low | triangle with "!" |
+| Offline | Not working | octagon with an X |
+| Maintenance | Inside a scheduled downtime window | wrench |
+| Unknown | **Our** probe could not measure it. Never used to mean "down" | question mark in a circle |
 
-Status is never shown by colour alone. Every level has a word and its own pixel-art icon, and in the uptime bars the
+Status is never shown by colour alone. Every level has a word and its own icon (lucide, as on the rest of the site), and in the uptime bars the
 segment height carries it too: full height is Operational, two-thirds is Degraded (orange) or Maintenance (blue),
 one-third is Offline (pink), top and bottom bars only is Unknown, and a bare baseline is no data. The worse the
 problem, the lower the bar. Normal is drawn in the site's own ink (EVE cream on dark, slate on light) so trouble stands
