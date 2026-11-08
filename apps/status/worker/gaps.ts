@@ -34,21 +34,25 @@ export function mergeHists(hs: GapHist[]): GapHist {
   return out;
 }
 
-/** Upper edge of the bucket holding the q-th quantile (so the true value is at most this). */
+/** Upper edge of the bucket holding the q-th quantile, capped at the longest gap seen (the true value is at most this). */
 export function quantile(h: GapHist, q: number): number | null {
   if (!h.n) return null;
   const target = Math.ceil(q * h.n);
   let acc = 0;
   for (let i = 0; i < h.buckets.length; i++) {
     acc += h.buckets[i];
-    if (acc >= target) return i < GAP_EDGES.length ? GAP_EDGES[i] : h.max;
+    if (acc >= target) return i < GAP_EDGES.length ? Math.min(GAP_EDGES[i], h.max) : h.max;
   }
   return h.max;
 }
 
-/** Suggested thresholds: Degraded at twice the 99.9th percentile gap, Offline at twice the longest gap seen. */
+/**
+ * Suggested thresholds: Degraded at twice the 99.9th percentile gap, Offline at twice the longest gap seen, and always
+ * at least 10 minutes after Degraded.
+ */
 export function suggestThresholds(h: GapHist) {
   const p999 = quantile(h, 0.999);
   if (p999 == null) return null;
-  return { degradedAfterSec: Math.max(300, Math.round(2 * p999)), offlineAfterSec: Math.max(600, Math.round(2 * h.max)) };
+  const degradedAfterSec = Math.max(300, Math.round(2 * p999));
+  return { degradedAfterSec, offlineAfterSec: Math.max(600, Math.round(2 * h.max), degradedAfterSec + 600) };
 }

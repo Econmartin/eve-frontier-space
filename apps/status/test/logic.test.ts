@@ -83,6 +83,13 @@ describe('gap histogram', () => {
     expect(quantile(h, 0.99)).toBe(5);
     expect(quantile(h, 0.999)).toBe(120);
     expect(h.max).toBe(420);
-    expect(suggestThresholds(h)).toEqual({ degradedAfterSec: 300, offlineAfterSec: 840 });
+    expect(suggestThresholds(h)).toEqual({ degradedAfterSec: 300, offlineAfterSec: 900 }); // 2 x 420 s would be 840, but Offline stays 10 min after Degraded
+  });
+  it('never reports a quantile above the longest gap, nor suggests Offline before Degraded', () => {
+    // A 15-minute job that sometimes skips a run: gaps of 900 s and a few of 1800 s (Utopia, Oct 2026)
+    const h = addGaps(emptyHist(), [...Array(3900).fill(900), ...Array(75).fill(1810)]);
+    expect(quantile(h, 0.999)).toBe(1810);
+    const s = suggestThresholds(h)!;
+    expect(s.offlineAfterSec).toBeGreaterThan(s.degradedAfterSec);
   });
 });
