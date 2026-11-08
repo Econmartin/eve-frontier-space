@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/png" href="/assets/favicon/favicon-96x96.png" sizes="96x96" />
+    <link rel="icon" type="image/svg+xml" href="/assets/favicon/favicon.svg" />
+    <link rel="shortcut icon" href="/assets/favicon/favicon.ico" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/assets/favicon/apple-touch-icon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>EVE Frontier Status</title>
+    <meta name="description" content="Live status of EVE Frontier's Stillness and Utopia worlds and the Sui testnet they run on, with 90 days of history and a public API." />
+    <meta property="og:title" content="EVE Frontier Status" />
+    <meta property="og:description" content="Is Stillness up? Live status of EVE Frontier's worlds, chain details and 90 days of history." />
+    <meta property="og:url" content="https://evefrontier.space/status" />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary" />
+    <link rel="alternate" type="application/rss+xml" title="EVE Frontier Status: incidents" href="/status/feeds/incidents.rss" />
+  </head>
+  <body>
+    <script>
+      // Same as the rest of the site: dark unless the visitor chose light (localStorage 'theme'), applied before first paint.
+      (function () {
+        var stored = null;
+        try { stored = localStorage.getItem('theme'); } catch (e) {}
+        if (stored !== 'light') document.documentElement.classList.add('dark');
+      })();
+    </script>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

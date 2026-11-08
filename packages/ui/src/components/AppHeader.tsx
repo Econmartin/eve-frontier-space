@@ -7,9 +7,11 @@ interface AppHeaderProps {
   scrolled?: boolean;
   center?: ReactNode;
   right?: ReactNode;
+  /** Logo URL. Defaults to the app's own copy; apps that do not copy the shared assets pass '/assets/…'. */
+  logoSrc?: string;
 }
 
-export function AppHeader({ homeHref = '/', scrolled = true, center, right }: AppHeaderProps) {
+export function AppHeader({ homeHref = '/', scrolled = true, center, right, logoSrc }: AppHeaderProps) {
   return (
     <header
       className={`shrink-0 sticky z-50 flex items-center px-10 py-3 gap-4 transition-all duration-300 ${
@@ -23,7 +25,7 @@ export function AppHeader({ homeHref = '/', scrolled = true, center, right }: Ap
         className="shrink-0 flex flex-col items-center gap-0.5 hover:opacity-80 transition-opacity"
       >
         <img
-          src={`${import.meta.env.BASE_URL}assets/eve_frontier_transparent-256w.webp`}
+          src={logoSrc ?? `${import.meta.env.BASE_URL}assets/eve_frontier_transparent-256w.webp`}
           alt="EVE Frontier"
           className="h-8 md:h-10"
         />

@@ -1,0 +1,48 @@
+{
+ "data": {
+  "acl": {
+   "nodes": [
+    {
+     "address": "0x725fe75e302c7f4b1baaa9c624a949f5a53a4fac355e206ba4b54f96470b1b14",
+     "asMoveObject": {
+      "contents": {
+       "json": {
+        "id": "0x725fe75e302c7f4b1baaa9c624a949f5a53a4fac355e206ba4b54f96470b1b14",
+        "authorized_sponsors": {
+         "id": "0x5f02bd55e083a0f3fad5df3371267b413bca2443fd3bc3172ab648eccb313054",
+         "size": "2"
+        }
+       }
+      }
+     }
+    }
+   ]
+  },
+  "character": {
+   "nodes": [
+    {
+     "asMoveObject": {
+      "contents": {
+       "json": {
+        "key": {
+         "tenant": "stillness"
+        }
+       }
+      }
+     }
+    }
+   ]
+  },
+  "pkg": {
+   "previousTransaction": {
+    "digest": "5rnk369zjxUZdo9Tovv8moGymDGAUnRUhhUutFH119nv",
+    "effects": {
+     "timestamp": "2026-06-25T09:13:39.307Z",
+     "checkpoint": {
+      "sequenceNumber": 352596414
+     }
+    }
+   }
+  }
+ }
+}

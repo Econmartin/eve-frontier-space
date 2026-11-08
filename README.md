@@ -10,6 +10,8 @@ apps/
   move/      # Interactive Move on Sui course (two courses,    (served at /move)
              #   real WASM compiler, on-chain completion)
   finance/   # DeFi dashboard for the eve-bank contract        (served at /finance)
+  status/    # Status of Stillness, Utopia and Sui testnet,     (served at /status)
+             #   with a public API; see apps/status/README.md
 
 contracts/
   eve-bank/  # Generic Move smart contract (bank · loans · lottery)

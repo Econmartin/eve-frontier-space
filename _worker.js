@@ -1,6 +1,19 @@
+import { handleStatus, runStatusCron } from './apps/status/worker/index.ts';
+
 export default {
+  // Status monitor: every-minute Cron Trigger (see [triggers] in wrangler.toml and apps/status/README.md)
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(runStatusCron(env));
+  },
+
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+
+    // Status site API, RSS feed and OpenAPI file; the page itself is the static app under /status
+    if (url.pathname.startsWith('/status/')) {
+      const res = await handleStatus(request, env, ctx);
+      if (res) return res;
+    }
 
     // OG proxy — fetches & caches Open Graph metadata for a given URL
     if (url.pathname === '/api/og') {
@@ -50,6 +63,7 @@ export default {
     if (url.pathname.startsWith('/move'))       fallback = '/move/index.html';
     if (url.pathname.startsWith('/finance'))    fallback = '/finance/index.html';
     if (url.pathname.startsWith('/directory'))  fallback = '/directory/index.html';
+    if (url.pathname.startsWith('/status'))     fallback = '/status/index.html';
 
     return env.ASSETS.fetch(new URL(fallback, url));
   },

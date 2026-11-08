@@ -1,0 +1,283 @@
+openapi: 3.1.0
+info:
+  title: EVE Frontier Status API
+  version: 1.0.0
+  description: |
+    Read-only status of EVE Frontier's worlds (Stillness, Utopia) and the Sui testnet they run on.
+    Measured once a minute by evefrontier.space. Responses are JSON, allow any origin (CORS *), and are cached at
+    the edge for 30 seconds. Every response carries `generated_at` (UTC, ISO 8601) and `stale`, which is true when the
+    newest sample is more than 3 minutes old. Limit: 60 requests a minute per IP address (429 beyond that).
+  license: { name: MIT }
+servers:
+  - url: https://evefrontier.space/status/api/v1
+paths:
+  /summary:
+    get:
+      summary: Overall status and every component's current status
+      responses:
+        '200':
+          description: OK
+          content: { application/json: { schema: { $ref: '#/components/schemas/Summary' } } }
+  /components:
+    get:
+      summary: Every component the monitor checks
+      responses:
+        '200': { description: OK }
+  /components/{id}:
+    get:
+      summary: One component with its last 90 daily rollups
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, example: stillness-game-server } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      component: { $ref: '#/components/schemas/ComponentStatus' }
+                      days: { type: array, items: { $ref: '#/components/schemas/DayRollup' } }
+        '404': { $ref: '#/components/responses/Error' }
+  /components/{id}/samples:
+    get:
+      summary: Recent one-minute samples in fixed buckets
+      description: |
+        1h is one bucket per minute, 6h per 5 minutes, 24h per 15 minutes, 7d per hour (raw samples are kept 14 days).
+        Buckets are aligned to clock time; the last one holds the current moment.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, example: sui-graphql } }
+        - { name: range, in: query, schema: { type: string, enum: ['1h', '6h', '24h', '7d'], default: '1h' } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      component: { type: string }
+                      range: { type: string }
+                      bucket_minutes: { type: integer }
+                      buckets: { type: array, items: { $ref: '#/components/schemas/Bucket' } }
+        '400': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /worlds:
+    get:
+      summary: Worlds the monitor knows
+      responses:
+        '200': { description: OK }
+  /worlds/{tenant}:
+    get:
+      summary: Chain details for one world
+      parameters:
+        - { name: tenant, in: path, required: true, schema: { type: string, enum: [stillness, utopia] } }
+      responses:
+        '200':
+          description: OK
+          content: { application/json: { schema: { $ref: '#/components/schemas/WorldDetails' } } }
+        '404': { $ref: '#/components/responses/Error' }
+  /worlds/{tenant}/gaps:
+    get:
+      summary: Distribution of gaps between sponsored world transactions, for setting game server thresholds
+      parameters:
+        - { name: tenant, in: path, required: true, schema: { type: string } }
+        - { name: days, in: query, schema: { type: integer, minimum: 1, maximum: 400, default: 14 } }
+      responses:
+        '200': { description: OK }
+  /incidents:
+    get:
+      summary: Incidents with their updates, newest first
+      parameters:
+        - { name: status, in: query, schema: { type: string, enum: [open, resolved] } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 200, default: 50 } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      incidents: { type: array, items: { $ref: '#/components/schemas/Incident' } }
+  /events:
+    get:
+      summary: World redeploys and upgrades found in Published.toml
+      responses:
+        '200': { description: OK }
+  /history:
+    get:
+      summary: Daily rollups for one component, or all of them
+      parameters:
+        - { name: component, in: query, schema: { type: string } }
+        - { name: days, in: query, schema: { type: integer, minimum: 1, maximum: 400, default: 90 } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                  - type: object
+                    properties:
+                      days: { type: integer }
+                      history:
+                        type: object
+                        additionalProperties: { type: array, items: { $ref: '#/components/schemas/DayRollup' } }
+  /subscriptions:
+    post:
+      summary: Subscribe a webhook to incident and redeploy events
+      description: |
+        Deliveries are POSTs of `{type, created_at, data, source}` with header
+        `X-Status-Signature: sha256=<HMAC-SHA256(secret, body)>`. Types: incident.opened, incident.updated,
+        incident.resolved, world.redeployed, world.upgraded. Five failed deliveries in a row disable the subscription.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [url], properties: { url: { type: string, format: uri, description: Public https URL } } }
+      responses:
+        '201': { description: Created; returns id and secret }
+        '400': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /subscriptions/{id}:
+    delete:
+      summary: Unsubscribe
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+        - { name: Authorization, in: header, required: true, schema: { type: string, example: Bearer <secret> } }
+      responses:
+        '200': { description: Removed }
+        '404': { $ref: '#/components/responses/Error' }
+components:
+  responses:
+    Error:
+      description: Error
+      content: { application/json: { schema: { type: object, properties: { error: { type: string } } } } }
+  schemas:
+    Level:
+      type: string
+      enum: [operational, degraded, offline, maintenance, unknown]
+      description: Unknown means our own probe could not measure the component; it never means the component is down.
+    Counts:
+      type: object
+      description: Minutes (samples) per level
+      properties:
+        operational: { type: integer }
+        degraded: { type: integer }
+        offline: { type: integer }
+        maintenance: { type: integer }
+        unknown: { type: integer }
+    Envelope:
+      type: object
+      required: [generated_at, stale]
+      properties:
+        generated_at: { type: string, format: date-time }
+        stale: { type: boolean, description: True when the newest sample is more than 3 minutes old }
+    ComponentStatus:
+      type: object
+      properties:
+        id: { type: string }
+        group: { type: string }
+        name: { type: string }
+        description: { type: string }
+        world: { type: string }
+        status: { $ref: '#/components/schemas/Level' }
+        message: { type: string }
+        checked_at: { type: [string, 'null'], format: date-time }
+        latency_ms: { type: [integer, 'null'] }
+    Summary:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+        - type: object
+          properties:
+            status: { $ref: '#/components/schemas/Level' }
+            description: { type: string, example: All systems operational }
+            counts: { $ref: '#/components/schemas/Counts' }
+            last_sample_at: { type: [string, 'null'], format: date-time }
+            groups:
+              type: array
+              items:
+                type: object
+                properties:
+                  name: { type: string }
+                  components: { type: array, items: { $ref: '#/components/schemas/ComponentStatus' } }
+    DayRollup:
+      type: object
+      properties:
+        date: { type: string, format: date }
+        uptime: { type: [number, 'null'], description: '0..1; Offline minutes count as down, Degraded as up, Unknown and Maintenance are left out' }
+        worst: { oneOf: [{ $ref: '#/components/schemas/Level' }, { type: 'null' }] }
+        counts: { $ref: '#/components/schemas/Counts' }
+        incident_ids: { type: array, items: { type: integer } }
+    Bucket:
+      type: object
+      properties:
+        start: { type: string, format: date-time }
+        minutes: { type: integer }
+        counts: { $ref: '#/components/schemas/Counts' }
+        uptime: { type: [number, 'null'] }
+        worst: { oneOf: [{ $ref: '#/components/schemas/Level' }, { type: 'null' }], description: Worst measured level; Unknown only when nothing else was measured }
+        latency_ms: { type: [integer, 'null'], description: Mean latency, for components that measure one }
+        message: { type: [string, 'null'], description: Newest check message at the worst level (every minute in the 1h range) }
+    Incident:
+      type: object
+      properties:
+        id: { type: integer }
+        component: { type: string }
+        component_name: { type: string }
+        title: { type: string }
+        impact: { $ref: '#/components/schemas/Level' }
+        status: { type: string, enum: [open, resolved] }
+        started_at: { type: string, format: date-time }
+        resolved_at: { type: [string, 'null'], format: date-time }
+        automatic: { type: boolean }
+        updates:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: integer }
+              at: { type: string, format: date-time }
+              kind: { type: string, enum: [detected, update, impact, resolved] }
+              author: { type: string, enum: [monitor, admin] }
+              body: { type: string }
+    WorldDetails:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+        - type: object
+          properties:
+            tenant: { type: string }
+            name: { type: string }
+            world_package: { type: [string, 'null'], description: Package the checks follow }
+            world_original_id: { type: [string, 'null'] }
+            upstream_world_package: { type: [string, 'null'], description: 'published-at under [published.testnet_<world>]' }
+            pinned: { type: boolean }
+            eve_token_package: { type: [string, 'null'] }
+            world_start_checkpoint: { type: [integer, 'null'], description: The checkpoint before the world package was published }
+            published_at: { type: [string, 'null'], format: date-time }
+            publish_digest: { type: [string, 'null'] }
+            current_checkpoint: { type: [integer, 'null'] }
+            epoch: { type: [integer, 'null'] }
+            transactions_last_hour: { type: [integer, 'null'] }
+            transactions_window_minutes: { type: integer, description: Minutes of samples behind transactions_last_hour (60 when complete) }
+            last_game_server_tx_at: { type: [string, 'null'], format: date-time }
+            last_game_server_tx_digest: { type: [string, 'null'] }
+            admin_acl: { type: [string, 'null'] }
+            sponsors:
+              type: array
+              items:
+                type: object
+                properties:
+                  address: { type: string }
+                  balance_sui: { type: [number, 'null'] }
+                  active: { type: boolean, description: Paid for a world transaction in the last 24 hours }
+            world_api: { type: [string, 'null'] }
+            resolved_at: { type: [string, 'null'], format: date-time }

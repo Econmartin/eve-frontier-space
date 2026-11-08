@@ -12,15 +12,19 @@
     "dev:home": "npm run dev -w @eve-frontier-space/home",
     "dev:finance": "npm run dev -w @eve-frontier-space/finance",
     "dev:directory": "npm run dev -w @eve-frontier-space/directory",
+    "dev:status": "npm run dev -w @eve-frontier-space/status",
     "build": "turbo run build && node scripts/combine-dist.mjs",
     "build:move": "npm run build -w @eve-frontier-space/move",
     "build:home": "npm run build -w @eve-frontier-space/home",
     "build:finance": "npm run build -w @eve-frontier-space/finance",
     "build:directory": "npm run build -w @eve-frontier-space/directory",
+    "build:status": "npm run build -w @eve-frontier-space/status",
+    "test:status": "npm run test -w @eve-frontier-space/status",
     "typecheck": "turbo run typecheck",
     "resize-images": "node packages/assets/resize.mjs"
   },
   "devDependencies": {
+    "esbuild": "^0.21.5",
     "sharp": "^0.34.5",
     "turbo": "^2.8.15"
   },

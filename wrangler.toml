@@ -12,3 +12,25 @@ binding = "ASSETS"
 binding = "DB"
 database_name = "eve-frontier-mining"
 database_id = "acdcb9ad-b7dc-4143-942b-fdab94c98c81"
+
+# Status monitor (apps/status): samples, rollups and incidents. Schema: apps/status/schema.sql
+[[d1_databases]]
+binding = "STATUS_DB"
+database_name = "eve-frontier-status"
+database_id = "5d4d4a68-2a4a-4b5a-8c05-5cf57adb8e6c"
+
+# Runs every status check once a minute
+[triggers]
+crons = ["* * * * *"]
+
+# 60 requests a minute per IP on the public status API
+[[ratelimits]]
+name = "STATUS_RATE_LIMITER"
+namespace_id = "2001"
+simple = { limit = 60, period = 60 }
+
+# The status OpenAPI file is bundled into the Worker as text
+[[rules]]
+type = "Text"
+globs = ["**/*.yaml"]
+fallthrough = true

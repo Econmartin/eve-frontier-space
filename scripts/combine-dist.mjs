@@ -8,7 +8,8 @@
  *
  * Routing and the OG proxy are handled by _worker.js (copied into dist/).
  */
-import { cpSync, copyFileSync, mkdirSync, rmSync, writeFileSync } from 'fs';
+import { cpSync, mkdirSync, rmSync, writeFileSync } from 'fs';
+import { build } from 'esbuild';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -35,13 +36,28 @@ const financeOut = resolve(outDir, 'finance');
 mkdirSync(financeOut, { recursive: true });
 cpSync(financeDist, financeOut, { recursive: true });
 
+// Status app at /status
+const statusOut = resolve(outDir, 'status');
+mkdirSync(statusOut, { recursive: true });
+cpSync(resolve(root, 'apps/status/dist'), statusOut, { recursive: true });
+
 // Directory app at /directory
 const directoryOut = resolve(outDir, 'directory');
 mkdirSync(directoryOut, { recursive: true });
 cpSync(directoryDist, directoryOut, { recursive: true });
 
-// Worker (Pages advanced mode — must live in dist/ for wrangler pages dev)
-copyFileSync(resolve(root, '_worker.js'), resolve(outDir, '_worker.js'));
+// Worker (Pages advanced mode — must live in dist/ for wrangler pages dev). It imports the status Worker code,
+// so it is bundled into one self-contained file rather than copied.
+await build({
+  entryPoints: [resolve(root, '_worker.js')],
+  outfile: resolve(outDir, '_worker.js'),
+  bundle: true,
+  format: 'esm',
+  platform: 'neutral',
+  target: 'es2022',
+  loader: { '.yaml': 'text' },
+  logLevel: 'warning',
+});
 // Tell CF Pages not to serve _worker.js as a public static asset
 writeFileSync(resolve(outDir, '.assetsignore'), '_worker.js\n');
 

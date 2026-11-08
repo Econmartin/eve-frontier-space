@@ -1,0 +1,108 @@
+@import 'tailwindcss';
+@source "../../../packages/ui/src";
+@import "@fontsource-variable/geist";
+
+/* Same switch as the rest of the site: <html class="dark">, dark unless the visitor chose light. */
+@custom-variant dark (&:is(.dark *));
+
+@font-face { font-family: 'Favorit Mono Std'; src: url('/fonts/FavoritMonoStd-Regular.woff2') format('woff2'); font-weight: 400; font-display: swap; }
+@font-face { font-family: 'Favorit Mono Std'; src: url('/fonts/FavoritMonoStd-Bold.woff2') format('woff2'); font-weight: 700; font-display: swap; }
+@font-face { font-family: 'Disket Mono'; src: url('/fonts/Disket-Mono-Regular.woff2') format('woff2'); font-weight: 400; font-display: swap; }
+@font-face { font-family: 'Disket Mono'; src: url('/fonts/Disket-Mono-Bold.woff2') format('woff2'); font-weight: 700; font-display: swap; }
+
+/* Tokens follow the home app (#0a0a0a page, #171717 cards, martian orange accent in dark). Light mode uses EVE's cool
+   crude off-white instead of the home app's cream, with white cards. */
+:root {
+  --bg: #f6f6f9;        /* crude-50 */
+  --surface: #ffffff;
+  --surface-2: #ececf2; /* crude-100 */
+  --text: #171717;
+  --muted: #55576e;
+  --border: rgb(51 52 71 / 0.14);
+  --focus: #cc3002;
+  --accent: #ff610a;
+  --accent-text: #b33000; /* martian, dark enough for text on cream */
+  --neutral-bg: #f6f6f9; /* the page frame (PageWrapper's bg-neutral) */
+  --color-martian-500: #ff610a;
+
+  /* Status: normal is the site's own ink; problems get the EVE palette's loud colours. Each level also has its own
+     pixel shape, pattern and word, so colour is never the only signal. Light values hold 4.5:1 on white and cream. */
+  --operational: #333447; /* crude-900 */
+  --degraded: #b83a00;    /* martian, darkened for text contrast */
+  --offline: #c2185b;     /* pink */
+  --maintenance: #1f3fd1; /* ocean */
+  --unknown: #515478;     /* crude-600 */
+  --nodata: #868aa3;     /* 3.4:1 on the white cards it sits on */
+}
+.dark {
+  --bg: #0a0a0a;
+  --surface: #171717;
+  --surface-2: #222224;
+  --text: #f5f5f5;
+  --muted: #a8a8a8;
+  --border: rgb(255 255 255 / 0.1);
+  --focus: #ff8432;
+  --accent-text: #ff8432;
+  --neutral-bg: #0a0a0a;
+  --operational: #fafae5; /* EVE cream */
+  --degraded: #ff7a2e;    /* martian */
+  --offline: #ff5c93;     /* pink */
+  --maintenance: #6f97ff; /* ocean */
+  --unknown: #9a9cbb;     /* crude */
+  --nodata: #6e6e78;
+}
+
+@theme inline {
+  --color-neutral: var(--neutral-bg);
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-text: var(--text);
+  --color-muted: var(--muted);
+  --color-line: var(--border);
+  --color-focus: var(--focus);
+  --color-accent: var(--accent);
+  --color-accent-text: var(--accent-text);
+  --color-operational: var(--operational);
+  --color-degraded: var(--degraded);
+  --color-offline: var(--offline);
+  --color-maintenance: var(--maintenance);
+  --color-unknown: var(--unknown);
+  --color-nodata: var(--nodata);
+  --font-sans: 'Geist Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'Favorit Mono Std', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-heading: 'Disket Mono', 'Favorit Mono Std', ui-monospace, monospace;
+  --radius-4xl: 1.625rem; /* as the home app */
+}
+
+html { font-family: var(--font-sans); scroll-padding-top: 6rem; } /* keeps focused items clear of the sticky header (2.4.11) */
+/* Favorit Mono turns "0x" into "0×" through contextual alternates; addresses must read exactly. */
+body { margin: 0; min-height: 100vh; font-feature-settings: "calt" 0, "liga" 0; font-variant-ligatures: none; }
+/* In the base layer so utilities such as font-sans can still override it */
+@layer base { h1, h2, h3 { font-family: var(--font-heading); letter-spacing: 0.02em; } }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+a { text-underline-offset: 3px; }
+code, pre, kbd, samp { font-family: var(--font-mono); }
+/* Long URLs and addresses in running text wrap instead of pushing the page sideways at narrow widths */
+:not(pre) > code { overflow-wrap: anywhere; }
+
+/* Uptime bar segments: solid colours, with height as the second cue so colour is never the only signal.
+   Full = Operational · two-thirds = Degraded or Maintenance · one-third = Offline · outline = Unknown · baseline = No data.
+   The worse the problem, the lower the bar. Segments sit on the bar's baseline (the button is items-end). */
+.seg { display: block; width: 100%; height: 100%; }
+.seg-operational { background: var(--operational); }
+.seg-degraded { background: var(--degraded); height: 66%; }
+.seg-maintenance { background: var(--maintenance); height: 66%; }
+.seg-offline { background: var(--offline); height: 34%; }
+/* Top and bottom bars rather than a full outline: on segments 4px wide or less an outline fills in and looks solid */
+.seg-unknown { background: transparent; box-shadow: inset 0 3px 0 var(--unknown), inset 0 -3px 0 var(--unknown); }
+.seg-nodata { background: linear-gradient(var(--nodata), var(--nodata)) bottom / 100% 2px no-repeat; }
+
+/* Native <dialog> used as the phone menu, sliding in from the right like the home app's sheet. */
+dialog.site-menu { margin: 0 0 0 auto; height: 100dvh; max-height: 100dvh; width: min(20rem, 85vw); max-width: none; padding: 0; border: 0; }
+dialog.site-menu::backdrop { background: rgb(0 0 0 / 0.4); backdrop-filter: blur(2px); }
+
+@media (prefers-reduced-motion: no-preference) {
+  .fade-in { animation: fade 0.2s ease-out; }
+  @keyframes fade { from { opacity: 0; transform: translateY(2px); } to { opacity: 1; transform: none; } }
+}
