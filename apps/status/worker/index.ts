@@ -2,16 +2,19 @@
 // /status/openapi.yaml; runStatusCron() for the every-minute Cron Trigger.
 import * as api from './api.ts';
 import { COMPONENTS, COMPONENT_BY_ID, WORLDS, type Env } from './config.ts';
+import { writeAllowed } from './guard.ts';
+import { liveDeps } from './http.ts';
 import { runCron } from './run.ts';
 // Bundled as text by wrangler (see the [[rules]] in wrangler.toml).
 import openapi from '../openapi.yaml';
 
 export { runCron as runStatusCron };
 
+// Any site may read the API. Writes (subscribe, unsubscribe, admin) are not offered cross-origin, so another site cannot
+// use its visitors' browsers to sign up URLs (see writeAllowed below).
 const CORS = {
   'access-control-allow-origin': '*',
-  'access-control-allow-methods': 'GET, POST, DELETE, OPTIONS',
-  'access-control-allow-headers': 'content-type, authorization',
+  'access-control-allow-methods': 'GET, OPTIONS',
   'access-control-max-age': '86400',
 };
 const EDGE_TTL = 30;
@@ -19,7 +22,7 @@ const EDGE_TTL = 30;
 const json = (data: unknown, status = 200, headers: Record<string, string> = {}) =>
   new Response(JSON.stringify(data, null, 2), {
     status,
-    headers: { 'content-type': 'application/json; charset=utf-8', ...CORS, ...headers },
+    headers: { 'content-type': 'application/json; charset=utf-8', ...headers },
   });
 
 const cacheable = (r: Response) => {
@@ -63,6 +66,10 @@ export async function handleStatus(request: Request, env: Env, ctx: ExecutionCon
   }
   if (!isApi && !isFeed) return null;
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
+  if (request.method === 'POST') {
+    const why = writeAllowed(request);
+    if (why) return json({ error: why }, request.headers.get('origin') ? 403 : 415);
+  }
 
   const ip = request.headers.get('cf-connecting-ip') ?? 'local';
   if (!(await allowed(env, ip))) return json({ error: 'rate limited: 60 requests a minute per address' }, 429, { 'retry-after': '60' });
@@ -88,6 +95,7 @@ export async function handleStatus(request: Request, env: Env, ctx: ExecutionCon
       res = json({ error: 'internal error' }, 500);
     }
   }
+  if (request.method === 'GET' || request.method === 'HEAD') for (const [k, v] of Object.entries(CORS)) res.headers.set(k, v);
   if (publicGet && res.status === 200) {
     cacheable(res);
     if (cache) ctx.waitUntil(cache.put(request.url, res.clone()));
@@ -101,7 +109,7 @@ async function route(request: Request, url: URL, p: string, env: Env, db: D1Data
   const m = request.method;
 
   if (p === '/status/feeds/incidents.rss' && m === 'GET') {
-    return new Response(await api.rss(c, url.origin), { headers: { 'content-type': 'application/rss+xml; charset=utf-8', ...CORS } });
+    return new Response(await api.rss(c, url.origin), { headers: { 'content-type': 'application/rss+xml; charset=utf-8' } });
   }
 
   const v1 = p.match(/^\/status\/api\/v1(\/.*)?$/);
@@ -148,13 +156,19 @@ async function route(request: Request, url: URL, p: string, env: Env, db: D1Data
     }
     if (r === '/subscriptions' && m === 'POST') {
       const body = await request.json().catch(() => null);
-      return json(await api.subscribe(c, body, await ipHash(request.headers.get('cf-connecting-ip') ?? 'local')), 201);
+      return json(await api.subscribe(c, body, await ipHash(request.headers.get('cf-connecting-ip') ?? 'local'), liveDeps()), 201);
     }
     const sub = r.match(/^\/subscriptions\/([0-9a-f]{16})$/);
     if (sub && m === 'DELETE') return json(await api.unsubscribe(c, sub[1], request.headers.get('authorization')));
   }
 
   const admin = p.match(/^\/status\/api\/admin(\/.*)$/);
+  if (admin && (m === 'GET' || m === 'DELETE')) {
+    await api.requireAdmin(env, request.headers.get('authorization'));
+    if (admin[1] === '/subscriptions' && m === 'GET') return json(await api.adminListSubscribers(c));
+    const del = admin[1].match(/^\/subscriptions\/([0-9a-f]{16})$/);
+    if (del && m === 'DELETE') return json(await api.adminDeleteSubscriber(c, del[1]));
+  }
   if (admin && m === 'POST') {
     await api.requireAdmin(env, request.headers.get('authorization'));
     const body = await request.json().catch(() => null);

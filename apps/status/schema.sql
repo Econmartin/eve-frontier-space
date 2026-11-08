@@ -79,7 +79,7 @@ CREATE TABLE IF NOT EXISTS gap_hist (
 CREATE TABLE IF NOT EXISTS subscribers (
   id         TEXT    PRIMARY KEY,
   url        TEXT    NOT NULL UNIQUE,
-  secret     TEXT    NOT NULL,           -- signs deliveries (HMAC-SHA256) and authorises unsubscribe
+  secret     TEXT    NOT NULL,           -- signs deliveries (HMAC-SHA256 over timestamp.body) and authorises unsubscribe
   created_at INTEGER NOT NULL,
   ip_hash    TEXT,
   failures   INTEGER NOT NULL DEFAULT 0,
@@ -94,3 +94,10 @@ CREATE TABLE IF NOT EXISTS deliveries (
   next_at    INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS deliveries_next ON deliveries (next_at);
+
+-- Webhook sign-up attempts per (hashed) IP: each attempt sends a challenge, so failed ones are limited too.
+CREATE TABLE IF NOT EXISTS subscribe_attempts (
+  ip_hash TEXT    NOT NULL,
+  ts      INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS subscribe_attempts_ip ON subscribe_attempts (ip_hash, ts);

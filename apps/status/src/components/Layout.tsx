@@ -249,7 +249,7 @@ export function Subscribe() {
             <label htmlFor="webhook-url" className="flex items-center gap-2 font-bold">
               <Webhook size={16} aria-hidden="true" /> Webhook
             </label>
-            <p id="webhook-help" className="mt-1 text-xs text-muted">We POST JSON to your https URL when an incident opens, changes or resolves, or a world is redeployed.</p>
+            <p id="webhook-help" className="mt-1 text-xs text-muted">We POST JSON to your https URL when an incident opens, changes or resolves, or a world is redeployed. Your endpoint must first echo back the challenge we send it. Details on the API tab.</p>
             <div className="mt-2 flex gap-2">
               <input
                 id="webhook-url"

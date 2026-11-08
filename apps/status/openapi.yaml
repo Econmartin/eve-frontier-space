@@ -135,18 +135,26 @@ paths:
     post:
       summary: Subscribe a webhook to incident and redeploy events
       description: |
-        Deliveries are POSTs of `{type, created_at, data, source}` with header
-        `X-Status-Signature: sha256=<HMAC-SHA256(secret, body)>`. Types: incident.opened, incident.updated,
-        incident.resolved, world.redeployed, world.upgraded. Five failed deliveries in a row disable the subscription.
+        Send as application/json, from a server or script (not offered cross-origin to browsers). Before anything is
+        stored we POST `{"type": "subscription.verify", "challenge": "<value>"}` to the URL; it must answer 2xx with the
+        challenge value in the body. Subscribing an already-subscribed URL that passes the challenge rotates its secret.
+
+        Deliveries are POSTs of `{type, created_at, data, source}` with headers `X-Status-Timestamp` (Unix seconds),
+        `X-Status-Delivery` (unique ID) and `X-Status-Signature: sha256=<hex HMAC-SHA256(secret, "<timestamp>.<raw body>")>`.
+        Reject timestamps older than 5 minutes and repeated delivery IDs. Types: incident.opened, incident.updated,
+        incident.resolved, world.redeployed, world.upgraded. Five failed deliveries in a row switch the subscription off.
       requestBody:
         required: true
         content:
           application/json:
             schema: { type: object, required: [url], properties: { url: { type: string, format: uri, description: Public https URL } } }
       responses:
-        '201': { description: Created; returns id and secret }
+        '201': { description: Verified and stored; returns id and secret (shown once) }
         '400': { $ref: '#/components/responses/Error' }
-        '409': { $ref: '#/components/responses/Error' }
+        '403': { description: Cross-site browser request }
+        '415': { description: Body is not application/json }
+        '422': { description: The endpoint did not echo the challenge; nothing was stored }
+        '429': { description: Too many attempts from this address today }
   /subscriptions/{id}:
     delete:
       summary: Unsubscribe

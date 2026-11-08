@@ -1,10 +1,14 @@
-// Webhook subscriptions: anyone can register an https URL; incident and redeploy events are POSTed to it,
-// signed with the subscriber's secret. Deliveries go through an outbox so a slow receiver never delays the checks.
+// Webhook subscriptions. Anyone can register an https URL, but only an endpoint that echoes a one-time challenge is
+// stored, so nobody can sign up someone else's URL. Incident and redeploy events are then POSTed to it, signed with the
+// subscriber's secret over a timestamp and the body (replay-safe). Deliveries go through an outbox so a slow receiver
+// never delays the checks.
 import { USER_AGENT } from './config.ts';
 import type { Deps } from './http.ts';
 
 export const MAX_SUBSCRIBERS = 150;
-export const MAX_PER_IP_PER_DAY = 5;
+/** Sign-up attempts per IP address per day. Each attempt makes us send a challenge, so failed ones count too. */
+export const MAX_ATTEMPTS_PER_IP_PER_DAY = 10;
+const CHALLENGE_TIMEOUT_MS = 5000;
 // 25 a run keeps a run under the free plan's 50 outbound requests (the checks use about 10-15): 150 subscribers in 6 minutes.
 const DELIVER_PER_RUN = 25;
 const MAX_ATTEMPTS = 5;
@@ -15,6 +19,44 @@ export function enqueueWebhook(db: D1Database, type: string, data: Record<string
   return db
     .prepare('INSERT INTO deliveries (subscriber, payload, created_at, attempts, next_at) SELECT id, ?, ?, 0, ? FROM subscribers WHERE active = 1')
     .bind(payload, ts, ts);
+}
+
+/**
+ * Headers for one delivery: X-Status-Signature is sha256=HMAC(secret, "<timestamp>.<body>"), so a captured delivery
+ * cannot be replayed later without the receiver noticing the old timestamp. X-Status-Delivery identifies the event.
+ */
+export async function signedHeaders(secret: string, body: string, nowMs: number, deliveryId: string): Promise<Record<string, string>> {
+  const ts = String(Math.floor(nowMs / 1000));
+  return {
+    'content-type': 'application/json',
+    'user-agent': USER_AGENT,
+    'x-status-timestamp': ts,
+    'x-status-delivery': deliveryId,
+    'x-status-signature': await sign(secret, `${ts}.${body}`),
+  };
+}
+
+/** True when the endpoint answered 2xx and its body contains the challenge (plain text or {"challenge": "..."}). */
+export function echoesChallenge(status: number, text: string, challenge: string): boolean {
+  return status >= 200 && status < 300 && text.slice(0, 4096).includes(challenge);
+}
+
+/** Sends the one-time challenge to a would-be subscriber and reports whether it was echoed back. */
+export async function challengeEndpoint(deps: Deps, url: string): Promise<boolean> {
+  const challenge = [...crypto.getRandomValues(new Uint8Array(16))].map((b) => b.toString(16).padStart(2, '0')).join('');
+  const body = JSON.stringify({ type: 'subscription.verify', challenge, created_at: new Date(deps.now()).toISOString(), source: 'https://evefrontier.space/status' });
+  try {
+    const res = await deps.fetch(url, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'user-agent': USER_AGENT },
+      body,
+      redirect: 'manual',
+      signal: AbortSignal.timeout(CHALLENGE_TIMEOUT_MS),
+    });
+    return echoesChallenge(res.status, await res.text().catch(() => ''), challenge);
+  } catch {
+    return false;
+  }
 }
 
 export async function sign(secret: string, body: string): Promise<string> {
@@ -41,7 +83,7 @@ export async function deliverWebhooks(db: D1Database, deps: Deps) {
       try {
         const res = await deps.fetch(d.url, {
           method: 'POST',
-          headers: { 'content-type': 'application/json', 'user-agent': USER_AGENT, 'x-status-signature': await sign(d.secret, d.payload) },
+          headers: await signedHeaders(d.secret, d.payload, now, `${d.sid}-${d.id}`),
           body: d.payload,
           redirect: 'manual',
           signal: AbortSignal.timeout(5000),

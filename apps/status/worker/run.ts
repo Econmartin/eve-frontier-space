@@ -324,5 +324,8 @@ export async function runDaily(db: D1Database, now: number) {
     db.prepare('DELETE FROM rollups WHERE day < ?').bind(dayOf(now - RETENTION.rollupsDays * 86400_000)),
     db.prepare('DELETE FROM gap_hist WHERE day < ?').bind(dayOf(now - RETENTION.rollupsDays * 86400_000)),
     db.prepare('DELETE FROM deliveries WHERE created_at < ?').bind(now - 2 * 86400_000),
+    db.prepare('DELETE FROM subscribe_attempts WHERE ts < ?').bind(now - 2 * 86400_000),
+    // Subscriptions switched off after repeated failures are forgotten after 30 days
+    db.prepare('DELETE FROM subscribers WHERE active = 0 AND created_at < ?').bind(now - 30 * 86400_000),
   ]);
 }

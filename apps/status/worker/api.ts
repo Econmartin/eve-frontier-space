@@ -25,7 +25,8 @@ import { mergeHists, quantile, suggestThresholds, GAP_EDGES, type GapHist } from
 import type { ResolvedWorld } from './resolve.ts';
 import { dayOf } from './run.ts';
 import { bucketWindow, buildBuckets, type AggRow, type ProblemRow } from './buckets.ts';
-import { MAX_PER_IP_PER_DAY, MAX_SUBSCRIBERS, validWebhookUrl } from './webhooks.ts';
+import { challengeEndpoint, MAX_ATTEMPTS_PER_IP_PER_DAY, MAX_SUBSCRIBERS, validWebhookUrl } from './webhooks.ts';
+import type { Deps } from './http.ts';
 
 const iso = (ms: number | null | undefined) => (ms == null ? null : new Date(ms).toISOString());
 
@@ -369,27 +370,40 @@ ${items
 
 const randomId = (bytes: number) => [...crypto.getRandomValues(new Uint8Array(bytes))].map((b) => b.toString(16).padStart(2, '0')).join('');
 
-export async function subscribe(c: Ctx, body: any, ipHash: string) {
+/**
+ * Subscribe a webhook. The endpoint must echo a one-time challenge first; nothing is stored otherwise, and the reply is
+ * the same whether or not the URL was already subscribed. Re-subscribing a URL you control rotates its secret.
+ */
+export async function subscribe(c: Ctx, body: any, ipHash: string, deps: Deps) {
   const url = validWebhookUrl(body?.url);
   if (!url) throw new HttpError(400, 'url must be a public https URL');
   const counts = await c.db
-    .prepare('SELECT (SELECT COUNT(*) FROM subscribers WHERE active = 1) AS total, (SELECT COUNT(*) FROM subscribers WHERE ip_hash = ? AND created_at > ?) AS mine')
+    .prepare('SELECT (SELECT COUNT(*) FROM subscribers WHERE active = 1) AS total, (SELECT COUNT(*) FROM subscribe_attempts WHERE ip_hash = ? AND ts > ?) AS mine')
     .bind(ipHash, c.now - 86400_000)
     .first<{ total: number; mine: number }>();
+  if ((counts?.mine ?? 0) >= MAX_ATTEMPTS_PER_IP_PER_DAY) throw new HttpError(429, 'too many subscription attempts from this address today');
   if ((counts?.total ?? 0) >= MAX_SUBSCRIBERS) throw new HttpError(503, 'subscriber limit reached');
-  if ((counts?.mine ?? 0) >= MAX_PER_IP_PER_DAY) throw new HttpError(429, 'too many subscriptions from this address today');
-  const id = randomId(8);
+  await c.db.prepare('INSERT INTO subscribe_attempts (ip_hash, ts) VALUES (?, ?)').bind(ipHash, c.now).run();
+  if (!(await challengeEndpoint(deps, url.toString()))) {
+    throw new HttpError(
+      422,
+      'the endpoint did not echo the challenge: it must answer the subscription.verify POST with a 2xx response whose body contains the challenge value',
+    );
+  }
   const secret = randomId(24);
-  const r = await c.db
-    .prepare('INSERT INTO subscribers (id, url, secret, created_at, ip_hash) VALUES (?,?,?,?,?) ON CONFLICT (url) DO NOTHING')
-    .bind(id, url.toString(), secret, c.now, ipHash)
-    .run();
-  if (!r.meta.changes) throw new HttpError(409, 'this url is already subscribed');
+  const row = await c.db
+    .prepare(
+      `INSERT INTO subscribers (id, url, secret, created_at, ip_hash) VALUES (?,?,?,?,?)
+       ON CONFLICT (url) DO UPDATE SET secret = excluded.secret, active = 1, failures = 0
+       RETURNING id`,
+    )
+    .bind(randomId(8), url.toString(), secret, c.now, ipHash)
+    .first<{ id: string }>();
   return {
-    id,
+    id: row!.id,
     url: url.toString(),
     secret,
-    note: 'Keep the secret: deliveries carry X-Status-Signature: sha256=HMAC(secret, body), and DELETE /status/api/v1/subscriptions/{id} with Authorization: Bearer <secret> unsubscribes.',
+    note: 'Keep the secret; it is shown once. Each delivery has X-Status-Timestamp, X-Status-Delivery and X-Status-Signature: sha256=HMAC(secret, "<timestamp>.<body>"). Reject deliveries older than 5 minutes. DELETE /status/api/v1/subscriptions/{id} with Authorization: Bearer <secret> unsubscribes; subscribing the same URL again gives it a new secret.',
   };
 }
 
@@ -417,6 +431,20 @@ export async function requireAdmin(env: Env, auth: string | null) {
   if (!env.STATUS_ADMIN_TOKEN) throw new HttpError(503, 'admin is not configured (set STATUS_ADMIN_TOKEN)');
   const token = auth?.replace(/^Bearer\s+/i, '') ?? '';
   if (!(await timingSafeEqual(token, env.STATUS_ADMIN_TOKEN))) throw new HttpError(401, 'bad admin token');
+}
+
+export async function adminListSubscribers(c: Ctx) {
+  const { results } = await c.db
+    .prepare('SELECT id, url, created_at, failures, active FROM subscribers ORDER BY created_at DESC')
+    .all<{ id: string; url: string; created_at: number; failures: number; active: number }>();
+  return { subscribers: results.map((r) => ({ id: r.id, url: r.url, created_at: iso(r.created_at), failures: r.failures, active: !!r.active })) };
+}
+
+export async function adminDeleteSubscriber(c: Ctx, id: string) {
+  const r = await c.db.prepare('DELETE FROM subscribers WHERE id = ?').bind(id).run();
+  if (!r.meta.changes) throw new HttpError(404, 'no such subscription');
+  await c.db.prepare('DELETE FROM deliveries WHERE subscriber = ?').bind(id).run();
+  return { ok: true };
 }
 
 export async function adminCreateIncident(c: Ctx, body: any) {

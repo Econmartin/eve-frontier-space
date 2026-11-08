@@ -165,10 +165,32 @@ has `generated_at` and `stale` (true when the newest sample is more than 3 minut
 `/summary`, `/components/{id}`, `/components/{id}/samples?range=1h|6h|24h|7d`, `/worlds/{tenant}`, `/worlds/{tenant}/gaps`, `/incidents?status=open|resolved`,
 `/history?component={id}&days=90`, `/events`, and `/status/feeds/incidents.rss`. Webhooks: `POST /subscriptions`.
 
-Webhooks go out from the cron through an outbox: up to 25 deliveries a run (so a run stays under the free plan's 50
-outbound requests and D1 queries), at most 150 subscribers, 5 sign-ups per IP a day. A failed delivery is retried after
-2, 4, 8 and 16 minutes; five deliveries in a row that fail disable the subscription. Cost is negligible: about 5 D1 row
-writes per delivery.
+### Webhooks
+
+1. **Subscribe:** `POST /status/api/v1/subscriptions` with `{"url": "https://…"}` (as `application/json`). We
+   immediately POST `{"type": "subscription.verify", "challenge": "…"}` to that URL; your endpoint must answer 2xx with
+   the challenge value in its body (plain, or `{"challenge": "…"}`). Only then is the subscription stored, and the reply
+   gives you an `id` and a `secret` (shown once). If the challenge fails, nothing is stored and the reply is the same
+   whether or not the URL was already subscribed. Subscribing a URL again (and passing the challenge) rotates its secret.
+2. **Deliveries:** POSTs of `{type, created_at, data, source}` with `X-Status-Timestamp` (Unix seconds),
+   `X-Status-Delivery` (unique per event and subscriber) and `X-Status-Signature: sha256=<hex HMAC-SHA256(secret,
+   "<timestamp>.<raw body>")>`. Check the signature, reject timestamps more than 5 minutes old, and ignore a delivery ID
+   you have seen before. Types: incident.opened, incident.updated, incident.resolved, world.redeployed, world.upgraded.
+3. **Unsubscribe:** `DELETE /status/api/v1/subscriptions/{id}` with `Authorization: Bearer <secret>`. Without the
+   secret nobody can unsubscribe you; a wrong ID or secret gets the same 404.
+
+Security choices: only public `https` URLs (no IP addresses, localhost or internal names, no redirects followed); the
+challenge means nobody can point deliveries at someone else's endpoint; write endpoints are not offered cross-origin (CORS
+is open for reads only, writes must be JSON, and browsers from other sites are refused), so another site cannot sign
+people up through its visitors; 10 sign-up attempts per IP a day; at most 150 subscribers.
+
+Admin: `GET /status/api/admin/subscriptions` lists them and `DELETE /status/api/admin/subscriptions/{id}` removes one
+(both with `Authorization: Bearer $STATUS_ADMIN_TOKEN`).
+
+Deliveries go out from the cron through an outbox: up to 25 a run (so a run stays under the free plan's 50 outbound
+requests and D1 queries). A failed delivery is retried after 2, 4, 8 and 16 minutes; five deliveries in a row that fail
+switch the subscription off, and switched-off subscriptions are deleted after 30 days. Cost is negligible: about 5 D1
+row writes per delivery.
 
 ## Adding a world
 

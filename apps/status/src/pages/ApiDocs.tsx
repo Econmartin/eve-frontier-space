@@ -197,10 +197,12 @@ export function ApiDocsPage() {
           Webhooks
         </h3>
         <p className="mt-1 text-muted">
-          <code>POST /status/api/v1/subscriptions</code> with <code>{'{"url":"https://…"}'}</code> returns an id and a secret. Each delivery is a POST of{' '}
-          <code>{'{type, created_at, data, source}'}</code> with <code>X-Status-Signature: sha256=HMAC(secret, body)</code>. Types: incident.opened, incident.updated,
-          incident.resolved, world.redeployed, world.upgraded. Unsubscribe with <code>DELETE /status/api/v1/subscriptions/&lt;id&gt;</code> and{' '}
-          <code>Authorization: Bearer &lt;secret&gt;</code>.
+          <code>POST /status/api/v1/subscriptions</code> with <code>{'{"url":"https://…"}'}</code> as JSON. We first POST{' '}
+          <code>{'{"type":"subscription.verify","challenge":"…"}'}</code> to your URL, and it must reply 2xx with the challenge in the body; only then is it stored and you
+          get an id and a secret (shown once). Each delivery is a POST of <code>{'{type, created_at, data, source}'}</code> with <code>X-Status-Timestamp</code>,{' '}
+          <code>X-Status-Delivery</code> and <code>X-Status-Signature: sha256=HMAC(secret, "&lt;timestamp&gt;.&lt;body&gt;")</code>: check it, and reject anything older
+          than 5 minutes or a delivery ID you have seen. Types: incident.opened, incident.updated, incident.resolved, world.redeployed, world.upgraded. Unsubscribe with{' '}
+          <code>DELETE /status/api/v1/subscriptions/&lt;id&gt;</code> and <code>Authorization: Bearer &lt;secret&gt;</code>.
         </p>
       </section>
     </div>
