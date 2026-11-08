@@ -207,6 +207,12 @@ export async function events(c: Ctx, limit = 20): Promise<WorldEvent[]> {
   return results.map((e) => ({ id: e.id, at: iso(e.ts)!, tenant: e.tenant, kind: e.kind, body: e.body, detail: e.detail ? JSON.parse(e.detail) : {} }));
 }
 
+/** Which components have history reconstructed from the chain, and for which period (set by scripts/backfill.ts). */
+export async function reconstructed(c: Ctx): Promise<{ from: string; to: string; components: string[]; method: string } | null> {
+  const b = await metaGet<{ from: string; to: string; components: string[]; method: string }>(c.db, 'backfill');
+  return b ? { from: b.from, to: b.to, components: b.components, method: b.method } : null;
+}
+
 async function metaGet<T>(db: D1Database, key: string): Promise<T | null> {
   const r = await db.prepare('SELECT value FROM meta WHERE key = ?').bind(key).first<{ value: string }>();
   return r ? (JSON.parse(r.value) as T) : null;

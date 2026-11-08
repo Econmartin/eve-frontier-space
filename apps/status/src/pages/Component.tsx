@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router';
-import { RANGES, type Bucket, type ComponentStatus, type DayRollup, type Incident, type RangeKey } from '../../shared/status.ts';
+import { RANGES, type Reconstructed, type Bucket, type ComponentStatus, type DayRollup, type Incident, type RangeKey } from '../../shared/status.ts';
 import { Legend, StatusLabel } from '../components/Status.tsx';
 import { bucketSegments, dayLevel, SegmentBar, UptimeBar, useBucketTime } from '../components/UptimeBar.tsx';
 import { API, formatDay, pct, useFormatTime, usePoll } from '../lib.tsx';
 import { IncidentCard } from './History.tsx';
-import { Loading } from './Overview.tsx';
+import { Loading, ReconstructedNote } from './Overview.tsx';
 
 type View = RangeKey | '90d';
 const VIEWS: { key: View; label: string; detail: string }[] = [
@@ -194,7 +194,7 @@ export function ComponentPage() {
   const { id } = useParams();
   const [params, setParams] = useSearchParams();
   const view: View = isView(params.get('range')) ? (params.get('range') as View) : '24h';
-  const comp = usePoll<{ component: ComponentStatus; days: DayRollup[] }>(`${API}/components/${id}`);
+  const comp = usePoll<{ component: ComponentStatus; days: DayRollup[]; reconstructed: Reconstructed | null }>(`${API}/components/${id}`);
   const incs = usePoll<{ incidents: Incident[] }>(`${API}/incidents?limit=200`);
   useFormatTime(); // re-render on the UTC/local toggle
   const title = comp.data ? `${comp.data.component.group} ${comp.data.component.name}` : 'Component';
@@ -236,8 +236,9 @@ export function ComponentPage() {
         <div id="range-panel" role="tabpanel" aria-labelledby={`tab-${view}`}>
           <p className="mb-8 text-xs text-muted">Showing the {VIEWS.find((v) => v.key === view)!.detail}. Checks run once a minute.</p>
           {view === '90d' ? <DayView c={c} days={comp.data.days} incidents={map} /> : <BucketView key={view} c={c} range={view} />}
-          <div className="mt-4">
+          <div className="mt-4 space-y-2">
             <Legend />
+            <ReconstructedNote r={comp.data.reconstructed} only={c.id} />
           </div>
         </div>
       </section>

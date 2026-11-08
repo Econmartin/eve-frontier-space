@@ -104,6 +104,14 @@ export interface Incident {
   updates: IncidentUpdate[];
 }
 
+/** History before live monitoring began, rebuilt from the chain for some components (null when there is none). */
+export interface Reconstructed {
+  from: string;
+  to: string;
+  components: string[];
+  method: string;
+}
+
 export interface WorldEvent {
   id: number;
   at: string;

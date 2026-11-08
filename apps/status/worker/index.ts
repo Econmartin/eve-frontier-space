@@ -118,7 +118,7 @@ async function route(request: Request, url: URL, p: string, env: Env, db: D1Data
         const s = await api.summary(c);
         const current = s.groups.flatMap((g) => g.components).find((x) => x.id === info.id)!;
         const days = (await api.history(c, [info.id], 90))[info.id];
-        return json({ ...api.envelope(c), component: current, days });
+        return json({ ...api.envelope(c), component: current, days, reconstructed: await api.reconstructed(c) });
       }
       const samp = r.match(/^\/components\/([a-z0-9-]+)\/samples$/);
       if (samp) {
@@ -143,7 +143,7 @@ async function route(request: Request, url: URL, p: string, env: Env, db: D1Data
         const id = q.get('component');
         if (id && !COMPONENT_BY_ID.has(id)) throw new api.HttpError(404, `unknown component: ${id}`);
         const ids = id ? [id] : COMPONENTS.map((x) => x.id);
-        return json({ ...api.envelope(c), days, history: await api.history(c, ids, days) });
+        return json({ ...api.envelope(c), days, history: await api.history(c, ids, days), reconstructed: await api.reconstructed(c) });
       }
     }
     if (r === '/subscriptions' && m === 'POST') {

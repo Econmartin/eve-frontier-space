@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
-import { LEVEL_LABEL, LEVELS, worst, type Bucket, type ComponentStatus, type DayRollup, type Incident, type Summary, type WorldEvent } from '../../shared/status.ts';
+import { LEVEL_LABEL, LEVELS, worst, type Bucket, type ComponentStatus, type DayRollup, type Incident, type Reconstructed, type Summary, type WorldEvent } from '../../shared/status.ts';
 import { Subscribe } from '../components/Layout.tsx';
 import { Legend, StatusIcon, StatusLabel } from '../components/Status.tsx';
 import { HourBar, UptimeBar } from '../components/UptimeBar.tsx';
@@ -9,7 +9,7 @@ import { IncidentCard } from './History.tsx';
 
 export function useStatusData() {
   const summary = usePoll<Summary>(`${API}/summary`);
-  const history = usePoll<{ history: Record<string, DayRollup[]> }>(`${API}/history?days=90`, 300_000);
+  const history = usePoll<{ history: Record<string, DayRollup[]>; reconstructed: Reconstructed | null }>(`${API}/history?days=90`, 300_000);
   const incidents = usePoll<{ incidents: Incident[] }>(`${API}/incidents?limit=200`);
   const incidentMap = new Map((incidents.data?.incidents ?? []).map((i) => [i.id, i]));
   return { summary, history, incidents, incidentMap };
@@ -235,7 +235,27 @@ export function OverviewPage() {
       </div>
       <Groups s={s} history={history.data?.history} recent={view === '24h' ? recent.data?.components : null} incidents={incidentMap} />
       <Legend />
+      <ReconstructedNote r={history.data?.reconstructed ?? null} s={s} />
     </div>
+  );
+}
+
+/** Says which bars before live monitoring began were rebuilt from the chain, and that the rest have no data then. */
+export function ReconstructedNote({ r, s, only }: { r: Reconstructed | null; s?: Summary; only?: string }) {
+  const f = useFormatTime();
+  if (!r) return null;
+  if (only && !r.components.includes(only)) {
+    return <p className="text-xs text-muted">Live monitoring began {f.dateTime(r.to)}; there is no data for this component before then.</p>;
+  }
+  const names = s
+    ? s.groups.flatMap((g) => g.components.filter((c) => r.components.includes(c.id)).map((c) => `${c.world ? g.name + ' ' : ''}${c.name.toLowerCase()}`))
+    : [];
+  return (
+    <p className="text-xs text-muted">
+      Live monitoring began {f.dateTime(r.to)}. Before that, {only ? 'this history is' : `${names.join(', ')} history is`} reconstructed from the Sui testnet
+      chain (checkpoint timestamps and sponsored world transactions) back to {f.dateTime(r.from)}, using the same thresholds and incident rules
+      {only ? '' : '; the other components have no data before live monitoring began'}.
+    </p>
   );
 }
 

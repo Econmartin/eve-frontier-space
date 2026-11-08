@@ -58,7 +58,7 @@ All thresholds live in [`worker/config.ts`](worker/config.ts).
 |---|---|---|---|---|---|
 | Sui testnet | Checkpoints | Timestamp of the latest checkpoint (Sui GraphQL) | newer than 60 s | 60 s to 5 min | older than 5 min |
 | Sui testnet | GraphQL endpoint | The checkpoint query: HTTP status and latency | 200 in under 2 s | 200 in 2 s or more | error or timeout on all 3 tries (10 s each) |
-| World | Game server | Age of the newest world transaction whose gas was paid by a sponsor in the world's AdminACL | Stillness: under 10 min; Utopia: under 20 min | Stillness: 10 to 20 min; Utopia: 20 to 45 min | Stillness: over 20 min; Utopia: over 45 min |
+| World | Game server | Age of the newest world transaction whose gas was paid by a sponsor in the world's AdminACL | Stillness: under 10 min; Utopia: under 35 min | Stillness: 10 to 20 min; Utopia: 35 to 45 min | Stillness: over 20 min; Utopia: over 45 min |
 | World | World API | `GET /health` answers `{"ok":true}` | in under 2 s | in 2 s or more | error, timeout or `ok` not true on all 3 tries |
 | World | World contracts | The package the monitor checks equals `published-at` under `[published.testnet_<world>]` in the upstream `contracts/world/Published.toml` | match | mismatch: the world was redeployed (or the monitor is pinned) | — |
 | World | Sponsor gas | SUI balance of each sponsor that paid for a world transaction in the last 24 h (all listed sponsors if none did) | lowest at or above the low mark | below the low mark (Stillness 100 SUI, Utopia 5 SUI) | below 0.1 SUI, or the AdminACL lists no sponsors |
@@ -69,8 +69,10 @@ Why these numbers:
   unusual.
 * **Stillness game server**: one 4.5-hour sample on 8 Nov 2026 had a median gap of 5 s between sponsored transactions,
   a 99th percentile of 2 min and a longest gap of 7 min.
-* **Utopia game server**: sponsored transactions arrived exactly every 15 minutes on 8 Nov 2026, which looks like a
-  scheduled job rather than players.
+* **Utopia game server**: its sponsored transactions come from a job that runs every 15 minutes rather than from
+  players. The brief started it at Degraded after 20 minutes, but the chain history (29 Sep to 8 Nov 2026) shows the job
+  skips one run about once a day, which made a 12-minute incident each time. Degraded now starts at 35 minutes: one
+  skipped run is tolerated, two in a row are flagged.
 * **Sponsor gas**: a world transaction costs about 0.001 SUI net. Stillness runs a few hundred to ~700 an hour, so
   100 SUI is roughly a week of gas. 0.1 SUI cannot cover the gross storage cost of a typical transaction (~0.03 SUI) for long.
 
@@ -180,6 +182,27 @@ To pin a world to a specific package (for testing), set `STATUS_PIN_<TENANT>` to
 `npx wrangler dev --var STATUS_PIN_STILLNESS:0x8b8a46ed766fa1358ce7c5c51f6a164b13d627a63e45343f69ed0ba0446c1aa1`.
 With the old Stillness package the game server goes Offline (its last transaction is from 29 Sep 2026) and World contracts
 shows the mismatch.
+
+## History before live monitoring (backfill)
+
+Live monitoring began 8 Nov 2026 10:21 UTC. Before that, `sui-checkpoints` and both game servers were reconstructed
+back to 29 Sep 2026 by [`scripts/backfill.ts`](scripts/backfill.ts), from Sui testnet history, using the same thresholds and
+incident rules as the live checks:
+
+* Checkpoints: timestamps sampled about every 10 minutes, with a closer look (every 50 checkpoints) wherever a stretch
+  ran slow. No stall of a minute or more was found.
+* Game servers: every world transaction in 5-minute windows, keeping those paid by an AdminACL sponsor.
+* Incidents found are stored like live ones, with updates that say "Reconstructed from chain history".
+* Gap histograms are filled for those days too, so `/worlds/{tenant}/gaps` already has 40 days of data.
+
+The other components were not being probed then and show no data. The API marks this with a `reconstructed` field on
+`/history` and `/components/{id}`, and the page says so under the bars. The script writes SQL to review before applying;
+it adds to rollups, so run it only once per period:
+
+```bash
+node apps/status/scripts/backfill.ts --from 2026-09-29T00:00:00Z --to <first live sample> --out backfill.sql
+npx wrangler d1 execute eve-frontier-status --remote --file=backfill.sql
+```
 
 ## Running it
 

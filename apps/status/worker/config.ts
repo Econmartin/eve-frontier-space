@@ -67,8 +67,9 @@ export const WORLDS: WorldConfig[] = [
     publishedKey: 'testnet_utopia',
     // The old Utopia World API host no longer resolves and no replacement is known.
     worldApi: null,
-    // Utopia's sponsored transactions arrive every 15 minutes, like a scheduled job.
-    heartbeat: { degradedAfterSec: 20 * 60, offlineAfterSec: 45 * 60 },
+    // Utopia's sponsored transactions come from a job that runs every 15 minutes and skips a run about once a day
+    // (29 Sep - 8 Nov 2026). Degraded at 35 min tolerates one skipped run and flags two in a row.
+    heartbeat: { degradedAfterSec: 35 * 60, offlineAfterSec: 45 * 60 },
     sponsorGas: { lowSui: 5, emptySui: 0.1 },
     maintenance: [],
   },
