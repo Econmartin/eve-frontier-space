@@ -242,4 +242,9 @@ Deploying: `npx wrangler d1 execute eve-frontier-status --remote --file=apps/sta
 Worker as usual. Cron Triggers need a Worker deploy (`wrangler deploy`); Cloudflare Pages cannot run them.
 
 Limits on the Workers free plan: each run makes about 8 to 12 outbound requests and about 10 D1 statements; samples cost
-roughly 13,000 row writes a day plus the same again for rollups.
+roughly 13,000 row writes a day plus the same again for rollups, and meta rows are only rewritten when their value changes.
+
+D1's free limits (5 million rows read and 100,000 rows written a day) are shared by every database on the account, so
+going over also breaks the site's other D1 pages until 00:00 UTC. D1 bills every row a query *scans*, not just the ones it
+returns, so every query on `samples` must name the component(s): its key is `(component, ts)`, and a filter on `ts` alone
+scans all 14 days (about 180,000 rows). Run once a minute, that alone was ~260 million rows read a day.
