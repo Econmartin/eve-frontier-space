@@ -18,6 +18,13 @@ const CORS = {
   'access-control-max-age': '86400',
 };
 const EDGE_TTL = 30;
+// Longer edge caching where the data changes slowly, so visitors in the same region share one D1 read. Browsers still
+// keep a response for EDGE_TTL at most.
+const EDGE_TTL_BY_PATH: [RegExp, number][] = [
+  [/^\/status\/api\/v1\/(history|events|recent)$/, 300],
+  [/^\/status\/api\/v1\/worlds\/[a-z0-9-]+\/gaps$/, 3600],
+  [/^\/status\/api\/v1\/components\/[a-z0-9-]+\/samples$/, 60],
+];
 
 const json = (data: unknown, status = 200, headers: Record<string, string> = {}) =>
   new Response(JSON.stringify(data, null, 2), {
@@ -25,8 +32,9 @@ const json = (data: unknown, status = 200, headers: Record<string, string> = {})
     headers: { 'content-type': 'application/json; charset=utf-8', ...headers },
   });
 
-const cacheable = (r: Response) => {
-  r.headers.set('cache-control', `public, max-age=${EDGE_TTL}, s-maxage=${EDGE_TTL}`);
+const cacheable = (r: Response, path: string) => {
+  const edge = EDGE_TTL_BY_PATH.find(([re]) => re.test(path))?.[1] ?? EDGE_TTL;
+  r.headers.set('cache-control', `public, max-age=${EDGE_TTL}, s-maxage=${edge}`);
   return r;
 };
 
@@ -97,7 +105,7 @@ export async function handleStatus(request: Request, env: Env, ctx: ExecutionCon
   }
   if (request.method === 'GET' || request.method === 'HEAD') for (const [k, v] of Object.entries(CORS)) res.headers.set(k, v);
   if (publicGet && res.status === 200) {
-    cacheable(res);
+    cacheable(res, p);
     if (cache) ctx.waitUntil(cache.put(request.url, res.clone()));
   }
   return res;
