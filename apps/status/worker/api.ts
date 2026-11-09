@@ -67,12 +67,14 @@ interface SampleRow {
 async function latestSamples(c: Ctx): Promise<Map<string, SampleRow>> {
   if (c.lastRun == null) return new Map();
   // The newest sample per component (all components are written together, but be robust to a partial run).
+  // Primary-key lookups per component: filtering on ts alone would scan the whole table, and D1 bills every row scanned
+  // (~27 rows read instead of every sample). json_each rather than UNION ALL: D1 caps the terms in a compound SELECT.
   const { results } = await c.db
     .prepare(
-      `SELECT s.* FROM samples s JOIN (SELECT component, MAX(ts) AS ts FROM samples WHERE ts > ? GROUP BY component) m
-       ON s.component = m.component AND s.ts = m.ts`,
+      `SELECT s.* FROM json_each(?) j JOIN samples s
+       ON s.component = j.value AND s.ts = (SELECT MAX(ts) FROM samples WHERE component = j.value AND ts > ?)`,
     )
-    .bind(c.lastRun - 30 * 60_000)
+    .bind(JSON.stringify(COMPONENTS.map((x) => x.id)), c.lastRun - 30 * 60_000)
     .all<SampleRow>();
   return new Map(results.map((r) => [r.component, r]));
 }

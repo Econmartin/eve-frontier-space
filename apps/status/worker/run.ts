@@ -35,7 +35,8 @@ export async function loadMeta(db: D1Database): Promise<Meta> {
       }
     },
     set: (k, v) => void changed.set(k, JSON.stringify(v)),
-    dirty: () => [...changed.entries()],
+    // Only keys whose value actually changed: every row written counts against D1's daily write limit.
+    dirty: () => [...changed.entries()].filter(([k, v]) => m.get(k) !== v),
   };
 }
 
@@ -170,10 +171,12 @@ export async function runCron(env: Env, deps?: Deps): Promise<void> {
   const day = dayOf(ts);
 
   // Recent samples (before this run) and open incidents, for the incident decisions.
+  // The component list matters: samples' key is (component, ts), so filtering on ts alone scans the whole table, and D1
+  // bills every row scanned. Once a minute over 14 days of samples that is hundreds of millions of rows read a day.
   const [recentRows, openRows, histRows] = await Promise.all([
     db
-      .prepare('SELECT component, status FROM samples WHERE ts > ? ORDER BY ts DESC')
-      .bind(ts - 20 * 60_000)
+      .prepare(`SELECT component, status FROM samples WHERE component IN (${COMPONENTS.map(() => '?').join(',')}) AND ts > ? ORDER BY ts DESC`)
+      .bind(...COMPONENTS.map((c) => c.id), ts - 20 * 60_000)
       .all<{ component: string; status: Level }>(),
     db.prepare("SELECT id, component, impact, automatic FROM incidents WHERE status = 'open'").all<{ id: number; component: string; impact: Level; automatic: number }>(),
     db.prepare('SELECT tenant, buckets, n, max_gap FROM gap_hist WHERE day = ?').bind(day).all<{ tenant: string; buckets: string; n: number; max_gap: number }>(),
