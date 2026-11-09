@@ -7,6 +7,7 @@ import { checkWorld, type WorldCursor } from './checks/world.ts';
 import { checkWorldApi } from './checks/worldApi.ts';
 import { COMPONENTS, COMPONENT_BY_ID, pinnedPackage, RESOLVE_EVERY_MS, RETENTION, WORLDS, type Env } from './config.ts';
 import { addGaps, emptyHist, type GapHist } from './gaps.ts';
+import { HOURLY_DDL, hourlyFromSamples, hourlyUpsert, HOUR_MS } from './hourly.ts';
 import { liveDeps, type Deps } from './http.ts';
 import { decide } from './incidents.ts';
 import { fetchUpstream, resolveWorld, type ResolvedWorld, type Upstream, type WorldChange } from './resolve.ts';
@@ -182,7 +183,22 @@ export async function runCron(env: Env, deps?: Deps): Promise<void> {
     db.prepare('SELECT tenant, buckets, n, max_gap FROM gap_hist WHERE day = ?').bind(day).all<{ tenant: string; buckets: string; n: number; max_gap: number }>(),
   ]);
 
+  // Hourly rollups: the first run after deploy creates and fills them from raw samples (one statement, once). Until that
+  // has worked the API keeps reading raw samples, and nothing is added to them, so a failure here never loses a run.
+  let hourlyReady = meta.get<boolean>('hourly_ready') === true;
+  if (!hourlyReady) {
+    hourlyReady = await safe(
+      async () => {
+        await db.batch([db.prepare(HOURLY_DDL), hourlyFromSamples(db, ts - RETENTION.hourlyDays * 86400_000 - HOUR_MS)]);
+        return true;
+      },
+      () => false,
+    );
+    if (hourlyReady) meta.set('hourly_ready', true);
+  }
+
   const stmts: D1PreparedStatement[] = [];
+  if (hourlyReady) stmts.push(...multiRow(db, ...hourlyUpsert(ts, out.results)));
   // Samples and today's rollups (one minute added to the right status column), as multi-row inserts.
   stmts.push(
     ...multiRow(
@@ -325,6 +341,7 @@ export async function runDaily(db: D1Database, now: number) {
       .bind(yDay, yStart, today),
     db.prepare('DELETE FROM samples WHERE ts < ?').bind(now - RETENTION.samplesDays * 86400_000),
     db.prepare('DELETE FROM rollups WHERE day < ?').bind(dayOf(now - RETENTION.rollupsDays * 86400_000)),
+    db.prepare('DELETE FROM hourly WHERE hour < ?').bind(now - RETENTION.hourlyDays * 86400_000 - HOUR_MS),
     db.prepare('DELETE FROM gap_hist WHERE day < ?').bind(dayOf(now - RETENTION.rollupsDays * 86400_000)),
     db.prepare('DELETE FROM deliveries WHERE created_at < ?').bind(now - 2 * 86400_000),
     db.prepare('DELETE FROM subscribe_attempts WHERE ts < ?').bind(now - 2 * 86400_000),

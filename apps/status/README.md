@@ -23,7 +23,7 @@ A Cron Trigger runs every minute (`[triggers]` in `wrangler.toml`). Each run:
    or a pin changed). If a world's package moved, it records a **World redeployed** (or upgraded) event and switches the
    checks to the new package.
 2. Runs every check. Each is wrapped so one failing never stops the others; an unexpected error gives **Unknown**.
-3. Stores one sample per component, adds one minute to today's rollup, and opens or closes incidents.
+3. Stores one sample per component, adds one minute to today's and this hour's rollups, and opens or closes incidents.
 4. Once a day: recomputes yesterday's rollups from the raw samples, deletes samples older than 14 days and rollups older
    than 400 days.
 5. Sends up to 10 pending webhook deliveries.
@@ -107,7 +107,9 @@ The overview bars are one segment per UTC day. Each component's page (`/status/h
 look: **1 h** (one segment per minute, i.e. every check), **6 h** (per 5 minutes), **24 h** (per 15 minutes, the default),
 **7 d** (per hour) and **90 d** (per day). Each range has a table underneath that can be filtered to problems only, with
 the check's message and, for the GraphQL endpoint and World API, mean latency. The range is in the URL (`?range=1h`) so it
-can be linked. These views come from the raw samples, so they reach back 14 days.
+can be linked. 1 h, 6 h and 24 h come from the raw samples; 7 d and the overview's "24 hours" view come from the hourly
+rollups (`hourly`, kept 8 days), so a poll reads a couple of hundred rows instead of tens of thousands. The first cron
+run after deploying creates and fills `hourly` from the raw samples; until then those views read raw samples.
 
 ## Incidents
 
@@ -242,9 +244,14 @@ Deploying: `npx wrangler d1 execute eve-frontier-status --remote --file=apps/sta
 Worker as usual. Cron Triggers need a Worker deploy (`wrangler deploy`); Cloudflare Pages cannot run them.
 
 Limits on the Workers free plan: each run makes about 8 to 12 outbound requests and about 10 D1 statements; samples cost
-roughly 13,000 row writes a day plus the same again for rollups, and meta rows are only rewritten when their value changes.
+roughly 13,000 row writes a day, plus the same again for each of the daily and hourly rollups (about 45,000 in all), and
+meta rows are only rewritten when their value changes.
 
 D1's free limits (5 million rows read and 100,000 rows written a day) are shared by every database on the account, so
 going over also breaks the site's other D1 pages until 00:00 UTC. D1 bills every row a query *scans*, not just the ones it
 returns, so every query on `samples` must name the component(s): its key is `(component, ts)`, and a filter on `ts` alone
-scans all 14 days (about 180,000 rows). Run once a minute, that alone was ~260 million rows read a day.
+scans all 14 days (about 180,000 rows). Run once a minute, that alone was ~260 million rows read a day. Likewise, views
+that span many hours read the hourly rollups rather than aggregating raw samples on every poll.
+
+When the limit is hit, every D1 query fails, so every status API call answers `500 {"error":"internal error"}` and the
+cron stops storing samples until the reset.

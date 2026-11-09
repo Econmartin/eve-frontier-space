@@ -25,6 +25,7 @@ import { mergeHists, quantile, suggestThresholds, GAP_EDGES, type GapHist } from
 import type { ResolvedWorld } from './resolve.ts';
 import { dayOf } from './run.ts';
 import { bucketWindow, buildBuckets, type AggRow, type ProblemRow } from './buckets.ts';
+import { hourlyAsSamples, type HourlyRow } from './hourly.ts';
 import { challengeEndpoint, MAX_ATTEMPTS_PER_IP_PER_DAY, MAX_SUBSCRIBERS, validWebhookUrl } from './webhooks.ts';
 import type { Deps } from './http.ts';
 
@@ -322,17 +323,38 @@ async function bucketsFor(c: Ctx, components: string[], minutes: number, bucketM
   );
 }
 
+/**
+ * Hour-sized buckets from the hourly rollups (a row per component per hour) instead of raw samples: the 24-hour
+ * overview reads ~220 rows instead of ~26,000. Falls back to raw samples until the cron has filled the rollups.
+ */
+async function hourBucketsFor(c: Ctx, components: string[], minutes: number): Promise<Record<string, Bucket[]>> {
+  if (!(await metaGet<boolean>(c.db, 'hourly_ready'))) return bucketsFor(c, components, minutes, 60, false);
+  const { start, size, n } = bucketWindow(c.now, minutes, 60);
+  const { results } = await c.db
+    .prepare(`SELECT * FROM hourly WHERE component IN (${components.map(() => '?').join(',')}) AND hour >= ?`)
+    .bind(...components, start)
+    .all<HourlyRow>();
+  return Object.fromEntries(
+    components.map((id) => {
+      const { agg, problems } = hourlyAsSamples(start, size, results.filter((r) => r.component === id));
+      return [id, buildBuckets(start, size, n, agg, problems)];
+    }),
+  );
+}
+
 /** One component: 1 h by minute, 6 h by 5 min, 24 h by 15 min, 7 d by hour. */
 export async function samples(c: Ctx, component: string, range: string): Promise<{ range: RangeKey; bucket_minutes: number; buckets: Bucket[] }> {
   if (!(range in RANGES)) throw new HttpError(400, `range must be one of ${Object.keys(RANGES).join(', ')}`);
   const r = RANGES[range as RangeKey];
-  const buckets = (await bucketsFor(c, [component], r.minutes, r.bucketMinutes, range === '1h'))[component];
+  const buckets = (
+    r.bucketMinutes === 60 ? await hourBucketsFor(c, [component], r.minutes) : await bucketsFor(c, [component], r.minutes, r.bucketMinutes, range === '1h')
+  )[component];
   return { range: range as RangeKey, bucket_minutes: r.bucketMinutes, buckets };
 }
 
 /** Every component over the last 24 hours, one bucket per hour: the overview's "24 hours" view. */
 export async function recent(c: Ctx): Promise<{ hours: number; bucket_minutes: number; components: Record<string, Bucket[]> }> {
-  return { hours: 24, bucket_minutes: 60, components: await bucketsFor(c, COMPONENTS.map((x) => x.id), 24 * 60, 60, false) };
+  return { hours: 24, bucket_minutes: 60, components: await hourBucketsFor(c, COMPONENTS.map((x) => x.id), 24 * 60) };
 }
 
 // ── RSS ─────────────────────────────────────────────────────────────────────────

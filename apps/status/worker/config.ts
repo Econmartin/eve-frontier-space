@@ -22,7 +22,7 @@ export const CHECKPOINT_THRESHOLDS = { degradedAfterSec: 60, offlineAfterSec: 30
 export const INCIDENT_OPEN_AFTER = 3;
 export const INCIDENT_CLOSE_AFTER = 5;
 
-export const RETENTION = { samplesDays: 14, rollupsDays: 400 };
+export const RETENTION = { samplesDays: 14, hourlyDays: 8, rollupsDays: 400 };
 export const RESOLVE_EVERY_MS = 6 * 3600_000;
 export const STALE_AFTER_MS = 3 * 60_000;
 

@@ -26,6 +26,26 @@ CREATE TABLE IF NOT EXISTS rollups (
   PRIMARY KEY (component, day)
 ) WITHOUT ROWID;
 
+-- Per component per UTC hour: minutes at each status, latency, and the newest message at each problem level. Incremented
+-- every run; feeds the 24-hour overview and the 7-day component view without reading raw samples. Kept 8 days.
+-- The cron also creates and fills this table on its first run if it is missing (worker/hourly.ts, same definition).
+CREATE TABLE IF NOT EXISTS hourly (
+  component       TEXT    NOT NULL,
+  hour            INTEGER NOT NULL,      -- epoch ms of the hour's start
+  operational     INTEGER NOT NULL DEFAULT 0,
+  degraded        INTEGER NOT NULL DEFAULT 0,
+  offline         INTEGER NOT NULL DEFAULT 0,
+  maintenance     INTEGER NOT NULL DEFAULT 0,
+  unknown         INTEGER NOT NULL DEFAULT 0,
+  lat_sum         INTEGER NOT NULL DEFAULT 0,
+  lat_n           INTEGER NOT NULL DEFAULT 0,
+  msg_degraded    TEXT,
+  msg_offline     TEXT,
+  msg_maintenance TEXT,
+  msg_unknown     TEXT,
+  PRIMARY KEY (component, hour)
+) WITHOUT ROWID;
+
 CREATE TABLE IF NOT EXISTS incidents (
   id          INTEGER PRIMARY KEY AUTOINCREMENT,
   component   TEXT    NOT NULL,
