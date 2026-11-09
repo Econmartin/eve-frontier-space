@@ -51,14 +51,13 @@ dist/finance/   ← finance app (serves /finance/*)
 
 ## Deployment
 
-Deployed to **Cloudflare Pages** with a Workers script for SPA routing.
+Deployed as one **Cloudflare Worker** (`wrangler.toml`): `_worker.js` serves the APIs (including `/status`) and SPA
+fallbacks, static files come from `dist/`, and a Cron Trigger runs the status checks every minute.
 
 ```bash
-# Deploy (Cloudflare Wrangler)
-npx wrangler pages deploy dist/
+npm run build
+npx wrangler deploy
 ```
-
-`worker.js` handles SPA fallback routing: unknown paths under `/move/*` and `/finance/*` are served their respective `index.html`.
 
 ## Smart Contract
 

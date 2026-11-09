@@ -180,7 +180,11 @@ export async function runCron(env: Env, deps?: Deps): Promise<void> {
       .bind(...COMPONENTS.map((c) => c.id), ts - 20 * 60_000)
       .all<{ component: string; status: Level }>(),
     db.prepare("SELECT id, component, impact, automatic FROM incidents WHERE status = 'open'").all<{ id: number; component: string; impact: Level; automatic: number }>(),
-    db.prepare('SELECT tenant, buckets, n, max_gap FROM gap_hist WHERE day = ?').bind(day).all<{ tenant: string; buckets: string; n: number; max_gap: number }>(),
+    // By key (tenant, day): filtering on day alone would scan every day kept (up to 400 per world).
+    db
+      .prepare(`SELECT tenant, buckets, n, max_gap FROM gap_hist WHERE tenant IN (${WORLDS.map(() => '?').join(',')}) AND day = ?`)
+      .bind(...WORLDS.map((w) => w.tenant), day)
+      .all<{ tenant: string; buckets: string; n: number; max_gap: number }>(),
   ]);
 
   // Hourly rollups: the first run after deploy creates and fills them from raw samples (one statement, once). Until that
@@ -336,9 +340,9 @@ export async function runDaily(db: D1Database, now: number) {
       .prepare(
         `INSERT INTO rollups (component, day, operational, degraded, offline, maintenance, unknown)
          SELECT component, ?, SUM(status='operational'), SUM(status='degraded'), SUM(status='offline'), SUM(status='maintenance'), SUM(status='unknown')
-         FROM samples WHERE ts >= ? AND ts < ? GROUP BY component`,
+         FROM samples WHERE component IN (${COMPONENTS.map(() => '?').join(',')}) AND ts >= ? AND ts < ? GROUP BY component`,
       )
-      .bind(yDay, yStart, today),
+      .bind(yDay, ...COMPONENTS.map((c) => c.id), yStart, today),
     db.prepare('DELETE FROM samples WHERE ts < ?').bind(now - RETENTION.samplesDays * 86400_000),
     db.prepare('DELETE FROM rollups WHERE day < ?').bind(dayOf(now - RETENTION.rollupsDays * 86400_000)),
     db.prepare('DELETE FROM hourly WHERE hour < ?').bind(now - RETENTION.hourlyDays * 86400_000 - HOUR_MS),
