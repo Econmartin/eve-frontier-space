@@ -94,7 +94,7 @@ export function IndustryShell() {
           </label>}
         </nav>
 
-        {INDUSTRY_FULL && pathname !== '/industry' && !pathname.startsWith('/industry/rocks') && <p className="mb-4 rounded-xl ring-1 ring-amber-500/40 bg-amber-500/5 px-4 py-2 text-sm font-sans">Patch 0.7.6.0 replaced blueprints with schemas. The recipes here are from before the patch and no longer work in game. We're rebuilding them from the new game files.</p>}
+        {INDUSTRY_FULL && pathname !== '/industry' && !pathname.startsWith('/industry/rocks') && <p className="mb-4 rounded-xl ring-1 ring-foreground/10 bg-foreground/[0.03] px-4 py-2 text-sm font-sans text-muted-foreground">Updated for 0.7.6.0 schemas. Bulk materials are measured in kg, and an "Any … material" slot takes any material whose properties fit that trait.</p>}
         {!industryDataReady && <p className="mb-4 rounded-xl ring-1 ring-amber-500/40 bg-amber-500/5 px-4 py-2 text-sm font-sans">Recipe data could not be loaded just now, so most of these tools will look empty. My rocks still works. Try reloading in a moment.</p>}
         <Outlet />
       </main>

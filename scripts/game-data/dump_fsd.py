@@ -7,8 +7,13 @@ import sys, os, json, pickle, re
 
 build_dir, res_dir, out_dir = sys.argv[1:4]
 wanted = sys.argv[4:] or [
-    "industry_blueprints", "industry_facilities", "typematerials",
-    "recipe", "recipeinput", "recipeoutput",
+    "industry_facilities", "typematerials",
+    # 0.7.6.0 Digital Chemistry: schemas, trait slots, properties and how outputs are computed
+    "recipe", "recipeinput", "recipeinputtrait", "recipeoutput", "recipefacilities", "recipederivationwiring",
+    "recipeoutputtransform", "recipeoutputtransformbreakpoint", "recipeoutputtransformsource",
+    "recipeoutputyieldbreakpoint", "recipeoutputyieldsource",
+    "property", "propertyderivation", "propertyderivationbreakpoint", "propertyderivationterm",
+    "trait", "traitproperty", "neotypeproperty", "neotypetrait",
     "types", "groups", "categories", "marketgroups", "iconids", "metagroups",
 ]
 

@@ -9,7 +9,7 @@ import dagre from '@dagrejs/dagre';
 import '@xyflow/react/dist/style.css';
 import { cn } from '@/lib/utils';
 import {
-  builtInSpace, defaultRecipeFor, facilityKind, facilityLive, facilityName, fmtTime, isBaseInput, itemName, itemOf, producedBy, recipeAvailable, usedIn, type Recipe,
+  fmtQty, builtInSpace, defaultRecipeFor, facilityKind, facilityLive, facilityName, fmtTime, isBaseInput, itemName, itemOf, producedBy, recipeAvailable, usedIn, type Recipe,
 } from '@/lib/industry';
 import { ItemIcon, useIndustrySettings } from '../parts';
 
@@ -123,13 +123,13 @@ export function buildItemGraph(root: number, o: GraphOptions) {
     if (o.productsOnly) {
       const fac = builtInSpace(r) ? 'in space' : pillFacilities(r, o.showUnavailable)[0] ?? 'unassigned';
       for (const i of r.inputs) if (!inputFilter || inputFilter(i.id)) for (const out of r.outputs) if (out.id !== i.id)
-        addEdge({ id: `${i.id}>${out.id}@${r.id}`, source: addItem(i.id), target: addItem(out.id), label: `${i.qty} → ${out.qty} · ${fac}`, ...EDGE_LABEL, labelStyle: { ...EDGE_LABEL.labelStyle, fontSize: 10 }, style: OUT_STYLE, animated: out.id === root || i.id === root });
+        addEdge({ id: `${i.id}>${out.id}@${r.id}`, source: addItem(i.id), target: addItem(out.id), label: `${fmtQty(i.qty, i.id)} → ${fmtQty(out.qty, out.id)} · ${fac}`, ...EDGE_LABEL, labelStyle: { ...EDGE_LABEL.labelStyle, fontSize: 10 }, style: OUT_STYLE, animated: out.id === root || i.id === root });
       return;
     }
     const k = `r${r.id}`;
     if (!nodes.has(k)) nodes.set(k, { id: k, type: 'recipe', position: { x: 0, y: 0 }, className: 'cursor-default!', data: { recipe: r } });
-    for (const i of r.inputs) if (!inputFilter || inputFilter(i.id)) addEdge({ id: `${k}<${i.id}`, source: addItem(i.id), target: k, label: `${i.qty}`, ...EDGE_LABEL, style: IN_STYLE });
-    for (const out of r.outputs) addEdge({ id: `${k}>${out.id}`, source: k, target: addItem(out.id), label: `${out.qty}`, ...EDGE_LABEL, style: OUT_STYLE, animated: out.id === root });
+    for (const i of r.inputs) if (!inputFilter || inputFilter(i.id)) addEdge({ id: `${k}<${i.id}`, source: addItem(i.id), target: k, label: fmtQty(i.qty, i.id), ...EDGE_LABEL, style: IN_STYLE });
+    for (const out of r.outputs) addEdge({ id: `${k}>${out.id}`, source: k, target: addItem(out.id), label: fmtQty(out.qty, out.id), ...EDGE_LABEL, style: OUT_STYLE, animated: out.id === root });
   };
   addItem(root, true);
   const seenUp = new Set<number>();
@@ -175,7 +175,7 @@ export function buildFacilityGraph(facilityId: number, showUnavailable: boolean,
     for (const [pid, p] of products) {
       const k = addItem(pid, sub(p), true);
       edges.push({ id: `f>${pid}`, source: 'f', target: k, style: OUT_STYLE });
-      for (const i of p.r.inputs) if (i.id !== pid) edges.push({ id: `${i.id}>${pid}@${p.r.id}`, source: addItem(i.id, undefined, true), target: k, label: `${i.qty}`, ...EDGE_LABEL, style: IN_STYLE });
+      for (const i of p.r.inputs) if (i.id !== pid) edges.push({ id: `${i.id}>${pid}@${p.r.id}`, source: addItem(i.id, undefined, true), target: k, label: fmtQty(i.qty, i.id), ...EDGE_LABEL, style: IN_STYLE });
     }
     return layout([...nodes.values()], edges, { rankdir: 'TB', nodesep: 24, ranksep: 90 });
   }

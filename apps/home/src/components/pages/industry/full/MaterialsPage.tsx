@@ -217,7 +217,7 @@ export function MinePage() {
             </Panel>
           ))}
         </div>
-        <p className="text-xs text-muted-foreground font-sans mt-2">These five come from the client's separate reprocessing table rather than blueprints; yields there are before any skill or facility modifiers.</p>
+        <p className="text-xs text-muted-foreground font-sans mt-2">These five come from the client's separate reprocessing table rather than schemas; yields there are before any skill or facility modifiers.</p>
       </Section>
 
       <Section title="Where belts come in">

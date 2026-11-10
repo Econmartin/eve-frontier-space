@@ -3,7 +3,7 @@ import { Link } from 'react-router';
 import { Factory, Rocket, Search, Ship, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { builtInSpace, FACILITY_KIND_LABEL, facilityKind, facilityName, fmtPrice, fmtTime, industryItems, itemAvailable, itemName, itemOf, recipeAvailable, searchItems, type Item, type Recipe, type RecipeIO } from '@/lib/industry';
+import { builtInSpace, FACILITY_KIND_LABEL, facilityKind, facilityName, fmtPrice, fmtQty, fmtTime, industryItems, itemAvailable, itemName, itemOf, recipeAvailable, searchItems, type Item, type Recipe, type RecipeIO } from '@/lib/industry';
 
 /** Item picture from the client (64 px UI icon, or a 128 px render for ships and structures). */
 export function ItemIcon({ id, size = 24, className }: { id: number; size?: number; className?: string }) {
@@ -20,7 +20,7 @@ export const ItemLink = ({ id, className, icon, iconSize = 20 }: { id: number; c
 );
 
 export const Price = ({ n, per }: { n: number; per?: string }) => <span className="tabular-nums text-[var(--color-ocean-500)] dark:text-[var(--color-ocean-300)]" title="NPC roaming-trade base price from the client; actual trades vary.">{fmtPrice(n)}{per ? <span className="opacity-70"> / {per}</span> : null}</span>;
-export const Qty = ({ n }: { n: number }) => <span className="tabular-nums text-[var(--color-martian-500)] font-semibold">{n.toLocaleString()}</span>;
+export const Qty = ({ n, id }: { n: number; id?: number }) => <span className="tabular-nums text-[var(--color-martian-500)] font-semibold whitespace-nowrap">{fmtQty(n, id)}</span>;
 
 export function IOList({ list, className }: { list: RecipeIO[]; className?: string }) {
   return (
@@ -28,7 +28,7 @@ export function IOList({ list, className }: { list: RecipeIO[]; className?: stri
       {list.map((x) => (
         <li key={x.id} className="flex items-center gap-2 text-sm">
           <ItemIcon id={x.id} size={22} />
-          <Qty n={x.qty} />
+          <Qty n={x.qty} id={x.id} />
           <ItemLink id={x.id} />
         </li>
       ))}
@@ -100,7 +100,7 @@ export function RecipeCard({ recipe, highlight, compact }: { recipe: Recipe; hig
         <div className="min-w-0 flex items-center gap-3">
           <ItemIcon id={title} size={40} className="rounded-lg" />
           <div className="min-w-0">
-            <div className="text-[0.65rem] tracking-[0.16em] uppercase text-muted-foreground">Blueprint {recipe.id}</div>
+            <div className="text-[0.65rem] tracking-[0.16em] uppercase text-muted-foreground">{recipe.kind === 'reprocessing' ? 'Refining schema' : 'Schema'} {recipe.id}</div>
             <div className="font-heading text-lg leading-tight truncate">
               <ItemLink id={title} className={highlight === title ? 'text-[var(--color-martian-500)]' : ''} />
             </div>

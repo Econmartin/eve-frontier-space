@@ -17,7 +17,6 @@ clang -O1 -I"$PYINC" "$HERE/host.c" -o "$HERE/.build/host" \
 "$HERE/.build/host" "$BUILD/code.ccp" "$BUILD/bin64" "$HERE/dump_fsd.py" "$BUILD" "$RESFILES" "$OUT" "${@:2}"
 [ -s "$OUT/typedogma.json" ] || "$HERE/.build/host" "$BUILD/code.ccp" "$BUILD/bin64" "$HERE/dump_fsd.py" "$BUILD" "$RESFILES" "$OUT" typedogma dogmaattributes
 grep -E "^(version|build|branch|codename)" "$BUILD/start.ini" | tr -d '\r' > "$OUT/client_version.txt"
-python3 "$HERE/build_recipes.py" "$OUT"
 
 # build the full dataset for the gitignored /industry pages, then export icons for everything in it
 python3 "$HERE/build_industry_json.py" "$OUT" "$ROOT/apps/home/src/data/full/industry.json"

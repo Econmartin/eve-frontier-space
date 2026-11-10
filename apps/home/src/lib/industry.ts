@@ -11,14 +11,25 @@ import { INDUSTRY_FULL } from '@/config';
 export interface Item {
   id: number; name: string; group: string; category: string;
   icon?: string; price?: number; published?: boolean; volume?: number | null; mass?: number | null; portionSize?: number | null; description?: string | null; regolith?: boolean;
+  /** 'kg' for bulk materials (measured by mass since 0.7.6.0); counted items have no unit */
+  unit?: 'kg';
+  /** property ranges across the variants the game can produce */
+  props?: { id: number; min: number; max: number }[];
+  /** traits some variant of this item can satisfy */
+  traits?: number[];
+  /** set on the stand-in items for trait-only schema slots ("Any Radome material"); ids are negative */
+  trait?: number;
 }
-export interface RecipeIO { id: number; qty: number }
+/** `trait` is set when a slot accepts any item with that trait; `yieldBy` lists properties the output yield depends on */
+export interface RecipeIO { id: number; qty: number; trait?: number; yieldBy?: number[] }
 export interface RecipeFacility { id: number; maxInputRuns: number; maxOutputRuns: number }
-export interface Recipe { id: number; product: number; time: number; inputs: RecipeIO[]; outputs: RecipeIO[]; facilities: RecipeFacility[] }
+export interface Recipe { id: number; name?: string; kind?: 'manufacturing' | 'reprocessing'; product: number; time: number; inputs: RecipeIO[]; outputs: RecipeIO[]; facilities: RecipeFacility[] }
+export interface Trait { name: string; description?: string | null; needs: { prop: number; min?: number; max?: number }[]; members: number[] }
+export interface Property { name: string; kind: 'physical' | 'specification'; min?: number | null; max?: number | null }
 export interface Facility { id: number; name: string; blueprints: number[] }
 export interface Reprocessing { id: number; portionSize: number | null; materials: RecipeIO[] }
 export interface Rock { id: number; output: number; belt: 'inner' | 'outer' | null }
-interface IndustryData { clientVersion: string; items: Record<string, Item>; recipes: Recipe[]; facilities: Facility[]; reprocessing: Reprocessing[]; rocks?: Rock[]; consumedBy?: Record<string, number[]> }
+interface IndustryData { clientVersion: string; items: Record<string, Item>; recipes: Recipe[]; facilities: Facility[]; reprocessing: Reprocessing[]; rocks?: Rock[]; consumedBy?: Record<string, number[]>; traits?: Record<string, Trait>; properties?: Record<string, Property> }
 
 export interface ChangeBrief { id: number; product: string; time: number; inputs: string[]; outputs: string[]; facilities: string[] }
 export interface ChangeEntry { version: string; date: string; note?: string; counts: Record<string, number>; added: ChangeBrief[]; removed: ChangeBrief[]; changed: { id: number; product: string; before: ChangeBrief; after: ChangeBrief; fields: string[] }[] }
@@ -52,6 +63,17 @@ export const recipeById = new Map<number, Recipe>(recipes.map((r) => [r.id, r]))
 export const facilities: Facility[] = data.facilities;
 export const facilityById = new Map<number, Facility>(facilities.map((f) => [f.id, f]));
 export const reprocessing: Reprocessing[] = data.reprocessing;
+export const traitOf = (id: number): Trait | undefined => data.traits?.[String(id)];
+export const propertyOf = (id: number): Property | undefined => data.properties?.[String(id)];
+/** amount with its unit: bulk materials are in kg, everything else is counted */
+/** m³ for an amount: bulk materials take mass ÷ density (mid-range variant), counted items their per-unit volume */
+export const volumeOf = (id: number, qty: number) => {
+  const it = items.get(id);
+  if (it?.unit !== 'kg') return (it?.volume ?? 0) * qty;
+  const d = it.props?.find((p) => propertyOf(p.id)?.name === 'Density');
+  return d ? qty / ((d.min + d.max) / 2) : 0;
+};
+export const fmtQty = (n: number, id?: number) => `${n.toLocaleString(undefined, { maximumFractionDigits: n < 10 ? 2 : 0 })}${id !== undefined && items.get(id)?.unit === 'kg' ? ' kg' : ''}`;
 /** The asteroid bodies you scan in space (Char, Slag, …) and the regolith each one yields. */
 export const rocks: Rock[] = data.rocks ?? [];
 export const rockFor = (regolithId: number) => rocks.find((r) => r.output === regolithId);
@@ -193,12 +215,14 @@ const liveFacilityCount = (r: Recipe) => (builtInSpace(r) ? 1 : new Set(r.facili
 export const facilityBuildable = (id: number) => producedBy.has(id);
 
 /**
- * Rank recipes for an item: available in game first, primary product first, no repack round-trips,
+ * Rank recipes for an item: available in game first, printing before refining, primary product first, no repack round-trips,
  * most available facilities, then fewest inputs, then shortest run.
  */
 export function rankRecipes(id: number, options: Recipe[]): Recipe[] {
   return [...options].sort((a, b) =>
     Number(recipeAvailable(b)) - Number(recipeAvailable(a))
+    // a build plan prints parts; refining salvage or old stock into them is the fallback
+    || Number(a.kind === 'reprocessing') - Number(b.kind === 'reprocessing')
     || Number(b.product === id) - Number(a.product === id)
     || Number(isRepackCycle(a, id)) - Number(isRepackCycle(b, id))
     || liveFacilityCount(b) - liveFacilityCount(a)

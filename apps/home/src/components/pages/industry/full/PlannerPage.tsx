@@ -5,11 +5,11 @@ import { Badge } from '@/components/ui/badge';
 import { Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
-  buildPlan, builtInSpace, rankRecipes, starterProducts, starterInputs, makeOptions, recipes, valueOf, shownFacilityNames, facilityName, fmtTime, fmtVol, industryItems, itemName, itemOf, producedBy, recipeAvailable, recipeById, summarizePlan, type PlanNode, type Recipe,
+  buildPlan, builtInSpace, rankRecipes, starterProducts, starterInputs, makeOptions, recipes, valueOf, shownFacilityNames, facilityName, fmtQty, fmtTime, fmtVol, volumeOf, industryItems, itemName, itemOf, producedBy, recipeAvailable, recipeById, summarizePlan, type PlanNode, type Recipe,
 } from '@/lib/industry';
 import { Empty, FacilityBadges, IOList, ItemIcon, ItemLink, ItemPicker, NumberField, Panel, Price, Qty, Section, SuggestionChips, addToHold, holdMap, useIndustrySettings, type Holding } from '../parts';
 
-const recipeLabel = (r: Recipe) => `${builtInSpace(r) ? 'built in space' : shownFacilityNames(r).join(' / ') || 'unassigned'}${recipeAvailable(r) ? '' : ' (not in game)'} · ${r.inputs.map((i) => `${i.qty} ${itemName(i.id)}`).join(', ')}`;
+const recipeLabel = (r: Recipe) => `${builtInSpace(r) ? 'built in space' : shownFacilityNames(r).join(' / ') || 'unassigned'}${recipeAvailable(r) ? '' : ' (not in game)'} · ${r.inputs.map((i) => `${fmtQty(i.qty, i.id)} ${itemName(i.id)}`).join(', ')}`;
 
 export function PlanPage() {
   const [params0] = useSearchParams();
@@ -96,14 +96,14 @@ function ShoppingList() {
 }
 
 function Totals({ title, rows, muted }: { title: string; rows: [number, number][]; muted?: boolean }) {
-  const vol = rows.reduce((s, [id, q]) => s + (itemOf(id).volume ?? 0) * q, 0);
+  const vol = rows.reduce((s, [id, q]) => s + volumeOf(id, q), 0);
   return (
     <Panel className="p-4">
       <div className="flex items-baseline justify-between mb-2"><div className="text-[0.65rem] tracking-[0.16em] uppercase text-muted-foreground">{title}</div>{vol > 0 && <div className="text-xs text-foreground/75 tabular-nums">{fmtVol(vol)}</div>}</div>
       <ul className="divide-y divide-foreground/5 text-sm">
         {rows.sort((a, b) => b[1] - a[1]).map(([id, q]) => (
           <li key={id} className={cn('py-1.5 flex items-center justify-between gap-3', muted && 'text-muted-foreground')}>
-            <ItemLink id={id} icon className={muted ? 'text-muted-foreground' : ''} /><Qty n={q} />
+            <ItemLink id={id} icon className={muted ? 'text-muted-foreground' : ''} /><Qty n={q} id={id} />
           </li>
         ))}
       </ul>
@@ -122,7 +122,7 @@ function PlanTree({ node, depth, overrides, owned, onRecipe, onOwned }: { node: 
         {node.children.length ? (
           <button onClick={() => setOpen((o) => !o)} className="text-muted-foreground hover:text-foreground" aria-label={open ? 'collapse' : 'expand'}>{open ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}</button>
         ) : <span className="inline-block size-4" />}
-        <Qty n={node.qty} />
+        <Qty n={node.qty} id={node.item} />
         <ItemLink id={node.item} icon className={cn(!node.recipe && !isOwned && 'text-muted-foreground')} />
         {node.recipe ? (
           <>
@@ -212,7 +212,7 @@ function FromHold() {
                 <table className="w-full text-sm">
                   <thead className="text-[0.65rem] tracking-[0.16em] uppercase text-muted-foreground"><tr className="border-b border-foreground/10"><th className="text-left font-normal px-4 py-2">Product</th><th className="text-left font-normal px-4 py-2">Missing</th><th className="text-right font-normal px-4 py-2">Have / need</th><th className="text-left font-normal px-4 py-2 hidden md:table-cell">Facility</th></tr></thead>
                   <tbody className="divide-y divide-foreground/5">{almost.slice(0, 40).map(({ recipe, missing }) => (
-                    <tr key={recipe.id} className="hover:bg-muted/50"><td className="px-4 py-2"><ItemLink id={recipe.product} icon /></td><td className="px-4 py-2"><ItemLink id={missing[0].id} icon /></td><td className="px-4 py-2 text-right tabular-nums"><span className="text-foreground/75">{missing[0].have.toLocaleString()}</span> / <Qty n={missing[0].need} /></td><td className="px-4 py-2 hidden md:table-cell"><FacilityBadges recipe={recipe} /></td></tr>
+                    <tr key={recipe.id} className="hover:bg-muted/50"><td className="px-4 py-2"><ItemLink id={recipe.product} icon /></td><td className="px-4 py-2"><ItemLink id={missing[0].id} icon /></td><td className="px-4 py-2 text-right tabular-nums"><span className="text-foreground/75">{missing[0].have.toLocaleString()}</span> / <Qty n={missing[0].need} id={missing[0].id} /></td><td className="px-4 py-2 hidden md:table-cell"><FacilityBadges recipe={recipe} /></td></tr>
                   ))}</tbody>
                 </table>
               </Panel>

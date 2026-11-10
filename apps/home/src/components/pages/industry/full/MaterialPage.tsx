@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useSearchParams } from 'react-router';
-import { fmtTime, industryItems, isBaseInput, itemName, itemOf, itemTier, recipeAvailable, usedIn } from '@/lib/industry';
-import { Empty, Select, FacilityBadges, ItemIcon, ItemLink, ItemPicker, Panel, Qty, Section, SuggestionChips, useIndustrySettings, useVisible } from '../parts';
+import { fmtQty, fmtTime, industryItems, itemName, itemOf, producedBy, recipeAvailable, usedIn } from '@/lib/industry';
+import { Empty, Select, FacilityBadges, IOList, ItemIcon, ItemLink, ItemPicker, Panel, Qty, Section, SuggestionChips, useIndustrySettings, useVisible } from '../parts';
 import { GraphPanel, GraphPlaceholder, buildItemGraph } from './graph';
 
 /** Step 2: pick a material, see what it becomes. */
@@ -12,13 +12,14 @@ export function MaterialPage() {
   const setDepth = (v: string) => { const p = new URLSearchParams(params); p.set('depth', v); setParams(p, { replace: true }); };
   const { showUnavailable } = useIndustrySettings();
   const pool = useMemo(() => industryItems.filter((i) => (usedIn.get(i.id) ?? []).some((r) => showUnavailable || recipeAvailable(r))), [showUnavailable]);
-  const suggestions = useMemo(() => pool.filter((i) => !isBaseInput(i.id) && itemTier(i.id, showUnavailable) === 1).sort((a, b) => (usedIn.get(b.id)?.length ?? 0) - (usedIn.get(a.id)?.length ?? 0)).slice(0, 12), [pool, showUnavailable]);
+  // what ores refine into: the bulk materials schemas ask for
+  const suggestions = useMemo(() => pool.filter((i) => i.unit === 'kg' && (producedBy.get(i.id) ?? []).some((r) => r.kind === 'reprocessing' && (showUnavailable || recipeAvailable(r)))).sort((a, b) => (usedIn.get(b.id)?.length ?? 0) - (usedIn.get(a.id)?.length ?? 0)).slice(0, 12), [pool, showUnavailable]);
   const uses = useVisible(id ? (usedIn.get(id) ?? []) : []);
   const pick = (iid: number) => { const p = new URLSearchParams(params); p.set('item', String(iid)); setParams(p, { replace: true }); };
   return (
     <div className="flex flex-col gap-4">
       <Panel className="flex flex-col gap-3">
-        <ItemPicker pool={pool} placeholder="Which material? Silica Grains, Iron-Rich Nodules, Carbon Weave…" onPick={(it) => pick(it.id)} clearOnPick={false} value={id ? itemName(id) : ''} />
+        <ItemPicker pool={pool} placeholder="Which material? Silica, Nickel-iron, Pyroxene…" onPick={(it) => pick(it.id)} clearOnPick={false} value={id ? itemName(id) : ''} />
         <SuggestionChips label="Refined materials, most used first" items={suggestions} onPick={(it) => pick(it.id)} />
       </Panel>
       {!id ? (
@@ -46,8 +47,10 @@ export function MaterialPage() {
                   <tbody className="divide-y divide-foreground/5">
                     {[...uses].sort((a, b) => a.inputs.find((x) => x.id === id)!.qty - b.inputs.find((x) => x.id === id)!.qty).map((r) => (
                       <tr key={r.id} className="hover:bg-muted/50">
-                        <td className="px-4 py-2"><ItemLink id={r.product} icon /> <span className="text-foreground/75">× {r.outputs.find((o) => o.id === r.product)?.qty ?? 1}</span></td>
-                        <td className="px-4 py-2 text-right"><Qty n={r.inputs.find((x) => x.id === id)!.qty} /></td>
+                        <td className="px-4 py-2">{r.kind === 'reprocessing'
+                          ? <IOList list={r.outputs} />
+                          : <><ItemLink id={r.product} icon /> <span className="text-foreground/75">× {fmtQty(r.outputs.find((o) => o.id === r.product)?.qty ?? 1, r.product)}</span></>}</td>
+                        <td className="px-4 py-2 text-right align-top"><Qty n={r.inputs.find((x) => x.id === id)!.qty} id={id} /></td>
                         <td className="px-4 py-2 hidden sm:table-cell"><FacilityBadges recipe={r} /></td>
                         <td className="px-4 py-2 text-right tabular-nums text-foreground/75">{fmtTime(r.time)}</td>
                       </tr>

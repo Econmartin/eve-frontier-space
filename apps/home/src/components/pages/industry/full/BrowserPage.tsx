@@ -4,7 +4,7 @@ import { Search } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import {
-  categories, consumedBy, conversionsFor, facilityKind, facilityLive, facilityName, fmtTime, fmtVol, industryItems, isBaseInput, itemAvailable, itemOf, priceOf, producedBy, recipeAvailable, recipes, searchItems, starterProducts, usedIn,
+  categories, consumedBy, conversionsFor, facilityKind, facilityLive, facilityName, fmtTime, fmtVol, industryItems, isBaseInput, itemAvailable, itemName, itemOf, priceOf, producedBy, propertyOf, recipeAvailable, recipes, searchItems, starterProducts, traitOf, usedIn,
 } from '@/lib/industry';
 import { Empty, FacilityBadge, FacilityBadges, IOList, ItemAvailabilityBadge, ItemIcon, ItemLink, Panel, Price, Qty, RecipeCard, Section, Select, SuggestionChips, useIndustrySettings, useVisible } from '../parts';
 
@@ -94,7 +94,7 @@ export function ItemDetail({ id }: { id: number }) {
           <div className="text-xs tracking-[0.16em] uppercase text-muted-foreground mb-1">{it.group} · {it.category}</div>
           <h2 className="text-3xl sm:text-4xl font-bold leading-none">{it.name}</h2>
           <div className="flex flex-wrap gap-2 mt-3">
-            {isBaseInput(id) && <Badge className="bg-[var(--color-martian-500)] text-black">base input</Badge>}
+            {isBaseInput(id) && it.trait === undefined && <Badge className="bg-[var(--color-martian-500)] text-black">base input</Badge>}
             {it.regolith && <Badge variant="outline">regolith · mined from asteroids</Badge>}
             <ItemAvailabilityBadge id={id} />
             {it.volume != null && <Badge variant="outline">{fmtVol(it.volume)} each</Badge>}
@@ -103,27 +103,36 @@ export function ItemDetail({ id }: { id: number }) {
           </div>
           </div>
         </div>
-        <div className="flex gap-2 shrink-0">
+        {it.trait === undefined && <div className="flex gap-2 shrink-0">
           <Link to={`/industry/make?item=${id}`} className="no-underline rounded-xl ring-1 ring-foreground/20 px-4 py-2 text-sm font-semibold hover:bg-muted transition-colors">How it's made</Link>
           {made.length > 0 && (
             <Link to={`/industry/plan?item=${id}`} className="no-underline rounded-xl bg-foreground text-background px-4 py-2 text-sm font-semibold hover:opacity-85 transition-opacity">Plan a build →</Link>
           )}
-        </div>
+        </div>}
       </div>
       {it.description && <p className="text-sm text-muted-foreground font-sans max-w-2xl mb-6">{it.description}</p>}
 
-      <Section title={`Made by · ${made.length}`} aside={hidden(madeAll, made)}>
+      {it.trait !== undefined && <TraitSlot trait={it.trait} />}
+      {!!it.traits?.length && (
+        <Section title={`Can fill · ${it.traits.length}`}>
+          <div className="flex flex-wrap gap-2">{it.traits.map((t) => <Link key={t} to={`/industry/item/${-t}`} className="no-underline"><Badge variant="outline" className="h-7 px-2 text-foreground hover:bg-muted">{traitOf(t)?.name}</Badge></Link>)}</div>
+          <p className="text-xs text-muted-foreground font-sans mt-2">Schema slots that ask for these traits accept this item, as long as the stack's properties fall inside the trait's ranges.</p>
+        </Section>
+      )}
+      {!!it.props?.length && <Properties props={it.props} />}
+
+      {it.trait === undefined && <Section title={`Made by · ${made.length}`} aside={hidden(madeAll, made)}>
         {made.length ? <div className="grid gap-3 md:grid-cols-2">{made.map((r) => <RecipeCard key={r.id} recipe={r} highlight={id} />)}</div>
           : madeAll.length ? <Empty>Every recipe for this item runs on a facility that is not in game this cycle. Turn on "show not in game" to see them.</Empty>
-          : <Empty>No blueprint produces this. It is gathered, mined, salvaged, or looted.</Empty>}
-      </Section>
+          : <Empty>No schema produces this. It is gathered, mined, salvaged, or looted.</Empty>}
+      </Section>}
 
       {conv.length > 0 && (
         <Section title="Breaks down into">
           <div className="grid gap-3 md:grid-cols-2">{conv.map((r) => (
             <Panel key={r.id} className="p-4">
               <div className="flex items-baseline justify-between gap-3 mb-2"><FacilityBadges recipe={r} /><span className="text-xs text-foreground/75 tabular-nums">{fmtTime(r.time)} / run</span></div>
-              <div className="text-sm mb-2"><Qty n={r.inputs[0].qty} /> <span className="text-muted-foreground">{it.name} →</span></div>
+              <div className="text-sm mb-2"><Qty n={r.inputs[0].qty} id={id} /> <span className="text-muted-foreground">{it.name} →</span></div>
               <IOList list={r.outputs} />
             </Panel>
           ))}</div>
@@ -146,7 +155,7 @@ export function ItemDetail({ id }: { id: number }) {
                 {uses.sort((a, b) => a.inputs.find((x) => x.id === id)!.qty - b.inputs.find((x) => x.id === id)!.qty).map((r) => (
                   <tr key={r.id} className="hover:bg-muted/50">
                     <td className="px-4 py-2"><ItemLink id={r.product} icon /> <span className="text-foreground/75">× {r.outputs.find((o) => o.id === r.product)?.qty ?? 1}</span></td>
-                    <td className="px-4 py-2 text-right"><Qty n={r.inputs.find((x) => x.id === id)!.qty} /></td>
+                    <td className="px-4 py-2 text-right"><Qty n={r.inputs.find((x) => x.id === id)!.qty} id={id} /></td>
                     <td className="px-4 py-2 hidden sm:table-cell"><FacilityBadges recipe={r} /></td>
                     <td className="px-4 py-2 text-right tabular-nums text-foreground/75">{fmtTime(r.time)}</td>
                   </tr>
@@ -157,5 +166,50 @@ export function ItemDetail({ id }: { id: number }) {
         ) : usesAll.length ? <Empty>Only consumed by recipes that are not in game this cycle.</Empty> : <Empty>Nothing consumes this item. It is an end product.</Empty>}
       </Section>
     </div>
+  );
+}
+
+const fmtProp = (n: number) => (Math.abs(n) >= 1000 ? Math.round(n).toLocaleString() : Number(n.toPrecision(3)).toLocaleString()).replace(/^-/, '−');
+const fmtRange = (min?: number, max?: number) =>
+  min !== undefined && max !== undefined ? (min === max ? fmtProp(min) : `${fmtProp(min)} to ${fmtProp(max)}`) : min !== undefined ? `≥ ${fmtProp(min)}` : max !== undefined ? `≤ ${fmtProp(max)}` : '–';
+
+/** Property ranges across the variants the game can produce of this item. */
+function Properties({ props }: { props: { id: number; min: number; max: number }[] }) {
+  return (
+    <Section title={`Properties · ${props.length}`}>
+      <Panel className="p-0 overflow-hidden">
+        <table className="w-full text-sm">
+          <tbody className="divide-y divide-foreground/5">
+            {props.map((p) => (
+              <tr key={p.id}><td className="px-4 py-1.5">{propertyOf(p.id)?.name ?? `property ${p.id}`}</td><td className="px-4 py-1.5 text-right tabular-nums">{fmtRange(p.min, p.max)}</td></tr>
+            ))}
+          </tbody>
+        </table>
+      </Panel>
+      <p className="text-xs text-muted-foreground font-sans mt-2">Each stack is one variant with its own values inside these ranges. Hover a stack in game to see its exact values.</p>
+    </Section>
+  );
+}
+
+/** A schema slot that takes any material with a trait: what the trait asks for, and what can fill it. */
+function TraitSlot({ trait }: { trait: number }) {
+  const t = traitOf(trait);
+  if (!t) return null;
+  return (
+    <>
+      <Section title="The trait asks for">
+        <Panel className="p-0 overflow-hidden">
+          <table className="w-full text-sm">
+            <tbody className="divide-y divide-foreground/5">
+              {t.needs.map((n) => <tr key={n.prop}><td className="px-4 py-1.5">{propertyOf(n.prop)?.name ?? `property ${n.prop}`}</td><td className="px-4 py-1.5 text-right tabular-nums">{fmtRange(n.min, n.max)}</td></tr>)}
+            </tbody>
+          </table>
+        </Panel>
+      </Section>
+      <Section title={`Can be filled by · ${t.members.length}`}>
+        <div className="flex flex-wrap gap-2">{t.members.map((m) => <Link key={m} to={`/industry/item/${m}`} className="no-underline"><Badge variant="outline" className="h-7 px-2 gap-1.5 text-foreground hover:bg-muted"><ItemIcon id={m} size={18} />{itemName(m)}</Badge></Link>)}</div>
+        <p className="text-xs text-muted-foreground font-sans mt-2">Any of these can go in the slot if the stack's properties fall inside the ranges above. Some variants of a material qualify and others don't.</p>
+      </Section>
+    </>
   );
 }
