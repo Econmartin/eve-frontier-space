@@ -19,15 +19,15 @@ export function BrowserPage() {
   const results = useMemo(() => searchItems(q, pool, 500), [q, pool]);
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[340px_minmax(0,1fr)]">
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[340px_minmax(0,1fr)]">
       <Panel className="lg:sticky lg:top-20 lg:self-start flex flex-col gap-3 max-h-[calc(100dvh-7rem)]">
         <div className="flex items-center gap-2 rounded-xl bg-background ring-1 ring-foreground/15 focus-within:ring-[var(--color-martian-500)] px-3 h-10">
           <Search className="size-4 text-muted-foreground" />
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search items, groups…" className="flex-1 min-w-0 bg-transparent outline-none text-sm placeholder:text-muted-foreground" />
         </div>
         <div className="grid grid-cols-2 gap-2">
-          <Select ariaLabel="Category" value={cat} onChange={setCat} options={[{ value: 'all', label: 'All categories' }, ...categories.map((c) => ({ value: c, label: c }))]} />
-          <Select ariaLabel="Kind" value={kind} onChange={(v) => setKind(v as typeof kind)} options={[{ value: 'all', label: 'Everything' }, { value: 'made', label: 'Craftable' }, { value: 'base', label: 'Base inputs' }]} />
+          <Select className="min-w-0" ariaLabel="Category" value={cat} onChange={setCat} options={[{ value: 'all', label: 'All categories' }, ...categories.map((c) => ({ value: c, label: c }))]} />
+          <Select className="min-w-0" ariaLabel="Kind" value={kind} onChange={(v) => setKind(v as typeof kind)} options={[{ value: 'all', label: 'Everything' }, { value: 'made', label: 'Craftable' }, { value: 'base', label: 'Base inputs' }]} />
         </div>
         <div className="text-[0.65rem] tracking-[0.16em] uppercase text-muted-foreground">{results.length} items</div>
         <ul className="overflow-auto -mx-2 px-2 flex-1 min-h-0 divide-y divide-foreground/5">

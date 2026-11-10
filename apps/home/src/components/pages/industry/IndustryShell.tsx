@@ -4,7 +4,7 @@ import { PageWrapper } from '@/components/templates/index.ts';
 import { HeaderActions, Footer } from '@/components/organisms/index.ts';
 import { availability, clientVersion, industryDataReady } from '@/lib/industry';
 import { INDUSTRY_FULL } from '@/config';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { IndustrySettingsContext } from './parts';
 
 export const INDUSTRY_HREF = '/industry';
@@ -40,8 +40,15 @@ export function IndustryShell() {
     return () => { document.title = prev; };
   }, [pathname]);
 
+  // on a phone the tab rows scroll sideways, so bring the current tab into view
+  const navRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const tab = navRef.current?.querySelector<HTMLElement>('[aria-current="page"]'); const row = tab?.parentElement;
+    if (tab && row) row.scrollLeft = tab.offsetLeft - row.offsetLeft - (row.clientWidth - tab.offsetWidth) / 2;
+  }, [pathname]);
+
   const tabClass = ({ isActive }: { isActive: boolean }) =>
-    `rounded-xl px-3.5 py-2 text-xs font-semibold tracking-wide uppercase whitespace-nowrap no-underline transition-colors ${
+    `shrink-0 rounded-xl px-3.5 py-2 text-xs font-semibold tracking-wide uppercase whitespace-nowrap no-underline transition-colors ${
       isActive ? 'bg-[var(--color-martian-500)] text-black' : 'text-white/70 hover:text-white hover:bg-white/10'
     }`;
   const browseActive = pathname.startsWith('/industry/item');
@@ -67,15 +74,15 @@ export function IndustryShell() {
         </header>
 
         <nav className="sticky top-2 z-40 mb-6 -mx-1 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
-          <div className="flex items-center gap-2 mx-1">
-            {INDUSTRY_FULL && <div className="inline-flex gap-0.5 rounded-2xl bg-black/95 dark:bg-white/5 backdrop-blur-md p-1">
+          <div ref={navRef} className="flex flex-wrap items-center gap-2 mx-1 min-w-0 max-w-full">
+            {INDUSTRY_FULL && <div className="inline-flex max-w-full overflow-x-auto [scrollbar-width:none] gap-0.5 rounded-2xl bg-black/95 dark:bg-white/5 backdrop-blur-md p-1">
               {STEPS.map((t, i) => (
                 <NavLink key={t.to} to={t.to} end={t.end} className={tabClass} title={t.hint}>
                   <span className="opacity-50 mr-1.5 tabular-nums">{i + 1}</span>{t.label}
                 </NavLink>
               ))}
             </div>}
-            <div className="inline-flex gap-0.5 rounded-2xl bg-black/95 dark:bg-white/5 backdrop-blur-md p-1">
+            <div className="inline-flex max-w-full overflow-x-auto [scrollbar-width:none] gap-0.5 rounded-2xl bg-black/95 dark:bg-white/5 backdrop-blur-md p-1">
               {(INDUSTRY_FULL ? REFERENCE : REFERENCE.filter((t) => t.to === '/industry/rocks')).map((t) => (
                 <NavLink key={t.to} to={t.to} className={({ isActive }) => tabClass({ isActive: isActive || (t.label === 'Browse' && browseActive) })}>{t.label}</NavLink>
               ))}
@@ -87,6 +94,7 @@ export function IndustryShell() {
           </label>}
         </nav>
 
+        {INDUSTRY_FULL && pathname !== '/industry' && !pathname.startsWith('/industry/rocks') && <p className="mb-4 rounded-xl ring-1 ring-amber-500/40 bg-amber-500/5 px-4 py-2 text-sm font-sans">Patch 0.7.6.0 replaced blueprints with schemas. The recipes here are from before the patch and no longer work in game. We're rebuilding them from the new game files.</p>}
         {!industryDataReady && <p className="mb-4 rounded-xl ring-1 ring-amber-500/40 bg-amber-500/5 px-4 py-2 text-sm font-sans">Recipe data could not be loaded just now, so most of these tools will look empty. My rocks still works. Try reloading in a moment.</p>}
         <Outlet />
       </main>
