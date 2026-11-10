@@ -4,7 +4,7 @@ import { Search } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import {
-  categories, consumedBy, conversionsFor, facilityKind, facilityLive, facilityName, fmtTime, fmtVol, industryItems, isBaseInput, itemAvailable, itemName, itemOf, priceOf, producedBy, propertyOf, recipeAvailable, recipes, searchItems, starterProducts, traitOf, usedIn,
+  categories, consumedBy, conversionsFor, facilityKind, facilityLive, facilityName, fmtQty, fmtTime, fmtVol, industryItems, isBaseInput, itemAvailable, itemName, itemOf, priceOf, producedBy, propertyOf, recipeAvailable, recipes, searchItems, starterProducts, traitOf, usedIn,
 } from '@/lib/industry';
 import { Empty, FacilityBadge, FacilityBadges, IOList, ItemAvailabilityBadge, ItemIcon, ItemLink, Panel, Price, Qty, RecipeCard, Section, Select, SuggestionChips, useIndustrySettings, useVisible } from '../parts';
 
@@ -97,7 +97,7 @@ export function ItemDetail({ id }: { id: number }) {
             {isBaseInput(id) && it.trait === undefined && <Badge className="bg-[var(--color-martian-500)] text-black">base input</Badge>}
             {it.regolith && <Badge variant="outline">regolith · mined from asteroids</Badge>}
             <ItemAvailabilityBadge id={id} />
-            {it.volume != null && <Badge variant="outline">{fmtVol(it.volume)} each</Badge>}
+            {it.volume != null && it.unit !== 'kg' && <Badge variant="outline">{fmtVol(it.volume)} each</Badge>}
             {priceOf(id) != null && <Badge variant="outline"><Price n={priceOf(id)!} per="unit" /></Badge>}
             {runsAt.map((f) => <FacilityBadge key={f} id={f} />)}
           </div>
@@ -154,7 +154,7 @@ export function ItemDetail({ id }: { id: number }) {
               <tbody className="divide-y divide-foreground/5">
                 {uses.sort((a, b) => a.inputs.find((x) => x.id === id)!.qty - b.inputs.find((x) => x.id === id)!.qty).map((r) => (
                   <tr key={r.id} className="hover:bg-muted/50">
-                    <td className="px-4 py-2"><ItemLink id={r.product} icon /> <span className="text-foreground/75">× {r.outputs.find((o) => o.id === r.product)?.qty ?? 1}</span></td>
+                    <td className="px-4 py-2"><ItemLink id={r.product} icon /> <span className="text-foreground/75">× {fmtQty(r.outputs.find((o) => o.id === r.product)?.qty ?? 1, r.product)}</span></td>
                     <td className="px-4 py-2 text-right"><Qty n={r.inputs.find((x) => x.id === id)!.qty} id={id} /></td>
                     <td className="px-4 py-2 hidden sm:table-cell"><FacilityBadges recipe={r} /></td>
                     <td className="px-4 py-2 text-right tabular-nums text-foreground/75">{fmtTime(r.time)}</td>
@@ -171,7 +171,7 @@ export function ItemDetail({ id }: { id: number }) {
 
 const fmtProp = (n: number) => (Math.abs(n) >= 1000 ? Math.round(n).toLocaleString() : Number(n.toPrecision(3)).toLocaleString()).replace(/^-/, '−');
 const fmtRange = (min?: number, max?: number) =>
-  min !== undefined && max !== undefined ? (min === max ? fmtProp(min) : `${fmtProp(min)} to ${fmtProp(max)}`) : min !== undefined ? `≥ ${fmtProp(min)}` : max !== undefined ? `≤ ${fmtProp(max)}` : '–';
+  min !== undefined && max !== undefined ? (fmtProp(min) === fmtProp(max) ? fmtProp(min) : `${fmtProp(min)} to ${fmtProp(max)}`) : min !== undefined ? `≥ ${fmtProp(min)}` : max !== undefined ? `≤ ${fmtProp(max)}` : '–';
 
 /** Property ranges across the variants the game can produce of this item. */
 function Properties({ props }: { props: { id: number; min: number; max: number }[] }) {
