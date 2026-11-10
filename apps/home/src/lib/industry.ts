@@ -133,6 +133,15 @@ for (const r of recipes) {
   for (const o of r.outputs) producedBy.set(o.id, [...(producedBy.get(o.id) ?? []), r]);
   for (const i of r.inputs) usedIn.set(i.id, [...(usedIn.get(i.id) ?? []), r]);
 }
+/** recipes the item can feed through a trait slot ("Any Radome material"), as opposed to by name */
+export const usedViaTrait = new Map<number, Recipe[]>();
+for (const r of recipes) for (const i of r.inputs) {
+  if (i.trait === undefined || i.id > 0) continue;
+  for (const m of data.traits?.[String(i.trait)]?.members ?? []) if (!usedViaTrait.get(m)?.includes(r)) usedViaTrait.set(m, [...(usedViaTrait.get(m) ?? []), r]);
+}
+/** the slot an item fills in a recipe: by name, or a trait slot it qualifies for */
+export const slotFor = (r: Recipe, id: number): RecipeIO | undefined =>
+  r.inputs.find((x) => x.id === id) ?? r.inputs.find((x) => x.id < 0 && x.trait !== undefined && (data.traits?.[String(x.trait)]?.members ?? []).includes(id));
 
 export const itemOf = (id: number): Item => items.get(id) ?? { id, name: `type ${id}`, group: '?', category: '?' };
 export const itemName = (id: number) => itemOf(id).name;

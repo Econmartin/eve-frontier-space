@@ -1,8 +1,10 @@
 import { useMemo } from 'react';
 import { useSearchParams } from 'react-router';
-import { fmtQty, fmtTime, industryItems, itemName, itemOf, producedBy, recipeAvailable, usedIn } from '@/lib/industry';
+import { fmtQty, fmtTime, industryItems, itemName, itemOf, producedBy, recipeAvailable, slotFor, usedIn, usedViaTrait } from '@/lib/industry';
 import { Empty, Select, FacilityBadges, IOList, ItemIcon, ItemLink, ItemPicker, Panel, Qty, Section, SuggestionChips, useIndustrySettings, useVisible } from '../parts';
 import { GraphPanel, GraphPlaceholder, buildItemGraph } from './graph';
+
+const useCount = (id: number) => (usedIn.get(id)?.length ?? 0) + (usedViaTrait.get(id)?.length ?? 0);
 
 /** Step 2: pick a material, see what it becomes. */
 export function MaterialPage() {
@@ -11,10 +13,10 @@ export function MaterialPage() {
   const depth = Math.min(4, Math.max(1, Number(params.get('depth')) || 1));
   const setDepth = (v: string) => { const p = new URLSearchParams(params); p.set('depth', v); setParams(p, { replace: true }); };
   const { showUnavailable } = useIndustrySettings();
-  const pool = useMemo(() => industryItems.filter((i) => (usedIn.get(i.id) ?? []).some((r) => showUnavailable || recipeAvailable(r))), [showUnavailable]);
+  const pool = useMemo(() => industryItems.filter((i) => [...(usedIn.get(i.id) ?? []), ...(usedViaTrait.get(i.id) ?? [])].some((r) => showUnavailable || recipeAvailable(r))), [showUnavailable]);
   // what ores refine into: the bulk materials schemas ask for
-  const suggestions = useMemo(() => pool.filter((i) => i.unit === 'kg' && (producedBy.get(i.id) ?? []).some((r) => r.kind === 'reprocessing' && (showUnavailable || recipeAvailable(r)))).sort((a, b) => (usedIn.get(b.id)?.length ?? 0) - (usedIn.get(a.id)?.length ?? 0)).slice(0, 12), [pool, showUnavailable]);
-  const uses = useVisible(id ? (usedIn.get(id) ?? []) : []);
+  const suggestions = useMemo(() => pool.filter((i) => i.unit === 'kg' && (producedBy.get(i.id) ?? []).some((r) => r.kind === 'reprocessing' && (showUnavailable || recipeAvailable(r)))).sort((a, b) => useCount(b.id) - useCount(a.id)).slice(0, 12), [pool, showUnavailable]);
+  const uses = useVisible(id ? [...(usedIn.get(id) ?? []), ...(usedViaTrait.get(id) ?? [])] : []);
   const pick = (iid: number) => { const p = new URLSearchParams(params); p.set('item', String(iid)); setParams(p, { replace: true }); };
   return (
     <div className="flex flex-col gap-4">
@@ -45,12 +47,12 @@ export function MaterialPage() {
                 <table className="w-full text-sm">
                   <thead className="text-[0.65rem] tracking-[0.16em] uppercase text-muted-foreground"><tr className="border-b border-foreground/10"><th className="text-left font-normal px-4 py-2">Product</th><th className="text-right font-normal px-4 py-2">Needs</th><th className="text-left font-normal px-4 py-2 hidden sm:table-cell">Facility</th><th className="text-right font-normal px-4 py-2">Time</th></tr></thead>
                   <tbody className="divide-y divide-foreground/5">
-                    {[...uses].sort((a, b) => a.inputs.find((x) => x.id === id)!.qty - b.inputs.find((x) => x.id === id)!.qty).map((r) => (
+                    {[...uses].sort((a, b) => slotFor(a, id)!.qty - slotFor(b, id)!.qty).map((r) => (
                       <tr key={r.id} className="hover:bg-muted/50">
                         <td className="px-4 py-2">{r.kind === 'reprocessing'
                           ? <IOList list={r.outputs} />
                           : <><ItemLink id={r.product} icon /> <span className="text-foreground/75">× {fmtQty(r.outputs.find((o) => o.id === r.product)?.qty ?? 1, r.product)}</span></>}</td>
-                        <td className="px-4 py-2 text-right align-top"><Qty n={r.inputs.find((x) => x.id === id)!.qty} id={id} /></td>
+                        <td className="px-4 py-2 text-right align-top"><Qty n={slotFor(r, id)!.qty} id={id} />{slotFor(r, id)!.id !== id && <div className="text-xs text-muted-foreground">as {itemName(slotFor(r, id)!.id)}</div>}</td>
                         <td className="px-4 py-2 hidden sm:table-cell"><FacilityBadges recipe={r} /></td>
                         <td className="px-4 py-2 text-right tabular-nums text-foreground/75">{fmtTime(r.time)}</td>
                       </tr>

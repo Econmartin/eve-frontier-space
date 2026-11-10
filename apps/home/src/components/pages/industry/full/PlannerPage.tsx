@@ -60,7 +60,7 @@ function ShoppingList() {
       ) : !plan.recipe && (producedBy.get(plan.item)?.length ?? 0) > 0 ? (
         <Empty><ItemLink id={plan.item} icon className="font-semibold" /> can only be made on facilities that are not in game this cycle. Turn on "show not in game" above to plan it anyway.</Empty>
       ) : (
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
+        <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
           <Section title="Build tree" className="mb-0">
             <Panel className="overflow-x-auto">
               <PlanTree node={plan} depth={0} overrides={overrides} owned={ownedItems}
