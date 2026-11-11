@@ -17,7 +17,7 @@ type ItemData = { id: number; root: boolean; base: boolean; sub?: string; vertic
 type RecipeData = { recipe: Recipe };
 type FacilityData = { id: number };
 type GroupData = { label: string; count: number };
-export type GNode = Node<ItemData, 'item'> | Node<RecipeData, 'recipe'> | Node<FacilityData, 'facility'> | Node<GroupData, 'group'>;
+export type GNode = Node<ItemData, 'item'> | Node<RecipeData, 'recipe'> | Node<FacilityData, 'facility'> | Node<GroupData, 'category'>;
 
 /** facilities for a recipe as shown on pills: respects the toggle, available first, deduped by name */
 function pillFacilities(r: Recipe, showUnavailable: boolean) {
@@ -68,7 +68,8 @@ function FacilityNode({ data }: NodeProps<Node<FacilityData, 'facility'>>) {
     </div>
   );
 }
-function GroupNode({ data }: NodeProps<Node<GroupData, 'group'>>) {
+// not called 'group': React Flow styles its own built-in group nodes, which drew a second box behind this one
+function GroupNode({ data }: NodeProps<Node<GroupData, 'category'>>) {
   return (
     <div className="rounded-lg bg-muted text-foreground px-3 py-2 w-[220px] text-left ring-1 ring-foreground/10">
       <Handle type="target" position={Position.Top} className="!bg-transparent !border-0 !w-1 !h-1" />
@@ -79,7 +80,7 @@ function GroupNode({ data }: NodeProps<Node<GroupData, 'group'>>) {
     </div>
   );
 }
-const nodeTypes: NodeTypes = { item: ItemNode, recipe: RecipeNode, facility: FacilityNode, group: GroupNode };
+const nodeTypes: NodeTypes = { item: ItemNode, recipe: RecipeNode, facility: FacilityNode, category: GroupNode };
 
 const EDGE_LABEL = {
   labelStyle: { fill: 'var(--foreground)', fontSize: 11, fontWeight: 600 },
@@ -101,7 +102,7 @@ export interface GraphOptions {
 
 function layout(nodes: GNode[], edges: Edge[], opts: { rankdir?: 'LR' | 'TB'; nodesep?: number; ranksep?: number } = {}) {
   const g = new dagre.graphlib.Graph(); g.setDefaultEdgeLabel(() => ({})); g.setGraph({ rankdir: opts.rankdir ?? 'LR', nodesep: opts.nodesep ?? 24, ranksep: opts.ranksep ?? 110, marginx: 20, marginy: 20 });
-  for (const n of nodes) g.setNode(n.id, n.type === 'recipe' ? { width: 120, height: 40 } : n.type === 'facility' ? { width: 240, height: 70 } : n.type === 'group' ? { width: 220, height: 36 } : { width: 230, height: 56 });
+  for (const n of nodes) g.setNode(n.id, n.type === 'recipe' ? { width: 120, height: 40 } : n.type === 'facility' ? { width: 240, height: 70 } : n.type === 'category' ? { width: 220, height: 36 } : { width: 230, height: 56 });
   for (const e of edges) g.setEdge(e.source, e.target);
   dagre.layout(g);
   for (const n of nodes) { const p = g.node(n.id); n.position = { x: p.x - p.width / 2, y: p.y - p.height / 2 }; }
@@ -185,12 +186,13 @@ export function buildFacilityGraph(facilityId: number, showUnavailable: boolean,
   ordered.forEach(([label, ids], gi) => {
     ids.sort((a, b) => itemName(a).localeCompare(itemName(b)));
     const gk = `g${gi}`;
-    nodes.set(gk, { id: gk, type: 'group', position: { x: 0, y }, className: 'cursor-default!', data: { label: label.replace(' Regoliths', ''), count: ids.length } });
+    nodes.set(gk, { id: gk, type: 'category', position: { x: 0, y }, className: 'cursor-default!', data: { label: label.replace(' Regoliths', ''), count: ids.length } });
     edges.push({ id: `${prev}>${gk}`, source: prev, sourceHandle: prevHandle, target: gk, type: 'straight', style: OUT_STYLE });
     ids.forEach((pid, i) => {
       const k = addItem(pid, sub(products.get(pid)!));
       nodes.get(k)!.position = { x: X0 + (i % PER_ROW) * COL, y: y + Math.floor(i / PER_ROW) * ROW };
-      edges.push({ id: `${gk}>${pid}`, source: gk, sourceHandle: 'r', target: k, type: 'smoothstep', style: IN_STYLE });
+      // one line per row, into its first product: lines to the rest ran along the row on top of each other
+      if (i % PER_ROW === 0) edges.push({ id: `${gk}>${pid}`, source: gk, sourceHandle: 'r', target: k, type: 'smoothstep', style: IN_STYLE });
     });
     y += Math.ceil(ids.length / PER_ROW) * ROW + GAP; prev = gk; prevHandle = 'b';
   });
