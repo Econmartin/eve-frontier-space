@@ -2,8 +2,8 @@
 import { useCallback, useEffect, useMemo, type ReactNode } from 'react';
 import { useNavigate } from 'react-router';
 import {
-  Background, Controls, Handle, Position, ReactFlow, ReactFlowProvider, useReactFlow,
-  type Edge, type Node, type NodeProps, type NodeTypes,
+  BaseEdge, Background, Controls, Handle, Position, ReactFlow, ReactFlowProvider, useReactFlow,
+  type Edge, type EdgeProps, type EdgeTypes, type Node, type NodeProps, type NodeTypes,
 } from '@xyflow/react';
 import dagre from '@dagrejs/dagre';
 import '@xyflow/react/dist/style.css';
@@ -17,7 +17,7 @@ type ItemData = { id: number; root: boolean; base: boolean; sub?: string; vertic
 type RecipeData = { recipe: Recipe };
 type FacilityData = { id: number };
 type GroupData = { label: string; count: number };
-export type GNode = Node<ItemData, 'item'> | Node<RecipeData, 'recipe'> | Node<FacilityData, 'facility'> | Node<GroupData, 'group'>;
+export type GNode = Node<ItemData, 'item'> | Node<RecipeData, 'recipe'> | Node<FacilityData, 'facility'> | Node<GroupData, 'category'>;
 
 /** facilities for a recipe as shown on pills: respects the toggle, available first, deduped by name */
 function pillFacilities(r: Recipe, showUnavailable: boolean) {
@@ -68,7 +68,8 @@ function FacilityNode({ data }: NodeProps<Node<FacilityData, 'facility'>>) {
     </div>
   );
 }
-function GroupNode({ data }: NodeProps<Node<GroupData, 'group'>>) {
+// not called 'group': React Flow styles its own built-in group nodes, which drew a second box behind this one
+function GroupNode({ data }: NodeProps<Node<GroupData, 'category'>>) {
   return (
     <div className="rounded-lg bg-muted text-foreground px-3 py-2 w-[220px] text-left ring-1 ring-foreground/10">
       <Handle type="target" position={Position.Top} className="!bg-transparent !border-0 !w-1 !h-1" />
@@ -79,7 +80,16 @@ function GroupNode({ data }: NodeProps<Node<GroupData, 'group'>>) {
     </div>
   );
 }
-const nodeTypes: NodeTypes = { item: ItemNode, recipe: RecipeNode, facility: FacilityNode, group: GroupNode };
+const nodeTypes: NodeTypes = { item: ItemNode, recipe: RecipeNode, facility: FacilityNode, category: GroupNode };
+
+/** Category to product on the Base graph, drawn as a tree: out to the category's own spine, down to a rail above
+ * the product's row, along it, and into the product's top. Lines to one row share the rail instead of stacking. */
+type TreeData = { spineX: number };
+function TreeEdge({ sourceX, sourceY, targetX, targetY, style, data }: EdgeProps<Edge<TreeData, 'tree'>>) {
+  const spine = data?.spineX ?? sourceX + 20, rail = targetY - 12;
+  return <BaseEdge path={`M ${sourceX} ${sourceY} H ${spine} V ${rail} H ${targetX} V ${targetY}`} style={style} />;
+}
+const edgeTypes: EdgeTypes = { tree: TreeEdge };
 
 const EDGE_LABEL = {
   labelStyle: { fill: 'var(--foreground)', fontSize: 11, fontWeight: 600 },
@@ -101,7 +111,7 @@ export interface GraphOptions {
 
 function layout(nodes: GNode[], edges: Edge[], opts: { rankdir?: 'LR' | 'TB'; nodesep?: number; ranksep?: number } = {}) {
   const g = new dagre.graphlib.Graph(); g.setDefaultEdgeLabel(() => ({})); g.setGraph({ rankdir: opts.rankdir ?? 'LR', nodesep: opts.nodesep ?? 24, ranksep: opts.ranksep ?? 110, marginx: 20, marginy: 20 });
-  for (const n of nodes) g.setNode(n.id, n.type === 'recipe' ? { width: 120, height: 40 } : n.type === 'facility' ? { width: 240, height: 70 } : n.type === 'group' ? { width: 220, height: 36 } : { width: 230, height: 56 });
+  for (const n of nodes) g.setNode(n.id, n.type === 'recipe' ? { width: 120, height: 40 } : n.type === 'facility' ? { width: 240, height: 70 } : n.type === 'category' ? { width: 220, height: 36 } : { width: 230, height: 56 });
   for (const e of edges) g.setEdge(e.source, e.target);
   dagre.layout(g);
   for (const n of nodes) { const p = g.node(n.id); n.position = { x: p.x - p.width / 2, y: p.y - p.height / 2 }; }
@@ -180,19 +190,20 @@ export function buildFacilityGraph(facilityId: number, showUnavailable: boolean,
     return layout([...nodes.values()], edges, { rankdir: 'TB', nodesep: 24, ranksep: 90 });
   }
 
-  const PER_ROW = 5, COL = 250, ROW = 70, X0 = 270, GAP = 28;
+  // each category sits above its products; the rows hang off a spine just right of the category box
+  const PER_ROW = 5, COL = 250, ROW = 80, X0 = 270, GAP = 28, DROP = 52, SPINE = 245;
   let y = 110; let prev = 'f'; let prevHandle: string | undefined;
   ordered.forEach(([label, ids], gi) => {
     ids.sort((a, b) => itemName(a).localeCompare(itemName(b)));
     const gk = `g${gi}`;
-    nodes.set(gk, { id: gk, type: 'group', position: { x: 0, y }, className: 'cursor-default!', data: { label: label.replace(' Regoliths', ''), count: ids.length } });
+    nodes.set(gk, { id: gk, type: 'category', position: { x: 0, y }, className: 'cursor-default!', data: { label: label.replace(' Regoliths', ''), count: ids.length } });
     edges.push({ id: `${prev}>${gk}`, source: prev, sourceHandle: prevHandle, target: gk, type: 'straight', style: OUT_STYLE });
     ids.forEach((pid, i) => {
-      const k = addItem(pid, sub(products.get(pid)!));
-      nodes.get(k)!.position = { x: X0 + (i % PER_ROW) * COL, y: y + Math.floor(i / PER_ROW) * ROW };
-      edges.push({ id: `${gk}>${pid}`, source: gk, sourceHandle: 'r', target: k, type: 'smoothstep', style: IN_STYLE });
+      const k = addItem(pid, sub(products.get(pid)!), true);
+      nodes.get(k)!.position = { x: X0 + (i % PER_ROW) * COL, y: y + DROP + Math.floor(i / PER_ROW) * ROW };
+      edges.push({ id: `${gk}>${pid}`, source: gk, sourceHandle: 'r', target: k, type: 'tree', data: { spineX: SPINE }, style: IN_STYLE });
     });
-    y += Math.ceil(ids.length / PER_ROW) * ROW + GAP; prev = gk; prevHandle = 'b';
+    y += DROP + Math.ceil(ids.length / PER_ROW) * ROW + GAP; prev = gk; prevHandle = 'b';
   });
   return { nodes: [...nodes.values()], edges };
 }
@@ -204,7 +215,7 @@ function Canvas({ nodes, edges, onItem }: { nodes: GNode[]; edges: Edge[]; onIte
   const onNodeClick = useCallback((_: unknown, n: Node) => { if (n.type === 'item') (onItem ?? ((id: number) => navigate(`/industry/item/${id}`)))((n.data as ItemData).id); }, [navigate, onItem]);
   const onNodeDoubleClick = useCallback((_: unknown, n: Node) => { if (n.type === 'item') navigate(`/industry/item/${(n.data as ItemData).id}`); }, [navigate]);
   return (
-    <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} onNodeClick={onNodeClick} onNodeDoubleClick={onNodeDoubleClick}
+    <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} edgeTypes={edgeTypes} onNodeClick={onNodeClick} onNodeDoubleClick={onNodeDoubleClick}
       nodesDraggable nodesConnectable={false} elementsSelectable={false} minZoom={0.2} maxZoom={2} fitView>
       <Background gap={24} size={1} color="color-mix(in oklab, var(--foreground) 12%, transparent)" />
       <Controls showInteractive={false} className="!bg-card !text-foreground !shadow-md [&>button]:!bg-card [&>button]:!border-foreground/10 [&>button]:!fill-foreground" />
