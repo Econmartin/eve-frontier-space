@@ -9,7 +9,7 @@ import {
 } from '@/lib/industry';
 import { Empty, FacilityBadges, IOList, ItemIcon, ItemLink, ItemPicker, NumberField, Panel, Price, Qty, Section, SuggestionChips, addToHold, holdMap, useIndustrySettings, type Holding } from '../parts';
 
-const recipeLabel = (r: Recipe) => `${builtInSpace(r) ? 'built in space' : shownFacilityNames(r).join(' / ') || 'unassigned'}${recipeAvailable(r) ? '' : ' (not in game)'} · ${r.inputs.map((i) => `${fmtQty(i.qty, i.id)} ${itemName(i.id)}`).join(', ')}`;
+const recipeLabel = (r: Recipe) => `${builtInSpace(r) ? 'Build Mode' : shownFacilityNames(r).join(' / ') || 'unassigned'}${recipeAvailable(r) ? '' : ' (not in game)'} · ${r.inputs.map((i) => `${fmtQty(i.qty, i.id)} ${itemName(i.id)}`).join(', ')}`;
 
 export function PlanPage() {
   const [params0] = useSearchParams();
@@ -82,7 +82,7 @@ function ShoppingList() {
               <ul className="divide-y divide-foreground/5 text-sm">
                 {[...summary.byFacilityRecipe.values()].sort((a, b) => b.time - a.time).map(({ recipe, runs, time }) => (
                   <li key={recipe.id} className="py-1.5 flex items-center justify-between gap-2">
-                    <span className="truncate"><span className="text-muted-foreground">{builtInSpace(recipe) ? 'in space' : shownFacilityNames(recipe).join('/') || '—'}</span> · <ItemLink id={recipe.product} /></span>
+                    <span className="truncate"><span className="text-muted-foreground">{builtInSpace(recipe) ? 'Build Mode' : shownFacilityNames(recipe).join('/') || '—'}</span> · <ItemLink id={recipe.product} /></span>
                     <span className="shrink-0 tabular-nums"><Qty n={runs} /> <span className="text-foreground/75">× {fmtTime(recipe.time)} = {fmtTime(time)}</span></span>
                   </li>
                 ))}
@@ -126,13 +126,13 @@ function PlanTree({ node, depth, overrides, owned, onRecipe, onOwned }: { node: 
         <ItemLink id={node.item} icon className={cn(!node.recipe && !isOwned && 'text-muted-foreground')} />
         {node.recipe ? (
           <>
-            <span className="text-xs text-foreground/75 tabular-nums">{node.runs} run{node.runs === 1 ? '' : 's'} · {fmtTime(node.runs * node.recipe.time)}</span>
+            <span className="text-xs text-foreground/75 tabular-nums">{node.runs} run{node.runs === 1 ? '' : 's'}{node.recipe.time ? ` · ${fmtTime(node.runs * node.recipe.time)}` : ''}</span>
             {options.length > 1 ? (
               <select value={overrides.get(node.item) ?? node.recipe.id} onChange={(e) => onRecipe(node.item, Number(e.target.value))} aria-label="recipe"
                 className="h-7 max-w-[60vw] rounded-lg bg-background ring-1 ring-foreground/15 px-2 text-xs">
                 {options.map((r) => <option key={r.id} value={r.id}>{recipeLabel(r)}</option>)}
               </select>
-            ) : <Badge variant="outline" className="h-6">{builtInSpace(node.recipe) ? 'built in space' : shownFacilityNames(node.recipe).join(' / ') || 'unassigned'}</Badge>}
+            ) : <Badge variant="outline" className="h-6">{builtInSpace(node.recipe) ? 'Build Mode' : shownFacilityNames(node.recipe).join(' / ') || 'unassigned'}</Badge>}
           </>
         ) : node.cycle ? <Badge variant="destructive" className="h-6">cycle stopped</Badge> : isOwned ? <Badge variant="secondary" className="h-6">owned</Badge> : <Badge variant="outline" className="h-6 text-muted-foreground">base</Badge>}
         {depth > 0 && options.length > 0 && (

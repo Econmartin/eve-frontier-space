@@ -22,6 +22,7 @@ const REFERENCE = [
   { to: '/industry/graph', label: 'Graph' },
   { to: '/industry/browse', label: 'Browse' },
   { to: '/industry/changes', label: 'Changes' },
+  { to: '/industry/old', label: 'Old mats' },
 ];
 const ALL = [...STEPS, ...REFERENCE];
 

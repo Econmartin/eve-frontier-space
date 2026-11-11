@@ -19,11 +19,14 @@ export interface Item {
   traits?: number[];
   /** set on the stand-in items for trait-only schema slots ("Any Radome material"); ids are negative */
   trait?: number;
+  /** made before 0.7.6.0 and only refined back into new materials now (Reinforced Alloys, Silica Grains…) */
+  legacy?: boolean;
 }
 /** `trait` is set when a slot accepts any item with that trait; `yieldBy` lists properties the output yield depends on */
 export interface RecipeIO { id: number; qty: number; trait?: number; yieldBy?: number[] }
 export interface RecipeFacility { id: number; maxInputRuns: number; maxOutputRuns: number }
-export interface Recipe { id: number; name?: string; kind?: 'manufacturing' | 'reprocessing'; product: number; time: number; inputs: RecipeIO[]; outputs: RecipeIO[]; facilities: RecipeFacility[] }
+/** `build` is Build Mode (ships and structures built in space); `legacy` refines an old material */
+export interface Recipe { id: number; name?: string; kind?: 'manufacturing' | 'reprocessing' | 'build'; legacy?: boolean; product: number; time: number; inputs: RecipeIO[]; outputs: RecipeIO[]; facilities: RecipeFacility[] }
 export interface Trait { name: string; description?: string | null; needs: { prop: number; min?: number; max?: number }[]; members: number[] }
 export interface Property { name: string; kind: 'physical' | 'specification'; min?: number | null; max?: number | null }
 export interface Facility { id: number; name: string; blueprints: number[] }
@@ -125,11 +128,14 @@ export const CLASS_LABEL: Record<QtyClass, string> = { L: 'large', S: 'small', T
 export const rocksWith = (regolithId: number) => compositeRocks.map((r) => ({ rock: r, cls: r.materials.find((m) => m.id === regolithId)?.cls })).filter((x): x is { rock: CompositeRock; cls: QtyClass } => !!x.cls).sort((a, b) => CLASS_RANK[a.cls] - CLASS_RANK[b.cls]);
 export const compositeMaterials: { material: string; regolith: number }[] = Object.entries(composites.materials).filter(([k, v]) => !k.startsWith('_') && typeof v === 'number').map(([material, regolith]) => ({ material, regolith: regolith as number }));
 
+/** refining schemas for old materials: kept off the main pages, listed on the Old mats tab */
+export const legacyRecipes: Recipe[] = recipes.filter((r) => r.legacy);
 /** recipes that output the item */
 export const producedBy = new Map<number, Recipe[]>();
 /** recipes that consume the item */
 export const usedIn = new Map<number, Recipe[]>();
 for (const r of recipes) {
+  if (r.legacy) continue;
   for (const o of r.outputs) producedBy.set(o.id, [...(producedBy.get(o.id) ?? []), r]);
   for (const i of r.inputs) usedIn.set(i.id, [...(usedIn.get(i.id) ?? []), r]);
 }
@@ -163,8 +169,8 @@ export function facilityKind(id: number): FacilityKind {
 }
 export const FACILITY_KIND_LABEL: Record<FacilityKind, string> = { deployable: 'structure', shipModule: 'ship module', unavailable: 'not in game this cycle', none: '' };
 export const facilityLive = (id: number) => facilityKind(id) === 'deployable' || facilityKind(id) === 'shipModule';
-/** Players can run this blueprint without any facility (e.g. the two hulls built in open space). */
-export const builtInSpace = (r: Recipe) => BUILT_IN_SPACE.has(r.id);
+/** Built in Build Mode, without a facility: ships and deployable structures. */
+export const builtInSpace = (r: Recipe) => r.kind === 'build' || BUILT_IN_SPACE.has(r.id);
 /** A recipe is available when it runs on a facility that exists in game, or is built in space. Unassigned recipes count as unavailable. */
 export const recipeAvailable = (r: Recipe) => builtInSpace(r) || r.facilities.some((f) => facilityLive(f.id));
 /** Facility names to print for a recipe: only those in game, unless the recipe has none (then all, so "not in game" rows still say where). */
@@ -182,7 +188,7 @@ export const itemAvailable = (id: number) => {
 
 /** every item that appears in a recipe (inputs, outputs, or as a facility), sorted by name */
 export const industryItems: Item[] = [...items.values()]
-  .filter((i) => producedBy.has(i.id) || usedIn.has(i.id) || i.regolith)
+  .filter((i) => producedBy.has(i.id) || usedIn.has(i.id) || i.regolith || i.legacy)
   .sort((a, b) => a.name.localeCompare(b.name));
 export const categories: string[] = [...new Set(industryItems.map((i) => i.category))].sort();
 export const groups: string[] = [...new Set(industryItems.map((i) => i.group))].sort();
@@ -204,6 +210,7 @@ export function searchItems(query: string, pool: Item[] = industryItems, limit =
 
 export function fmtTime(s: number): string {
   s = Math.round(s);
+  if (s === 0) return '–'; // Build Mode has no run time in the client
   if (s < 60) return `${s}s`;
   const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), r = s % 60;
   if (h >= 24) { const d = Math.floor(h / 24); return `${d}d ${h % 24}h ${m}m`; }
@@ -319,7 +326,7 @@ export function summarizePlan(root: PlanNode): PlanSummary {
 // ---------------- Yield calculator ----------------
 export interface YieldLine { input: number; qty: number; recipe: Recipe; runs: number; used: number; leftover: number; outputs: { id: number; qty: number }[] }
 /** Single-input recipes that convert `inputId`, i.e. refining / breakdown. */
-export const conversionsFor = (inputId: number): Recipe[] => (usedIn.get(inputId) ?? []).filter((r) => r.inputs.length === 1);
+export const conversionsFor = (inputId: number): Recipe[] => recipes.filter((r) => r.kind !== 'build' && r.inputs.length === 1 && r.inputs[0].id === inputId);
 export function computeYield(inputId: number, qty: number, recipe: Recipe): YieldLine {
   const need = recipe.inputs[0].qty; const runs = Math.floor(qty / need);
   return { input: inputId, qty, recipe, runs, used: runs * need, leftover: qty - runs * need, outputs: recipe.outputs.map((o) => ({ id: o.id, qty: o.qty * runs })) };

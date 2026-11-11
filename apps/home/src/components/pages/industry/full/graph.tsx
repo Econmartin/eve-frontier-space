@@ -42,8 +42,8 @@ function RecipeNode({ data }: NodeProps<Node<RecipeData, 'recipe'>>) {
   const r = data.recipe;
   const { showUnavailable } = useIndustrySettings();
   const facs = pillFacilities(r, showUnavailable);
-  const lead = builtInSpace(r) ? 'in space' : facs[0] ?? 'unassigned';
-  const title = `${builtInSpace(r) ? 'Built in space' : facs.length ? `Runs on: ${facs.join(', ')}` : 'No facility in game'} · ${fmtTime(r.time)} per run · ${r.inputs.map((i) => `${i.qty} ${itemName(i.id)}`).join(', ')} → ${r.outputs.map((o) => `${o.qty} ${itemName(o.id)}`).join(', ')}`;
+  const lead = builtInSpace(r) ? 'Build Mode' : facs[0] ?? 'unassigned';
+  const title = `${builtInSpace(r) ? 'Build Mode' : facs.length ? `Runs on: ${facs.join(', ')}` : 'No facility in game'} · ${fmtTime(r.time)} per run · ${r.inputs.map((i) => `${i.qty} ${itemName(i.id)}`).join(', ')} → ${r.outputs.map((o) => `${o.qty} ${itemName(o.id)}`).join(', ')}`;
   return (
     <div title={title} className={cn('rounded-full px-3 py-1.5 text-[0.65rem] leading-tight ring-1 shadow-sm text-center',
       builtInSpace(r) ? 'bg-[var(--color-ocean-500)] text-white ring-transparent' : !facs.length ? 'bg-muted text-muted-foreground ring-foreground/10' : recipeAvailable(r) ? 'bg-[var(--color-martian-500)] text-black ring-transparent' : 'bg-muted text-muted-foreground ring-foreground/10 line-through')}>
@@ -121,7 +121,7 @@ export function buildItemGraph(root: number, o: GraphOptions) {
   const addEdge = (e: Edge) => { if (!edgeIds.has(e.id)) { edgeIds.add(e.id); edges.push(e); } };
   const addRecipe = (r: Recipe, inputFilter?: (id: number) => boolean) => {
     if (o.productsOnly) {
-      const fac = builtInSpace(r) ? 'in space' : pillFacilities(r, o.showUnavailable)[0] ?? 'unassigned';
+      const fac = builtInSpace(r) ? 'Build Mode' : pillFacilities(r, o.showUnavailable)[0] ?? 'unassigned';
       for (const i of r.inputs) if (!inputFilter || inputFilter(i.id)) for (const out of r.outputs) if (out.id !== i.id)
         addEdge({ id: `${i.id}>${out.id}@${r.id}`, source: addItem(i.id), target: addItem(out.id), label: `${fmtQty(i.qty, i.id)} → ${fmtQty(out.qty, out.id)} · ${fac}`, ...EDGE_LABEL, labelStyle: { ...EDGE_LABEL.labelStyle, fontSize: 10 }, style: OUT_STYLE, animated: out.id === root || i.id === root });
       return;

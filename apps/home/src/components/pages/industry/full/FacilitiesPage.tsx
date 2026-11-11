@@ -14,9 +14,9 @@ export function BasePage() {
   const { showUnavailable } = useIndustrySettings();
   const listed = useMemo(() => facilities
     .filter((f) => showUnavailable || facilityKind(f.id) !== 'unavailable')
-    .map((f) => ({ ...f, kind: facilityKind(f.id), count: recipes.filter((r) => (showUnavailable || recipeAvailable(r)) && r.facilities.some((x) => x.id === f.id)).length }))
+    .map((f) => ({ ...f, kind: facilityKind(f.id), count: recipes.filter((r) => !r.legacy && (showUnavailable || recipeAvailable(r)) && r.facilities.some((x) => x.id === f.id)).length }))
     .sort((a, b) => (a.kind === b.kind ? a.name.localeCompare(b.name) : a.kind === 'deployable' ? -1 : 1)), [showUnavailable]);
-  const rs = useMemo(() => (id ? recipes.filter((r) => (showUnavailable || recipeAvailable(r)) && r.facilities.some((x) => x.id === id)) : []), [id, showUnavailable]);
+  const rs = useMemo(() => (id ? recipes.filter((r) => !r.legacy && (showUnavailable || recipeAvailable(r)) && r.facilities.some((x) => x.id === id)) : []), [id, showUnavailable]);
   const set = (patch: Record<string, string | undefined>) => { const p = new URLSearchParams(params); for (const [k, v] of Object.entries(patch)) v === undefined ? p.delete(k) : p.set(k, v); setParams(p, { replace: true }); };
   return (
     <div className="flex flex-col gap-4">

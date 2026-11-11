@@ -77,7 +77,32 @@ for rid, r in R.items():
     if not outputs: continue
     recipes.append({"id": rid, "name": r["name"], "kind": r["recipeType"], "product": outputs[0]["id"], "time": r["duration"],
                     "inputs": inputs, "outputs": outputs, "facilities": fac_of[rid]})
+
+# --- Build Mode: ships (Creations) and deployable structures are built in space, not from schemas ---------
+# Ids are offset so they never collide with schema ids; the site->ship match is by name (site "LAI" builds the LAI).
+BUILD_ID = 1_000_000
+costs = L("build_costs.json", {"ships": {}, "structures": {}})
+ship_by_name = {types.get(k, {}).get("typeName"): int(k) for k in (L("creation_templates.json") or {})}
+built = [(ship_by_name.get(types.get(site, {}).get("typeName"), int(site)), c) for site, c in costs["ships"].items()]
+built += [(int(k), c) for k, c in costs["structures"].items() if types.get(k, {}).get("published")]
+for tid, c in built:
+    recipes.append({"id": BUILD_ID + tid, "name": types.get(str(tid), {}).get("typeName"), "kind": "build", "product": tid, "time": 0,
+                    "inputs": [{"id": int(t), "qty": q} for t, q in c.items()], "outputs": [{"id": tid, "qty": 1}], "facilities": []})
 recipes.sort(key=lambda r: r["id"])
+
+# --- old materials: made before Digital Chemistry, now only refined back into new materials ----------------
+# Retired parts and pre-0.7.6.0 minerals: no schema makes them, and refining is all they are good for.
+# Salvage, rift crude and ores still drop, so only the Material category counts, plus what the dev blog names.
+RETIRED_EXTRA = {"Nomad Program Frame"}
+STILL_DROPS = {"Synod Technocore"}  # loot: nothing uses it except refining this cycle, but it is not retired
+made = {o["id"] for r in recipes if r["kind"] != "reprocessing" for o in r["outputs"]}
+used = {i["id"] for r in recipes if r["kind"] != "reprocessing" for i in r["inputs"]}
+refined = {i["id"] for r in recipes if r["kind"] == "reprocessing" for i in r["inputs"]}
+def category(tid): return cats.get(str(groups.get(str(types.get(str(tid), {}).get("groupID")), {}).get("categoryID")), {}).get("categoryName")
+legacy = {i for i in refined if i not in made and i not in used and i not in regolith_ids and types.get(str(i), {}).get("typeName") not in STILL_DROPS
+          and (category(i) == "Material" or types.get(str(i), {}).get("typeName") in RETIRED_EXTRA)}
+for r in recipes:
+    if r["kind"] == "reprocessing" and any(i["id"] in legacy for i in r["inputs"]): r["legacy"] = True
 
 ids = set(regolith_ids) | {r["id"] for r in rocks}
 for k, v in consumers.items(): ids.add(k); ids.update(v)
@@ -103,6 +128,7 @@ def tinfo(tid):
     return it
 items = {str(i): tinfo(i) for i in sorted(ids)}
 for i in regolith_ids: items[str(i)]["regolith"] = True
+for i in legacy: items[str(i)]["legacy"] = True
 for i, pr in prices.items():
     if str(i) in items: items[str(i)]["price"] = pr
 for t in sorted(used_traits):
@@ -114,7 +140,8 @@ if icon_dir:
         if it["id"] > 0 and os.path.exists(os.path.join(icon_dir, f"{it['id']}.png")): it["icon"] = f"/industry/icons/{it['id']}.png"
 
 fac_names = lambda fid: types.get(str(fid), {}).get("typeName", str(fid))
-facilities = [{"id": int(fid), "name": fac_names(fid), "blueprints": sorted(x["recipeID"] for x in v["recipes"] if x["recipeID"] in {r["id"] for r in recipes})} for fid, v in RF.items()]
+schema_ids = {r["id"] for r in recipes}
+facilities = [{"id": int(fid), "name": fac_names(fid), "blueprints": sorted(x["recipeID"] for x in v["recipes"] if x["recipeID"] in schema_ids)} for fid, v in RF.items()]
 traits = {str(t): {"name": T.get(str(t), {}).get("name"), "description": strip(T.get(str(t), {}).get("description")),
                    "needs": [{"prop": c["propertyID"], **({"min": c["minValue"]} if "minValue" in c else {}), **({"max": c["maxValue"]} if "maxValue" in c else {})} for c in TP.get(str(t), {}).get("properties", [])],
                    "members": trait_members[t]} for t in sorted(used_traits)}
@@ -132,4 +159,5 @@ data = {"clientVersion": version, "items": items, "recipes": recipes, "facilitie
 with open(out, "w", encoding="utf-8") as fh:
     json.dump(data, fh, ensure_ascii=False, separators=(",", ":"))
 kinds = collections.Counter(r["kind"] for r in recipes)
+print(f"old materials: {len(legacy)} ({', '.join(sorted(items[str(i)]['name'] for i in legacy))})")
 print(f"wrote {out}: {len(items)} items, {len(recipes)} schemas ({dict(kinds)}), {len(facilities)} facilities, {len(traits)} traits, {len(properties)} properties, {len(regolith_ids)} regoliths, {len(rocks)} rocks; {os.path.getsize(out)//1024} KB")

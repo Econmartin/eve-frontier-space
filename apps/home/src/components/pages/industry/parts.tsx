@@ -81,7 +81,7 @@ export function FacilityBadges({ recipe }: { recipe: Recipe }) {
   });
   return (
     <div className="flex flex-wrap gap-1">
-      {builtInSpace(recipe) && <Badge className="gap-1 bg-[var(--color-ocean-500)]/15 text-[var(--color-ocean-700)] dark:text-[var(--color-ocean-300)]" title="Players build this directly in open space, no structure needed."><Rocket className="size-3" /> built in space</Badge>}
+      {builtInSpace(recipe) && <Badge className="gap-1 bg-[var(--color-ocean-500)]/15 text-[var(--color-ocean-700)] dark:text-[var(--color-ocean-300)]" title="Built in Build Mode, in space, with no printer or refinery needed."><Rocket className="size-3" /> Build Mode</Badge>}
       {ids.length === 0 && !builtInSpace(recipe) && <Badge variant="outline" className="text-muted-foreground">no facility assigned</Badge>}
       {ids.map((id) => <FacilityBadge key={id} id={id} />)}
       {!available && <NotInGame />}
@@ -100,16 +100,16 @@ export function RecipeCard({ recipe, highlight, compact }: { recipe: Recipe; hig
         <div className="min-w-0 flex items-center gap-3">
           <ItemIcon id={title} size={40} className="rounded-lg" />
           <div className="min-w-0">
-            <div className="text-[0.65rem] tracking-[0.16em] uppercase text-muted-foreground">{recipe.kind === 'reprocessing' ? 'Refining schema' : 'Schema'} {recipe.id}</div>
+            <div className="text-[0.65rem] tracking-[0.16em] uppercase text-muted-foreground">{recipe.kind === 'build' ? 'Build Mode' : `${recipe.kind === 'reprocessing' ? 'Refining schema' : 'Schema'} ${recipe.id}`}</div>
             <div className="font-heading text-lg leading-tight truncate">
               <ItemLink id={title} className={highlight === title ? 'text-[var(--color-martian-500)]' : ''} />
             </div>
           </div>
         </div>
-        <div className="text-right shrink-0">
+        {recipe.kind !== 'build' && <div className="text-right shrink-0">
           <div className="text-[0.65rem] tracking-[0.16em] uppercase text-muted-foreground">Run time</div>
           <div className="tabular-nums">{fmtTime(recipe.time)}</div>
-        </div>
+        </div>}
       </div>
       <div className={cn('grid gap-4', compact ? 'grid-cols-1' : 'sm:grid-cols-2')}>
         <div>

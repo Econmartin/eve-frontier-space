@@ -96,6 +96,7 @@ export function ItemDetail({ id }: { id: number }) {
           <div className="flex flex-wrap gap-2 mt-3">
             {isBaseInput(id) && it.trait === undefined && <Badge className="bg-[var(--color-martian-500)] text-black">base input</Badge>}
             {it.regolith && <Badge variant="outline">regolith · mined from asteroids</Badge>}
+            {it.legacy && <Link to="/industry/old" className="no-underline"><Badge variant="outline" className="border-dashed text-muted-foreground hover:bg-muted">old material · refine what you have</Badge></Link>}
             <ItemAvailabilityBadge id={id} />
             {it.volume != null && it.unit !== 'kg' && <Badge variant="outline">{fmtVol(it.volume)} each</Badge>}
             {priceOf(id) != null && <Badge variant="outline"><Price n={priceOf(id)!} per="unit" /></Badge>}
@@ -163,7 +164,7 @@ export function ItemDetail({ id }: { id: number }) {
               </tbody>
             </table>
           </Panel>
-        ) : usesAll.length ? <Empty>Only consumed by recipes that are not in game this cycle.</Empty> : <Empty>Nothing consumes this item. It is an end product.</Empty>}
+        ) : usesAll.length ? <Empty>Only consumed by recipes that are not in game this cycle.</Empty> : it.legacy ? <Empty>Nothing uses this any more. Refine what you have into the new materials (above).</Empty> : <Empty>Nothing consumes this item. It is an end product.</Empty>}
       </Section>
     </div>
   );

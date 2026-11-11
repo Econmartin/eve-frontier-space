@@ -14,6 +14,8 @@ wanted = sys.argv[4:] or [
     "recipeoutputyieldbreakpoint", "recipeoutputyieldsource",
     "property", "propertyderivation", "propertyderivationbreakpoint", "propertyderivationterm",
     "trait", "traitproperty", "neotypeproperty", "neotypetrait",
+    # Build Mode: ship templates and structure construction costs (see extract_build_costs.py)
+    "creation_templates", "spacecomponentsbytype",
     "types", "groups", "categories", "marketgroups", "iconids", "metagroups",
 ]
 
