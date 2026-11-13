@@ -7,3 +7,4 @@ export { GraphPage } from './GraphPage.tsx';
 export { BrowserPage } from './BrowserPage.tsx';
 export { ChangesPage } from './ChangesPage.tsx';
 export { OldPage } from './OldPage.tsx';
+export { TunePage } from './TunePage.tsx';

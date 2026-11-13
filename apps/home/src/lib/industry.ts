@@ -17,18 +17,25 @@ export interface Item {
   props?: { id: number; min: number; max: number }[];
   /** traits some variant of this item can satisfy */
   traits?: number[];
+  /** traits the game lists for this item itself (module stats read the input carrying a trait) */
+  nt?: number[];
   /** set on the stand-in items for trait-only schema slots ("Any Radome material"); ids are negative */
   trait?: number;
   /** made before 0.7.6.0 and only refined back into new materials now (Reinforced Alloys, Silica Grains…) */
   legacy?: boolean;
 }
 /** `trait` is set when a slot accepts any item with that trait; `yieldBy` lists properties the output yield depends on */
-export interface RecipeIO { id: number; qty: number; trait?: number; yieldBy?: number[] }
+export interface RecipeIO { id: number; qty: number; trait?: number; yieldBy?: number[]; /** the schema's input index, which formulas refer to */ slot?: number }
+/** one output stat's formula: l = c + sum(coef x input value, log10 where flagged), b = curve over one input; e = take 10^result.
+ * s rows are [slot, input property, coefficient, log10 flag]. See lib/chem.ts. */
+/** a module-stat term as the game has it: reads property p from the input carrying trait t (or the wired slot w); a = averaged */
+export interface DerivedTerm { t?: number; p: number; k: number; g?: 1; a?: 1; w?: number }
+export interface Transform { o: number; p: number; op: 'l' | 'b'; c?: number; e?: 1; /** a module stat derived from the parts' ratings */ d?: 1; r?: DerivedTerm[]; s: [number, number, number, number][]; b?: [number, number][] }
 export interface RecipeFacility { id: number; maxInputRuns: number; maxOutputRuns: number }
 /** `build` is Build Mode (ships and structures built in space); `legacy` refines an old material */
-export interface Recipe { id: number; name?: string; kind?: 'manufacturing' | 'reprocessing' | 'build'; legacy?: boolean; product: number; time: number; inputs: RecipeIO[]; outputs: RecipeIO[]; facilities: RecipeFacility[] }
+export interface Recipe { id: number; name?: string; kind?: 'manufacturing' | 'reprocessing' | 'build'; legacy?: boolean; tf?: Transform[]; /** stats set to one value whatever goes in, by property id */ fx?: Record<string, number>; product: number; time: number; inputs: RecipeIO[]; outputs: RecipeIO[]; facilities: RecipeFacility[] }
 export interface Trait { name: string; description?: string | null; needs: { prop: number; min?: number; max?: number }[]; members: number[] }
-export interface Property { name: string; kind: 'physical' | 'specification'; min?: number | null; max?: number | null }
+export interface Property { name: string; kind: 'physical' | 'specification'; min?: number | null; max?: number | null; unitID?: number; unit?: string; /** stored as log10 */ log?: 1 }
 export interface Facility { id: number; name: string; blueprints: number[] }
 export interface Reprocessing { id: number; portionSize: number | null; materials: RecipeIO[] }
 export interface Rock { id: number; output: number; belt: 'inner' | 'outer' | null }

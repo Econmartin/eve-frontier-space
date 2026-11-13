@@ -16,6 +16,7 @@ wanted = sys.argv[4:] or [
     "trait", "traitproperty", "neotypeproperty", "neotypetrait",
     # Build Mode: ship templates and structure construction costs (see extract_build_costs.py)
     "creation_templates", "spacecomponentsbytype",
+    "dogmaunits",  # unit symbols for property display (extract_client_meta.py)
     "types", "groups", "categories", "marketgroups", "iconids", "metagroups",
 ]
 

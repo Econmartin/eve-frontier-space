@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import {
   categories, consumedBy, conversionsFor, facilityKind, facilityLive, facilityName, fmtQty, fmtTime, fmtVol, industryItems, isBaseInput, itemAvailable, itemName, itemOf, priceOf, producedBy, propertyOf, recipeAvailable, recipes, searchItems, starterProducts, traitOf, usedIn,
 } from '@/lib/industry';
+import { fmtProp } from '@/lib/chem';
 import { Empty, FacilityBadge, FacilityBadges, IOList, ItemAvailabilityBadge, ItemIcon, ItemLink, Panel, Price, Qty, RecipeCard, Section, Select, SuggestionChips, useIndustrySettings, useVisible } from '../parts';
 
 export function BrowserPage() {
@@ -170,9 +171,9 @@ export function ItemDetail({ id }: { id: number }) {
   );
 }
 
-const fmtProp = (n: number) => (Math.abs(n) >= 1000 ? Math.round(n).toLocaleString() : Number(n.toPrecision(3)).toLocaleString()).replace(/^-/, '−');
-const fmtRange = (min?: number, max?: number) =>
-  min !== undefined && max !== undefined ? (fmtProp(min) === fmtProp(max) ? fmtProp(min) : `${fmtProp(min)} to ${fmtProp(max)}`) : min !== undefined ? `≥ ${fmtProp(min)}` : max !== undefined ? `≤ ${fmtProp(max)}` : '–';
+/** a stored range, shown the way the game shows values (10^x for log-stored properties, with units) */
+const fmtRange = (p: number, min?: number, max?: number) =>
+  min !== undefined && max !== undefined ? (fmtProp(p, min) === fmtProp(p, max) ? fmtProp(p, min) : `${fmtProp(p, min)} to ${fmtProp(p, max)}`) : min !== undefined ? `≥ ${fmtProp(p, min)}` : max !== undefined ? `≤ ${fmtProp(p, max)}` : '–';
 
 /** Property ranges across the variants the game can produce of this item. */
 function Properties({ props }: { props: { id: number; min: number; max: number }[] }) {
@@ -182,7 +183,7 @@ function Properties({ props }: { props: { id: number; min: number; max: number }
         <table className="w-full text-sm">
           <tbody className="divide-y divide-foreground/5">
             {props.map((p) => (
-              <tr key={p.id}><td className="px-4 py-1.5">{propertyOf(p.id)?.name ?? `property ${p.id}`}</td><td className="px-4 py-1.5 text-right tabular-nums">{fmtRange(p.min, p.max)}</td></tr>
+              <tr key={p.id}><td className="px-4 py-1.5">{propertyOf(p.id)?.name ?? `property ${p.id}`}</td><td className="px-4 py-1.5 text-right tabular-nums">{fmtRange(p.id, p.min, p.max)}</td></tr>
             ))}
           </tbody>
         </table>
@@ -202,7 +203,7 @@ function TraitSlot({ trait }: { trait: number }) {
         <Panel className="p-0 overflow-hidden">
           <table className="w-full text-sm">
             <tbody className="divide-y divide-foreground/5">
-              {t.needs.map((n) => <tr key={n.prop}><td className="px-4 py-1.5">{propertyOf(n.prop)?.name ?? `property ${n.prop}`}</td><td className="px-4 py-1.5 text-right tabular-nums">{fmtRange(n.min, n.max)}</td></tr>)}
+              {t.needs.map((n) => <tr key={n.prop}><td className="px-4 py-1.5">{propertyOf(n.prop)?.name ?? `property ${n.prop}`}</td><td className="px-4 py-1.5 text-right tabular-nums">{fmtRange(n.prop, n.min, n.max)}</td></tr>)}
             </tbody>
           </table>
         </Panel>

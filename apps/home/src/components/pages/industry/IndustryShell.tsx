@@ -19,6 +19,7 @@ const STEPS = [
 ];
 const REFERENCE = [
   { to: '/industry/rocks', label: 'My rocks' },
+  { to: '/industry/tune', label: 'Tune' },
   { to: '/industry/graph', label: 'Graph' },
   { to: '/industry/browse', label: 'Browse' },
   { to: '/industry/changes', label: 'Changes' },

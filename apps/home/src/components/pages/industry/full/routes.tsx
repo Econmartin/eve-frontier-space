@@ -12,6 +12,7 @@ const GraphPage = lazy(() => ind().then((m) => ({ default: m.GraphPage })));
 const BrowserPage = lazy(() => ind().then((m) => ({ default: m.BrowserPage })));
 const ChangesPage = lazy(() => ind().then((m) => ({ default: m.ChangesPage })));
 const OldPage = lazy(() => ind().then((m) => ({ default: m.OldPage })));
+const TunePage = lazy(() => ind().then((m) => ({ default: m.TunePage })));
 
 /** Redirect for renamed industry pages that keeps the query string (shared links carry the item in it). */
 function Moved({ to }: { to: string }) { const { search } = useLocation(); return <Navigate to={`${to}${search}`} replace />; }
@@ -29,6 +30,7 @@ export const fullIndustryRoutes: RouteObject[] = [
   { path: 'browse', element: <BrowserPage /> },
   { path: 'item/:id', element: <BrowserPage /> },
   { path: 'changes', element: <ChangesPage /> },
+  { path: 'tune', element: <TunePage /> },
   // old materials from before 0.7.6.0: drop this tab next cycle
   { path: 'old', element: <OldPage /> },
   // old paths
