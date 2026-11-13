@@ -363,7 +363,9 @@ function Sources({ material, props, target, ranges }: { material: number; props:
                 <div className="flex items-center gap-2">
                   <ItemIcon id={m.ore} size={20} />
                   <ItemLink id={m.ore} className="font-semibold" />
-                  <span className={cn('ml-auto tabular-nums', m.hits === m.got.length ? 'text-[var(--color-ocean-500)]' : 'text-muted-foreground')}>{m.hits} of {m.got.length} close</span>
+                  <span className={cn('ml-auto tabular-nums', m.hits === m.got.length ? 'text-[var(--color-ocean-500)]' : 'text-muted-foreground')}
+                    title="Properties this ore's refining changes, and how many of them come within 5% of their range of what you set (the same step the game calls atypical). The rest come out the same from any of these ores.">
+                    matches {m.hits} of {m.got.length} it affects</span>
                 </div>
                 <div>
                   <span className="text-muted-foreground">Look for </span>
