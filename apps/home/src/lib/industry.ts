@@ -19,6 +19,10 @@ export interface Item {
   traits?: number[];
   /** traits the game lists for this item itself (module stats read the input carrying a trait) */
   nt?: number[];
+  /** the game's standard stack of a crafted part, stored values by property id (bulk materials have none: their standard is mid-range) */
+  std?: Record<string, number>;
+  /** asteroid kinds that hold this regolith, with how much: 5 Dominant, 4 Major, 3 Moderate, 2 Minor, 1 Trace */
+  minedFrom?: [string, number][];
   /** set on the stand-in items for trait-only schema slots ("Any Radome material"); ids are negative */
   trait?: number;
   /** made before 0.7.6.0 and only refined back into new materials now (Reinforced Alloys, Silica Grains…) */
@@ -33,9 +37,9 @@ export interface DerivedTerm { t?: number; p: number; k: number; g?: 1; a?: 1; w
 export interface Transform { o: number; p: number; op: 'l' | 'b'; c?: number; e?: 1; /** a module stat derived from the parts' ratings */ d?: 1; r?: DerivedTerm[]; s: [number, number, number, number][]; b?: [number, number][] }
 export interface RecipeFacility { id: number; maxInputRuns: number; maxOutputRuns: number }
 /** `build` is Build Mode (ships and structures built in space); `legacy` refines an old material */
-export interface Recipe { id: number; name?: string; kind?: 'manufacturing' | 'reprocessing' | 'build'; legacy?: boolean; tf?: Transform[]; /** stats set to one value whatever goes in, by property id */ fx?: Record<string, number>; product: number; time: number; inputs: RecipeIO[]; outputs: RecipeIO[]; facilities: RecipeFacility[] }
+export interface Recipe { id: number; name?: string; kind?: 'manufacturing' | 'reprocessing' | 'build'; legacy?: boolean; tf?: Transform[]; /** stats set to one value whatever goes in, by property id */ fx?: Record<string, number>; /** the material the game's standard build puts in each trait slot, by slot */ std?: Record<string, number>; product: number; time: number; inputs: RecipeIO[]; outputs: RecipeIO[]; facilities: RecipeFacility[] }
 export interface Trait { name: string; description?: string | null; needs: { prop: number; min?: number; max?: number }[]; members: number[] }
-export interface Property { name: string; kind: 'physical' | 'specification'; min?: number | null; max?: number | null; unitID?: number; unit?: string; /** stored as log10 */ log?: 1 }
+export interface Property { name: string; kind: 'physical' | 'specification'; min?: number | null; max?: number | null; unitID?: number; unit?: string; /** stored as log10 */ log?: 1; /** the name a module stat shows under in game */ stat?: string }
 export interface Facility { id: number; name: string; blueprints: number[] }
 export interface Reprocessing { id: number; portionSize: number | null; materials: RecipeIO[] }
 export interface Rock { id: number; output: number; belt: 'inner' | 'outer' | null }

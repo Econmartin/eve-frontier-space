@@ -4,7 +4,7 @@ import { ArrowDown, ArrowUp, RotateCcw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { industryItems, itemName, itemOf, producedBy, propertyOf, traitOf, type Recipe, type RecipeIO, type Transform } from '@/lib/industry';
 import {
-  candidates, evaluate, fmtDelta, fmtNumber, fmtProp, level, reach, resolveDerived, trend, shown, slotProps, slotRange, standardStack, tunable, typeRange,
+  candidates, evaluate, fmtDelta, fmtNumber, fmtProp, level, reach, resolveDerived, shown, slotProps, slotRange, standardStack, tunable, typeRange, vanilla, vanillaStack,
   type Interval, type Level, type Stack,
 } from '@/lib/chem';
 import { Empty, ItemIcon, ItemLink, ItemPicker, Panel, Section, Select, SuggestionChips } from '../parts';
@@ -87,13 +87,18 @@ interface SlotState { material: number; via: boolean; parts: Record<number, Part
 interface Group { key: number; input: RecipeIO; part: Part; props: number[]; ranges: Record<number, Interval> }
 interface SlotView { input: RecipeIO; state: SlotState; up?: ReturnType<typeof upstreamFor>; groups: Group[]; stack: Stack; ranges: Record<number, Interval> }
 
+/** what a slot starts with: the material the game's standard build uses there, else the best fit */
+function firstMaterial(recipe: Recipe, input: RecipeIO, need: number[]): number {
+  const cands = candidates(input, need); const std = recipe.std?.[input.slot ?? -1];
+  return std !== undefined && cands.some((c) => c.id === std) ? std : cands[0]?.id ?? input.id;
+}
 function freshSlot(input: RecipeIO, material: number, via: boolean, need: number[], keep?: Record<number, number>): SlotState {
   const up = via && hasParts(material, need) ? upstreamFor(material) : undefined;
   if (!up) return { material, via: false, parts: { [-1]: { material, values: standardStack(input, material, need) } } };
   const parts: Record<number, Part> = {};
   for (const [slot, props] of Object.entries(feeding(up, need))) {
     const inp = up.recipe.inputs.find((i) => i.slot === Number(slot)); if (!inp) continue;
-    const m = keep?.[Number(slot)] ?? candidates(inp, props)[0]?.id ?? inp.id;
+    const m = keep?.[Number(slot)] ?? firstMaterial(up.recipe, inp, props);
     parts[Number(slot)] = { material: m, values: standardStack(inp, m, props) };
   }
   return { material, via: true, parts };
@@ -125,13 +130,13 @@ function Tuner({ recipe }: { recipe: Recipe }) {
   const props = useMemo(() => slotProps(recipe), [recipe]);
   const slots = useMemo(() => recipe.inputs.filter((i) => props[i.slot ?? -1]), [recipe, props]);
   const [state, setState] = useState<Record<number, SlotState>>(() =>
-    Object.fromEntries(slots.map((i) => [i.slot!, freshSlot(i, candidates(i, props[i.slot!])[0]?.id ?? i.id, true, props[i.slot!])])));
+    Object.fromEntries(slots.map((i) => [i.slot!, freshSlot(i, firstMaterial(recipe, i, props[i.slot!]), true, props[i.slot!])])));
   const viewsOf = (st: Record<number, SlotState>) => Object.fromEntries(slots.map((i) => [i.slot!, viewSlot(i, st[i.slot!], props[i.slot!])])) as Record<number, SlotView>;
   const views = viewsOf(state);
   const stacks = Object.fromEntries(Object.entries(views).map(([k, v]) => [k, v.stack])) as Record<number, Stack>;
   const ranges = Object.fromEntries(Object.entries(views).map(([k, v]) => [k, v.ranges])) as Record<number, Record<number, Interval>>;
-  // the game's "standard": a mid-range stack of each slot's own material
-  const standard = Object.fromEntries(slots.map((i) => [i.slot!, standardStack(i, state[i.slot!].material, props[i.slot!])])) as Record<number, Stack>;
+  // the game's "standard": each slot's material as the game's standard stack of it (a crafted part's own standard build)
+  const standard = Object.fromEntries(slots.map((i) => [i.slot!, vanillaStack(state[i.slot!].material, props[i.slot!])])) as Record<number, Stack>;
   // stats that cannot move here (every input fixed, or nothing chosen carries them) go last, and dead zeros are dropped
   const moves = (t: Transform) => { const [lo, hi] = reach(t, ranges); return hi - lo > 1e-12 * Math.max(1, Math.abs(hi)); };
   const chosen = slots.map((i) => ({ slot: i.slot!, material: state[i.slot!].material, trait: i.trait }));
@@ -170,7 +175,7 @@ function Tuner({ recipe }: { recipe: Recipe }) {
       <div className="flex flex-col gap-4">
         {moduleStats.length > 0 && <Section title="Module stats" className="mb-0">
           <Panel className="p-0 overflow-hidden"><ul className="divide-y divide-foreground/5">{rows(moduleStats)}</ul></Panel>
-          <p className="text-xs text-muted-foreground font-sans mt-2">From the game's own formulas, reading each part's ratings. Not yet checked against a module built in game.</p>
+          <p className="text-xs text-muted-foreground font-sans mt-2">From the game's own formulas, reading each part's ratings. Checked against a Synthetic Mining Lens built in game: its Volatility, Volatility Damage and Duration changes match the build screen.</p>
         </Section>}
         <Section title={moduleStats.length ? 'Part ratings' : 'What comes out'} className="mb-0">
           {partStats.length > 0 && <Panel className="p-0 overflow-hidden"><ul className="divide-y divide-foreground/5">{rows(partStats)}</ul></Panel>}
@@ -184,20 +189,23 @@ function Tuner({ recipe }: { recipe: Recipe }) {
 function StatRow({ t, missing, recipe, stacks, standard, ranges, onPush }: { t: Transform; missing: number[]; recipe: Recipe; stacks: Record<number, Stack>; standard: Record<number, Stack>; ranges: Record<number, Record<number, Interval>>; onPush: (up: boolean) => void }) {
   const value = evaluate(t, stacks), base = evaluate(t, standard), [lo, hi] = reach(t, ranges);
   const out = recipe.outputs[t.o]?.id ?? recipe.product;
-  // the game labels a stat against the output type's range (stored like the inputs: log10 where flagged)
-  const lvl = level(value, typeRange(out, t.p));
+  // the game labels a stat against the output type's range and its standard value (stored like the inputs: log10 where flagged)
+  const lvl = level(value, typeRange(out, t.p), vanilla(out, t.p));
+  const name = (t.d && propertyOf(t.p)?.stat) || propertyOf(t.p)?.name;
   const pos = (v: number) => (hi > lo ? Math.min(100, Math.max(0, ((v - lo) / (hi - lo)) * 100)) : 50);
+  // standards are stored to 7 figures, so anything smaller than that is rounding, not a difference
   const delta = shown(t.p, value) - shown(t.p, base);
+  const differs = Math.abs(delta) > 1e-6 * Math.max(Math.abs(shown(t.p, value)), Math.abs(shown(t.p, base)), 1e-9);
   if (missing.length || !Number.isFinite(value)) return (
     <li className="px-4 py-3 flex flex-col gap-1">
-      <div className="flex items-baseline justify-between gap-3"><span className="text-sm">{propertyOf(t.p)?.name}</span><span className="tabular-nums text-muted-foreground">—</span></div>
+      <div className="flex items-baseline justify-between gap-3"><span className="text-sm">{name}</span><span className="tabular-nums text-muted-foreground">—</span></div>
       <div className="text-xs text-muted-foreground">{missing.length ? `Needs an input with the ${[...new Set(missing)].map((m) => traitOf(m)?.name).join(', ')} trait; none of the materials chosen carries it.` : 'Unknown: a material chosen has no value for a property this needs.'}</div>
     </li>
   );
   return (
     <li className="px-4 py-3 flex flex-col gap-1.5">
       <div className="flex items-baseline justify-between gap-3">
-        <span className="text-sm">{propertyOf(t.p)?.name}{recipe.outputs.length > 1 && <span className="text-muted-foreground"> · {itemName(out)}</span>}</span>
+        <span className="text-sm">{name}{recipe.outputs.length > 1 && <span className="text-muted-foreground"> · {itemName(out)}</span>}</span>
         <span className="tabular-nums font-semibold">{fmtProp(t.p, value)}</span>
       </div>
       <div className="flex items-center gap-2">
@@ -211,7 +219,7 @@ function StatRow({ t, missing, recipe, stacks, standard, ranges, onPush }: { t: 
       <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground tabular-nums">
         <span>{fmtProp(t.p, lo)} – {fmtProp(t.p, hi)}</span>
         <span>
-          {Math.abs(delta) > 1e-12 && <span className={delta > 0 ? 'text-[var(--color-ocean-500)]' : 'text-[var(--color-martian-500)]'}>{fmtDelta(t.p, value, base)} vs standard</span>}
+          {differs && <span className={delta > 0 ? 'text-[var(--color-ocean-500)]' : 'text-[var(--color-martian-500)]'}>{fmtDelta(t.p, value, base)} vs standard</span>}
           {lvl && <span className={cn('ml-2', LEVEL_TONE[lvl])}>{lvl[0].toUpperCase() + lvl.slice(1)}</span>}
         </span>
       </div>
@@ -278,34 +286,113 @@ function PartEditor({ g, nested, onPart }: { g: Group; nested: boolean; onPart: 
           </label>
         );
       })}
-      <Sources material={g.part.material} props={g.props} />
+      <Sources material={g.part.material} props={g.props} target={g.part.values} ranges={g.ranges} />
     </div>
   );
 }
 
-/** Where a material comes from: the ores that refine into it, and which ore property drives each property we care about. */
-function Sources({ material, props }: { material: number; props: number[] }) {
-  const all = producedBy.get(material) ?? [];
-  const ores = all.filter((r) => r.kind === 'reprocessing' && itemOf(r.inputs[0].id).regolith);
-  const printed = all.filter(tunable);
-  const hints = ores.flatMap((r) => {
-    const o = r.outputs.findIndex((x) => x.id === material);
-    return (r.tf ?? []).filter((t) => t.o === o && t.op === 'b' && props.includes(t.p)).map((t) => {
-      return { ore: r.inputs[0].id, prop: t.p, from: t.s[0][1], dir: trend(t.b!) };
-    });
-  });
-  if (!ores.length && !printed.length) return null;
+// ---------------- where to mine it ----------------
+interface OreMatch {
+  ore: number;
+  /** the ore property to look for and the value that gets closest to what you set */
+  look: { prop: number; value: number; range: Interval }[];
+  /** what the material comes out as at those values, against what you set */
+  got: { prop: number; value: number; want: number; hit: boolean }[];
+  hits: number; err: number;
+}
+/**
+ * For each ore that refines into this material, the ore stack that gets its refined material closest to the values
+ * set on the sliders. The refining schema ties each material property to one ore property through a curve, so
+ * every ore property is solved on its own: sweep it across the ore's range and keep the best value. Properties
+ * you moved off standard count ten times as much as the ones you left alone, so the ore follows what you asked for.
+ */
+function oreMatches(material: number, props: number[], target: Stack, ranges: Record<number, Interval>): { matches: OreMatch[]; unlinked: number[] } {
+  const ores = (producedBy.get(material) ?? []).filter((r) => r.kind === 'reprocessing' && !r.legacy && itemOf(r.inputs[0].id).regolith);
+  const matches: OreMatch[] = []; const unlinked: number[] = [];
+  for (const r of ores) {
+    const ore = r.inputs[0].id; const o = r.outputs.findIndex((x) => x.id === material);
+    const curves = (r.tf ?? []).filter((t) => t.o === o && t.op === 'b' && props.includes(t.p) && Number.isFinite(target[t.p]));
+    if (!curves.length) { unlinked.push(ore); continue; }
+    const width = (p: number) => { const [lo, hi] = ranges[p] ?? [0, 0]; return hi - lo; };
+    const by = new Map<number, Transform[]>();
+    for (const t of curves) by.set(t.s[0][1], [...(by.get(t.s[0][1]) ?? []), t]);
+    const m: OreMatch = { ore, look: [], got: [], hits: 0, err: 0 };
+    for (const [q, ts] of by) {
+      const range = typeRange(ore, q); if (!range) continue;
+      const at = (x: number) => ts.map((t) => evaluate(t, { [t.s[0][0]]: { [q]: x } }));
+      const weight = (p: number) => (Math.abs(target[p] - vanilla(material, p)) > 0.01 * width(p) ? 10 : 1);
+      let best = { x: range[0], e: Infinity };
+      for (let i = 0; i <= 240; i++) {
+        const x = range[0] + ((range[1] - range[0]) * i) / 240;
+        const e = at(x).reduce((acc, v, k) => acc + (width(ts[k].p) > 0 ? (weight(ts[k].p) * Math.abs(v - target[ts[k].p])) / width(ts[k].p) : 0), 0);
+        if (e < best.e - 1e-12) best = { x, e };
+      }
+      m.look.push({ prop: q, value: best.x, range });
+      at(best.x).forEach((v, k) => {
+        const p = ts[k].p; const w = width(p);
+        m.got.push({ prop: p, value: v, want: target[p], hit: w > 0 ? Math.abs(v - target[p]) <= 0.05 * w : Math.abs(v - target[p]) < 1e-9 });
+      });
+      m.err += best.e;
+    }
+    m.hits = m.got.filter((g) => g.hit).length;
+    if (m.got.length) matches.push(m);
+  }
+  // closest first, counting what you moved off standard most
+  matches.sort((a, b) => a.err / a.got.length - b.err / b.got.length);
+  return { matches, unlinked };
+}
+
+/** the item info "Mined from" words */
+const ABUNDANCE: Record<number, string> = { 5: 'Dominant', 4: 'Major', 3: 'Moderate', 2: 'Minor', 1: 'Trace' };
+/** Where a material comes from: the ores whose stacks refine closest to what the sliders are set to, and where those are mined. */
+function Sources({ material, props, target, ranges }: { material: number; props: number[]; target: Stack; ranges: Record<number, Interval> }) {
+  const [all, setAll] = useState(false);
+  const printed = (producedBy.get(material) ?? []).filter(tunable);
+  const { matches, unlinked } = useMemo(() => oreMatches(material, props, target, ranges), [material, props, target, ranges]);
+  if (!matches.length && !unlinked.length && !printed.length) return null;
+  const shownMatches = all ? matches : matches.slice(0, 3);
   return (
-    <div className="border-t border-foreground/10 pt-3 text-xs flex flex-col gap-1.5">
-      {ores.length > 0 && <div><span className="text-muted-foreground">Refined from </span>{ores.map((r, i) => <span key={r.id}>{i > 0 && ', '}<ItemLink id={r.inputs[0].id} /></span>)}</div>}
-      {hints.map((h) => (
-        <div key={`${h.ore}:${h.prop}`} className="text-muted-foreground">
-          {h.dir === 'mixed'
-            ? <>{propertyOf(h.prop)?.name} from <ItemLink id={h.ore} /> depends on its {propertyOf(h.from)?.name}, and peaks in between</>
-            : <>For higher {propertyOf(h.prop)?.name}, look for <ItemLink id={h.ore} /> with {h.dir === 'rising' ? 'high' : 'low'} {propertyOf(h.from)?.name}</>}
-        </div>
-      ))}
-      {printed.length > 0 && <div><span className="text-muted-foreground">Printed too: </span><Link to={`/industry/tune?item=${material}`} className="no-underline text-[var(--color-martian-500)]">tune {itemName(material)} →</Link></div>}
+    <div className="border-t border-foreground/10 pt-3 flex flex-col gap-2">
+      {matches.length > 0 && <>
+        <div className="text-[0.65rem] tracking-[0.16em] uppercase text-muted-foreground">Ore to look for, for these values</div>
+        <ul className="flex flex-col gap-2">
+          {shownMatches.map((m) => {
+            const rocks = itemOf(m.ore).minedFrom ?? [];
+            return (
+              <li key={m.ore} className="rounded-lg bg-foreground/[0.03] ring-1 ring-foreground/10 p-2.5 flex flex-col gap-1.5 text-xs">
+                <div className="flex items-center gap-2">
+                  <ItemIcon id={m.ore} size={20} />
+                  <ItemLink id={m.ore} className="font-semibold" />
+                  <span className={cn('ml-auto tabular-nums', m.hits === m.got.length ? 'text-[var(--color-ocean-500)]' : 'text-muted-foreground')}>{m.hits} of {m.got.length} close</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Look for </span>
+                  {m.look.map((l, i) => <span key={l.prop}>{i > 0 && ', '}{propertyOf(l.prop)?.name} ≈ <span className="tabular-nums font-semibold">{fmtProp(l.prop, l.value)}</span>{lookEnd(l)}</span>)}
+                </div>
+                <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-muted-foreground tabular-nums">
+                  {m.got.map((g) => (
+                    <span key={g.prop} title={`you set ${fmtProp(g.prop, g.want)}`} className={g.hit ? 'text-foreground' : undefined}>
+                      {g.hit ? '✓' : '·'} {propertyOf(g.prop)?.name} {fmtProp(g.prop, g.value)}{!g.hit && <> (set {fmtProp(g.prop, g.want)})</>}
+                    </span>
+                  ))}
+                </div>
+                {rocks.length > 0 && <div><span className="text-muted-foreground">Mined from </span>{rocks.map(([rock, a], i) => <span key={rock}>{i > 0 && ', '}{rock} <span className="text-muted-foreground">{ABUNDANCE[a] ?? ''}</span></span>)}</div>}
+              </li>
+            );
+          })}
+        </ul>
+        {matches.length > 3 && <button onClick={() => setAll(!all)} className="self-start text-xs text-muted-foreground hover:text-foreground">{all ? 'fewer ores' : `all ${matches.length} ores`}</button>}
+        <p className="text-[0.7rem] text-muted-foreground font-sans">From the refining schemas' own curves: each material property follows one property of the ore stack you refine, so properties tied to the same one move together and some combinations cannot all be had. What you moved off standard counts most. Checked against Olivine refined in game from a known Inkstone stack: all 28 properties match.</p>
+      </>}
+      {unlinked.length > 0 && <div className="text-xs"><span className="text-muted-foreground">{matches.length ? 'Also refined from ' : 'Refined from '}</span>{unlinked.map((id, i) => <span key={id}>{i > 0 && ', '}<ItemLink id={id} /></span>)}<span className="text-muted-foreground">{matches.length ? ': their schemas do not tie these properties to the ore' : ''}</span></div>}
+      {printed.length > 0 && <div className="text-xs"><span className="text-muted-foreground">Printed too: </span><Link to={`/industry/tune?item=${material}`} className="no-underline text-[var(--color-martian-500)]">tune {itemName(material)} →</Link></div>}
     </div>
   );
+}
+/** "(the top of its range)" when the best value sits at an end, so you know to look for the most or least you can find */
+function lookEnd(l: { value: number; range: Interval }) {
+  const w = l.range[1] - l.range[0]; if (!(w > 0)) return null;
+  if (l.value >= l.range[1] - 1e-9 * Math.max(1, Math.abs(w))) return <span className="text-muted-foreground"> (as high as it comes)</span>;
+  if (l.value <= l.range[0] + 1e-9 * Math.max(1, Math.abs(w))) return <span className="text-muted-foreground"> (as low as it comes)</span>;
+  return null;
 }

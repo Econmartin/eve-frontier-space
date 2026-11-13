@@ -17,7 +17,15 @@ R, RI, RIT, RO = L("recipe.json"), L("recipeinput.json"), L("recipeinputtrait.js
 RF, YS = L("recipefacilities.json"), L("recipeoutputyieldsource.json", {})
 TR, TS, TB = L("recipeoutputtransform.json", {}), L("recipeoutputtransformsource.json", {}), L("recipeoutputtransformbreakpoint.json", {})
 META = L("client_meta.json", {"log10": [], "units": {}})
+# the game's standard for each crafted item, from its own code (extract_crafted_defaults.py)
+CD = L("crafted_defaults.json") or {}
+STD = CD.get("defaults", {})
+# the material the game's standard build puts in each trait slot, by schema: {schema: {slot: material}}
+STD_SLOTS = {str(c["recipe"]): c["slots"] for c in CD.get("choices", {}).values() if c.get("slots")}
+# "Mined from": which asteroid kinds hold each regolith, 5 Dominant, 4 Major, 3 Moderate, 2 Minor, 1 Trace
+PRES = L("regolith_presence.json") or {}
 PD, PDT, PDW = L("propertyderivation.json", {}), L("propertyderivationterm.json", {}), L("recipederivationwiring.json", {})
+PDB = L("propertyderivationbreakpoint.json", {})
 P, T, TP = L("property.json"), L("trait.json"), L("traitproperty.json")
 NP, NT = L("neotypeproperty.json", {}), L("neotypetrait.json", {})
 regolith_ids = {int(t) for t, v in types.items() if groups.get(str(v.get("groupID")), {}).get("groupName", "").endswith("Regoliths")}
@@ -85,9 +93,10 @@ def module_attrs(tid):
     return {a["attributeID"] for a in ((td or {}).get(str(tid)) or {}).get("dogmaAttributes", [])}
 
 def derived(rid, inputs, product=None):
-    """Module stats (Mining Amount, Range…) worked out from the parts' ratings: [{p, op: l, c, s, d: 1}].
+    """Module stats (Mining Amount, Range…) worked out from the parts' ratings: [{p, op: l|b, c, s, d: 1}].
     Each term reads one rating from the input carrying its trait (or the slot the schema wires it to); 'average'
-    over several inputs is folded into the coefficients so it stays a plain sum. Only linear ones are kept."""
+    over several inputs is folded into the coefficients so it stays a plain sum. A breakpoint one (Volatility)
+    runs that sum through its curve."""
     wired = {(w["propertyID"], w["termIndex"]): w["inputIndex"] for w in PDW.get(str(rid), {}).get("wiring", [])}
     # traits an input brings: its own, the slot's, and for a trait slot those of the parts that can fill it
     # (D1 Fuel's slot asks for one trait; the Fuel Stock that fills it carries the one its stats read)
@@ -95,7 +104,9 @@ def derived(rid, inputs, product=None):
     own = {i["slot"]: carried(i["id"]) | ({i["trait"]} | set().union(*(carried(m) for m in members(i["trait"]))) if "trait" in i else set()) for i in inputs}
     out, has = [], module_attrs(product) if product else set()
     for pid, d in PD.items():
-        if d.get("op") != "linearCombination": continue
+        if d.get("op") not in ("linearCombination", "breakpointTable"): continue
+        curve = sorted([b["x"], b["y"]] for b in PDB.get(pid, {}).get("breakpoints", [])) if d["op"] == "breakpointTable" else None
+        if d["op"] == "breakpointTable" and not curve: continue
         if P.get(pid, {}).get("bridgedAttributeID") not in has: continue  # the game only applies stats the module carries
         rows, ok = [], True
         for term in PDT.get(pid, {}).get("terms", []):
@@ -108,7 +119,7 @@ def derived(rid, inputs, product=None):
         terms = [{"t": term.get("traitID"), "p": term["sourcePropertyID"], "k": term.get("coefficient", 0), **({"g": 1} if term.get("log10") else {}),
                   **({"a": 1} if term.get("reduce") == "average" else {}), **({"w": wired[(int(pid), term["termIndex"])]} if (int(pid), term["termIndex"]) in wired else {})}
                  for term in PDT.get(pid, {}).get("terms", [])]
-        if ok and rows: out.append({"o": 0, "p": int(pid), "op": "l", "c": d.get("linearConstant", 0), "s": rows, "d": 1, "r": terms})
+        if ok and rows: out.append({"o": 0, "p": int(pid), **({"op": "b", "b": curve} if curve else {"op": "l", "c": d.get("linearConstant", 0)}), "s": rows, "d": 1, "r": terms})
     return out
 
 fac_of = collections.defaultdict(list)
@@ -131,6 +142,7 @@ for rid, r in R.items():
                for o in sorted(RO[str(rid)]["outputs"], key=lambda o: o["outputIndex"])]
     if not outputs: continue
     recipes.append({"id": rid, "name": r["name"], "kind": r["recipeType"], "product": outputs[0]["id"], "time": r["duration"],
+                    **({"std": {k: v for k, v in STD_SLOTS[str(rid)].items()}} if str(rid) in STD_SLOTS else {}),
                     "inputs": inputs, "outputs": outputs, "facilities": fac_of[rid], **({"tf": tf} if (tf := transforms(rid) + (derived(rid, inputs, outputs[0]["id"]) if r["recipeType"] == "manufacturing" else [])) else {}),
                     **({"fx": fx} if r["recipeType"] == "manufacturing" and (fx := fixed(rid)) else {})})
 
@@ -183,9 +195,15 @@ def tinfo(tid):
     if tr: it["traits"] = tr
     nt = sorted(x["traitID"] for x in NT.get(str(tid), {}).get("traits", []))
     if nt: it["nt"] = nt
+    # the game's standard stack of a crafted part (what "atypical" and the build deltas compare with); bulk
+    # materials have none, their standard is the middle of each range
+    if str(tid) in STD: it["std"] = {p: float("%.7g" % v) for p, v in STD[str(tid)].items()}
     return it
 items = {str(i): tinfo(i) for i in sorted(ids)}
 for i in regolith_ids: items[str(i)]["regolith"] = True
+for i, kinds in PRES.get("ores", {}).items():
+    if i in items:
+        items[i]["minedFrom"] = sorted(([PRES["asteroids"].get(k, {}).get("name") or k, a] for k, a in kinds), key=lambda x: (-x[1], x[0]))
 for i in legacy: items[str(i)]["legacy"] = True
 for i, pr in prices.items():
     if str(i) in items: items[str(i)]["price"] = pr
@@ -217,7 +235,9 @@ LOG10 = set(META["log10"])
 # a module stat with no unit of its own shows in the unit of the module attribute it feeds (Range in m…)
 unit_of = lambda p: P[str(p)].get("unitID") or (da or {}).get(str(P[str(p)].get("bridgedAttributeID")), {}).get("unitID")
 properties = {str(p): {"name": P[str(p)]["name"], "kind": P[str(p)]["kind"], "min": P[str(p)].get("naturalMin"), "max": P[str(p)].get("naturalMax"),
-                       **({"unitID": unit_of(p), "unit": META["units"].get(str(unit_of(p)))} if unit_of(p) else {}), **({"log": 1} if p in LOG10 else {})}
+                       **({"unitID": unit_of(p), "unit": META["units"].get(str(unit_of(p)))} if unit_of(p) else {}), **({"log": 1} if p in LOG10 else {}),
+                       # module stats show in game under the module attribute's name ("Volatility", not "Volatility Chance")
+                       **({"stat": a} if (a := META.get("attributes", {}).get(str(P[str(p)].get("bridgedAttributeID")))) and a != P[str(p)]["name"] else {})}
               for p in sorted(prop_ids) if str(p) in P}
 
 ini = os.path.join(d, "start.ini"); cv = os.path.join(d, "client_version.txt")
