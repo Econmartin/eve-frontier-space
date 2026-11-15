@@ -1,15 +1,23 @@
 import { candidates } from '@/lib/chem';
-import { itemName, itemOf, type SlotFill } from '@/lib/industry';
+import { itemName, itemOf } from '@/lib/industry';
 import { cn } from '@/lib/utils';
 
 /** materials that can go in an "Any … material" slot, best fit first */
 export const slotOptions = (slot: number) => candidates({ id: slot, qty: 0, trait: itemOf(slot).trait });
 
-/** a dropdown for one "Any … material" slot: leave it open, or pick the material you will use */
-export function SlotSelect({ slot, value, onChange, className }: { slot: number; value?: number; onChange: (material: number | undefined) => void; className?: string }) {
+/**
+ * An "Any … material" slot shown as its own name: it reads "Any Radome material" until you pick, then the material.
+ * `title` blends into a card heading (the graph); the default is a small field (lists).
+ */
+export function SlotSelect({ slot, value, onChange, className, variant }: { slot: number; value?: number; onChange: (material: number | undefined) => void; className?: string; variant?: 'title' }) {
   return (
-    <select id={`slot${slot}`} aria-label={itemName(slot)} value={value ?? ''} onChange={(e) => onChange(e.target.value ? Number(e.target.value) : undefined)}
-      className={cn('h-7 max-w-[60vw] rounded-lg bg-background ring-1 ring-foreground/15 px-2 text-xs', value === undefined && 'text-muted-foreground', className)}>
+    <select id={`slot${slot}`} aria-label={`${itemName(slot)}: pick a material`} value={value ?? ''} onChange={(e) => onChange(e.target.value ? Number(e.target.value) : undefined)}
+      title="Pick the material that goes in this slot"
+      className={cn('max-w-full truncate cursor-pointer',
+        variant === 'title'
+          ? 'w-full -mx-1 px-1 h-6 rounded-md bg-transparent text-sm font-medium leading-tight ring-1 ring-transparent hover:ring-foreground/20 focus:ring-[var(--color-martian-500)] outline-none'
+          : 'h-7 rounded-lg bg-background ring-1 ring-foreground/15 px-2 text-sm',
+        value === undefined && 'text-[var(--color-martian-500)]', className)}>
       <option value="">{itemName(slot)}</option>
       {slotOptions(slot).map((c) => <option key={c.id} value={c.id}>{itemName(c.id)}{c.fit === 'sometimes' ? ' (some stacks fit)' : ''}</option>)}
     </select>

@@ -1,5 +1,5 @@
 /** Shared React Flow canvas and graph builders for the industry pages. */
-import { useCallback, useEffect, useMemo, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, type ReactNode } from 'react';
 import { useNavigate } from 'react-router';
 import {
   BaseEdge, Background, Controls, Handle, Position, ReactFlow, ReactFlowProvider, useReactFlow,
@@ -9,11 +9,15 @@ import dagre from '@dagrejs/dagre';
 import '@xyflow/react/dist/style.css';
 import { cn } from '@/lib/utils';
 import {
-  fmtQty, builtInSpace, defaultRecipeFor, facilityKind, facilityLive, facilityName, fmtTime, isBaseInput, itemName, itemOf, producedBy, recipeAvailable, slotFor, usedIn, usedViaTrait, type Recipe, type RecipeIO,
+  fmtQty, builtInSpace, defaultRecipeFor, facilityKind, facilityLive, facilityName, fmtTime, isBaseInput, itemName, itemOf, producedBy, recipeAvailable, slotFor, usedIn, usedViaTrait, type Recipe, type RecipeIO, type SlotFill,
 } from '@/lib/industry';
 import { ItemIcon, useIndustrySettings } from '../parts';
+import { SlotSelect } from './SlotFill';
 
-type ItemData = { id: number; root: boolean; base: boolean; sub?: string; vertical?: boolean };
+/** `slot`: the "Any … material" slot this card stands for, or the material picked for it */
+type ItemData = { id: number; root: boolean; base: boolean; sub?: string; vertical?: boolean; slot?: number };
+/** set by a graph whose "Any … material" cards can be filled in place (Make) */
+const SlotFillContext = createContext<((slot: number, material: number | undefined) => void) | null>(null);
 type RecipeData = { recipe: Recipe };
 type FacilityData = { id: number };
 type GroupData = { label: string; count: number };
@@ -25,14 +29,24 @@ function pillFacilities(r: Recipe, showUnavailable: boolean) {
 }
 
 function ItemNode({ data }: NodeProps<Node<ItemData, 'item'>>) {
-  const it = itemOf(data.id);
+  const it = itemOf(data.id); const fill = useContext(SlotFillContext);
   return (
     <div className={cn('flex items-center gap-2.5 rounded-xl bg-card ring-1 px-3 py-2 min-w-[180px] max-w-[240px] shadow-sm', data.root ? 'ring-[var(--color-martian-500)] ring-2' : data.base ? 'ring-foreground/10' : 'ring-foreground/15')}>
       <Handle type="target" position={data.vertical ? Position.Top : Position.Left} className="!bg-foreground/30 !border-0 !w-1.5 !h-1.5" />
       <ItemIcon id={data.id} size={34} className="rounded-lg" />
-      <div className="min-w-0">
-        <div className="text-sm font-medium leading-tight truncate">{it.name}</div>
-        <div className="text-[0.6rem] uppercase tracking-wider text-muted-foreground truncate">{data.sub ?? (data.base ? 'raw material' : it.group)}</div>
+      <div className="min-w-0 flex-1">
+        {data.slot !== undefined && fill ? (
+          // an "Any … material" slot: the name is the dropdown. nodrag/nopan keep the graph from grabbing the click
+          <div className="nodrag nopan" onClick={(e) => e.stopPropagation()} onDoubleClick={(e) => e.stopPropagation()}>
+            <SlotSelect slot={data.slot} value={data.id > 0 ? data.id : undefined} onChange={(m) => fill(data.slot!, m)} variant="title" />
+            <div className="text-[0.6rem] uppercase tracking-wider text-muted-foreground truncate">{data.id > 0 ? itemName(data.slot).replace(/^Any /, '').replace(/ material$/, '') : 'pick what fits'}</div>
+          </div>
+        ) : (
+          <>
+            <div className="text-sm font-medium leading-tight truncate">{it.name}</div>
+            <div className="text-[0.6rem] uppercase tracking-wider text-muted-foreground truncate">{data.sub ?? (data.base ? 'raw material' : it.group)}</div>
+          </>
+        )}
       </div>
       <Handle type="source" position={data.vertical ? Position.Bottom : Position.Right} className="!bg-foreground/30 !border-0 !w-1.5 !h-1.5" />
     </div>
@@ -105,6 +119,8 @@ export interface GraphOptions {
   mode: Mode; depth: number; showUnavailable: boolean;
   /** collapse recipe pills: draw item → item edges labelled with the facility */
   productsOnly?: boolean;
+  /** materials picked for "Any … material" slots: drawn in place of the slot (the graph stops there, as it does at the slot) */
+  fill?: SlotFill;
   /** consumers followed per item when walking downstream */
   perItem?: number;
 }
@@ -127,7 +143,9 @@ export function buildItemGraph(root: number, o: GraphOptions) {
   const vis = (rs: Recipe[]) => (o.showUnavailable ? rs : rs.filter(recipeAvailable));
   const perItem = o.perItem ?? 12;
   const nodes = new Map<string, GNode>(); const edges: Edge[] = []; const edgeIds = new Set<string>();
-  const addItem = (id: number, isRoot = false) => { const k = `i${id}`; if (!nodes.has(k)) nodes.set(k, { id: k, type: 'item', position: { x: 0, y: 0 }, className: 'cursor-pointer!', data: { id, root: isRoot, base: isBaseInput(id) } }); return k; };
+  const addItem = (id: number, isRoot = false, slot?: number) => { const k = `i${id}`; if (!nodes.has(k)) nodes.set(k, { id: k, type: 'item', position: { x: 0, y: 0 }, className: 'cursor-pointer!', data: { id, root: isRoot, base: isBaseInput(id), slot: slot ?? (id < 0 ? id : undefined) } }); return k; };
+  // an "Any … material" slot with a material picked draws that material on the card, and goes no further back
+  const filled = (id: number) => (id < 0 ? o.fill?.get(id) ?? id : id);
   const addEdge = (e: Edge) => { if (!edgeIds.has(e.id)) { edgeIds.add(e.id); edges.push(e); } };
   /** `from`: draw only what this item feeds, starting at the item itself even where it fills an "Any … material" slot */
   const addRecipe = (r: Recipe, inputFilter?: (id: number) => boolean, from?: number) => {
@@ -141,7 +159,7 @@ export function buildItemGraph(root: number, o: GraphOptions) {
     const k = `r${r.id}`;
     if (!nodes.has(k)) nodes.set(k, { id: k, type: 'recipe', position: { x: 0, y: 0 }, className: 'cursor-default!', data: { recipe: r } });
     const feeds = from !== undefined ? [slotFor(r, from)].filter((x): x is RecipeIO => !!x).map((x) => ({ ...x, id: from })) : r.inputs.filter((i) => !inputFilter || inputFilter(i.id));
-    for (const i of feeds) addEdge({ id: `${k}<${i.id}`, source: addItem(i.id), target: k, label: fmtQty(i.qty, i.id), ...EDGE_LABEL, style: IN_STYLE });
+    for (const i of feeds) { const f = filled(i.id); addEdge({ id: `${k}<${f}`, source: addItem(f, false, i.id < 0 ? i.id : undefined), target: k, label: fmtQty(i.qty, f), ...EDGE_LABEL, style: IN_STYLE }); }
     for (const out of r.outputs) addEdge({ id: `${k}>${out.id}`, source: k, target: addItem(out.id), label: fmtQty(out.qty, out.id), ...EDGE_LABEL, style: OUT_STYLE, animated: out.id === root });
   };
   addItem(root, true);
@@ -149,7 +167,7 @@ export function buildItemGraph(root: number, o: GraphOptions) {
   const expandUp = (id: number, d: number, all: boolean) => {
     const pool = vis(producedBy.get(id) ?? []);
     const rs = all ? pool : [defaultRecipeFor(id, pool)].filter((r): r is Recipe => !!r);
-    for (const r of rs) { const key = r.id * 1_000_003 + id; if (seenUp.has(key)) continue; seenUp.add(key); addRecipe(r); if (d > 1) for (const i of r.inputs) expandUp(i.id, d - 1, false); }
+    for (const r of rs) { const key = r.id * 1_000_003 + id; if (seenUp.has(key)) continue; seenUp.add(key); addRecipe(r); if (d > 1) for (const i of r.inputs) if (i.id > 0) expandUp(i.id, d - 1, false); }
   };
   const seenDown = new Set<number>();
   const expandDown = (id: number, d: number) => {
@@ -238,13 +256,13 @@ export function GraphPlaceholder({ children, className }: { children: ReactNode;
 }
 
 /** Drop-in graph panel. `build` runs inside useMemo keyed on `deps`. */
-export function GraphPanel({ build, deps, onItem, className, note }: { build: () => { nodes: GNode[]; edges: Edge[] }; deps: unknown[]; onItem?: (id: number) => void; className?: string; note?: string }) {
+export function GraphPanel({ build, deps, onItem, onFill, className, note }: { build: () => { nodes: GNode[]; edges: Edge[] }; deps: unknown[]; onItem?: (id: number) => void; onFill?: (slot: number, material: number | undefined) => void; className?: string; note?: string }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const g = useMemo(build, deps);
   return (
     <div>
       <div className={cn('rounded-2xl overflow-hidden ring-1 ring-foreground/10 bg-background', className ?? 'h-[60dvh] min-h-[420px]')}>
-        <ReactFlowProvider><Canvas nodes={g.nodes} edges={g.edges} onItem={onItem} /></ReactFlowProvider>
+        <SlotFillContext.Provider value={onFill ?? null}><ReactFlowProvider><Canvas nodes={g.nodes} edges={g.edges} onItem={onItem} /></ReactFlowProvider></SlotFillContext.Provider>
       </div>
       {note && <p className="text-xs text-muted-foreground font-sans mt-2">{note}</p>}
     </div>

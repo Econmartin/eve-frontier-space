@@ -107,7 +107,7 @@ function Totals({ title, rows, muted, onFill }: { title: string; rows: [number, 
       <ul className="divide-y divide-foreground/5 text-sm">
         {rows.sort((a, b) => b[1] - a[1]).map(([id, q]) => (
           <li key={id} className={cn('py-1.5 flex items-center justify-between gap-3', muted && 'text-muted-foreground')}>
-            {id < 0 && onFill ? <SlotSelect slot={id} onChange={(m) => onFill(id, m)} className="min-w-0 max-w-[230px]" /> : <ItemLink id={id} icon className={muted ? 'text-muted-foreground' : ''} />}<Qty n={q} id={id} />
+            {id < 0 && onFill ? <span className="inline-flex items-center gap-1.5 min-w-0"><ItemIcon id={id} size={20} /><SlotSelect slot={id} onChange={(m) => onFill(id, m)} variant="title" className="w-auto" /></span> : <ItemLink id={id} icon className={muted ? 'text-muted-foreground' : ''} />}<Qty n={q} id={id} />
           </li>
         ))}
       </ul>
@@ -129,7 +129,7 @@ function PlanTree({ node, depth, overrides, owned, onRecipe, onOwned, onFill }: 
         <Qty n={node.qty} id={node.item} />
         {/* an "Any … material" slot: pick the material, and the tree plans that material from here down */}
         {node.slot !== undefined || node.item < 0
-          ? <>{node.slot !== undefined && <ItemLink id={node.item} icon />}<SlotSelect slot={node.slot ?? node.item} value={node.slot !== undefined ? node.item : undefined} onChange={(m) => onFill(node.slot ?? node.item, m)} /></>
+          ? <span className="inline-flex items-center gap-1.5 min-w-0"><ItemIcon id={node.item} size={20} /><SlotSelect slot={node.slot ?? node.item} value={node.slot !== undefined ? node.item : undefined} onChange={(m) => onFill(node.slot ?? node.item, m)} variant="title" className="w-auto" /></span>
           : <ItemLink id={node.item} icon className={cn(!node.recipe && !isOwned && 'text-muted-foreground')} />}
         {node.recipe ? (
           <>

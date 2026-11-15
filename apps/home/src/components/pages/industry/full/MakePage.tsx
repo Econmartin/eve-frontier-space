@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router';
-import { industryItems, itemName, itemOf, producedBy, rankRecipes, recipeAvailable, starterProducts } from '@/lib/industry';
+import { fmtFill, industryItems, itemName, itemOf, parseFill, producedBy, rankRecipes, recipeAvailable, starterProducts } from '@/lib/industry';
 import { Empty, Select, ItemIcon, ItemPicker, Panel, RecipeCard, Section, SuggestionChips, useIndustrySettings, useVisible } from '../parts';
 import { GraphPanel, GraphPlaceholder, buildItemGraph } from './graph';
 
@@ -14,6 +14,9 @@ export function MakePage() {
   const pool = useMemo(() => industryItems.filter((i) => (producedBy.get(i.id) ?? []).some((r) => showUnavailable || recipeAvailable(r))), [showUnavailable]);
   const made = useVisible(id ? rankRecipes(id, producedBy.get(id) ?? []) : []);
   const pick = (iid: number) => { const p = new URLSearchParams(params); p.set('item', String(iid)); setParams(p, { replace: true }); };
+  // materials picked on the graph's "Any … material" cards, kept in the link so the shopping list gets them too
+  const fillParam = params.get('fill'); const fill = useMemo(() => parseFill(fillParam), [fillParam]);
+  const setFill = (slot: number, m: number | undefined) => { const f = new Map(fill); if (m) f.set(slot, m); else f.delete(slot); const p = new URLSearchParams(params); if (f.size) p.set('fill', fmtFill(f)); else p.delete('fill'); setParams(p, { replace: true }); };
   return (
     <div className="flex flex-col gap-4">
       <Panel className="flex flex-col gap-3">
@@ -37,11 +40,11 @@ export function MakePage() {
             </div>
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-2"><span className="text-xs tracking-[0.16em] uppercase text-muted-foreground">Steps back</span><Select ariaLabel="Depth" value={String(depth)} onChange={setDepth} options={[1, 2, 3, 4].map((n) => ({ value: String(n), label: String(n) }))} /></div>
-              <Link to={`/industry/plan?item=${id}`} className="no-underline rounded-xl bg-foreground text-background px-4 py-2 text-sm font-semibold hover:opacity-85 transition-opacity">Shopping list →</Link>
+              <Link to={`/industry/plan?item=${id}${fill.size ? `&fill=${fmtFill(fill)}` : ''}`} className="no-underline rounded-xl bg-foreground text-background px-4 py-2 text-sm font-semibold hover:opacity-85 transition-opacity">Shopping list →</Link>
             </div>
           </div>
-          <GraphPanel build={() => buildItemGraph(id, { mode: 'up', depth, showUnavailable })} deps={[id, depth, showUnavailable]} onItem={(iid) => { if (producedBy.has(iid)) pick(iid); }}
-            note="Orange pills are recipes with their facility and run time; numbers on the arrows are quantities per run. Past the first step the graph follows the usual recipe for each input; click a made item to centre on it." />
+          <GraphPanel build={() => buildItemGraph(id, { mode: 'up', depth, showUnavailable, fill })} deps={[id, depth, showUnavailable, fillParam]} onFill={setFill} onItem={(iid) => { if (producedBy.has(iid)) pick(iid); }}
+            note="Orange pills are recipes with their facility and run time; numbers on the arrows are quantities per run. Past the first step the graph follows the usual recipe for each input; click a made item to centre on it. An Any … material card has a dropdown: see what fits and pick the one you will use." />
           <Section title={`Ways to make it · ${made.length}`} className="mb-0 min-h-[60dvh]">
             {made.length ? <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">{made.map((r) => <RecipeCard key={r.id} recipe={r} highlight={id} />)}</div> : <Empty>No recipe for this in game this cycle.</Empty>}
           </Section>
