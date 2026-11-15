@@ -9,7 +9,7 @@ import dagre from '@dagrejs/dagre';
 import '@xyflow/react/dist/style.css';
 import { cn } from '@/lib/utils';
 import {
-  fmtQty, builtInSpace, defaultRecipeFor, facilityKind, facilityLive, facilityName, fmtTime, isBaseInput, itemName, itemOf, producedBy, recipeAvailable, usedIn, type Recipe,
+  fmtQty, builtInSpace, defaultRecipeFor, facilityKind, facilityLive, facilityName, fmtTime, isBaseInput, itemName, itemOf, producedBy, recipeAvailable, slotFor, usedIn, usedViaTrait, type Recipe, type RecipeIO,
 } from '@/lib/industry';
 import { ItemIcon, useIndustrySettings } from '../parts';
 
@@ -129,10 +129,12 @@ export function buildItemGraph(root: number, o: GraphOptions) {
   const nodes = new Map<string, GNode>(); const edges: Edge[] = []; const edgeIds = new Set<string>();
   const addItem = (id: number, isRoot = false) => { const k = `i${id}`; if (!nodes.has(k)) nodes.set(k, { id: k, type: 'item', position: { x: 0, y: 0 }, className: 'cursor-pointer!', data: { id, root: isRoot, base: isBaseInput(id) } }); return k; };
   const addEdge = (e: Edge) => { if (!edgeIds.has(e.id)) { edgeIds.add(e.id); edges.push(e); } };
-  const addRecipe = (r: Recipe, inputFilter?: (id: number) => boolean) => {
+  /** `from`: draw only what this item feeds, starting at the item itself even where it fills an "Any … material" slot */
+  const addRecipe = (r: Recipe, inputFilter?: (id: number) => boolean, from?: number) => {
     if (o.productsOnly) {
       const fac = builtInSpace(r) ? 'Build Mode' : pillFacilities(r, o.showUnavailable)[0] ?? 'unassigned';
-      for (const i of r.inputs) if (!inputFilter || inputFilter(i.id)) for (const out of r.outputs) if (out.id !== i.id)
+      const ins = from !== undefined ? [slotFor(r, from)].filter((x): x is RecipeIO => !!x).map((x) => ({ ...x, id: from })) : r.inputs.filter((i) => !inputFilter || inputFilter(i.id));
+      for (const i of ins) for (const out of r.outputs) if (out.id !== i.id)
         addEdge({ id: `${i.id}>${out.id}@${r.id}`, source: addItem(i.id), target: addItem(out.id), label: `${fmtQty(i.qty, i.id)} → ${fmtQty(out.qty, out.id)} · ${fac}`, ...EDGE_LABEL, labelStyle: { ...EDGE_LABEL.labelStyle, fontSize: 10 }, style: OUT_STYLE, animated: out.id === root || i.id === root });
       return;
     }
@@ -151,8 +153,10 @@ export function buildItemGraph(root: number, o: GraphOptions) {
   const seenDown = new Set<number>();
   const expandDown = (id: number, d: number) => {
     if (seenDown.has(id)) return; seenDown.add(id);
-    for (const r of vis(usedIn.get(id) ?? []).slice(0, perItem)) {
-      addRecipe(r, (iid) => iid === id);
+    // schemas that name it, and since 0.7.6.0 mostly the ones whose "Any … material" slot it fits
+    const uses = [...new Set([...(usedIn.get(id) ?? []), ...(usedViaTrait.get(id) ?? [])])];
+    for (const r of vis(uses).slice(0, perItem)) {
+      if (o.productsOnly) addRecipe(r, undefined, id); else addRecipe(r, (iid) => iid === id || iid === slotFor(r, id)?.id);
       if (d > 1) for (const out of r.outputs) if (out.id !== id) expandDown(out.id, d - 1);
     }
   };
