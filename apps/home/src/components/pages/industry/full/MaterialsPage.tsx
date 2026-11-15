@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { computeYield, conversionsFor, FAMILY_HINTS, facilityName, shownFacilityNames, fmtTime, industryItems, isBaseInput, itemName, itemOf, recipeAvailable, regolithFamilies, regoliths, reprocessing, asteroidKinds, minedNow, ABUNDANCE_LABEL, priceOf, valueOf, type Item } from '@/lib/industry';
+import { MineExplorer } from './MineExplorer';
 import { Empty, FacilityBadges, IOList, ItemIcon, ItemLink, ItemPicker, NumberField, Panel, Price, Qty, Section, SuggestionChips, useIndustrySettings } from '../parts';
 
 /** Step 1: pick a rock, see what comes out of it. */
@@ -21,18 +22,10 @@ export function MinePage() {
   const conv = (id: number) => conversionsFor(id).filter((r) => showUnavailable || recipeAvailable(r));
   // regoliths no asteroid holds any more (before 0.7.6.0) stay behind the "show not in game" toggle
   const current = (i: Item) => !i.regolith || minedNow.has(i.id) || showUnavailable;
-  const minable = useMemo(() => industryItems.filter((i) => isBaseInput(i.id) && conv(i.id).length > 0 && current(i)), [showUnavailable]);
+  const minable = useMemo(() => industryItems.filter((i) => i.id > 0 && !i.legacy && isBaseInput(i.id) && conv(i.id).length > 0 && current(i)), [showUnavailable]);
   const rockConv = rock ? conv(rock) : [];
-  const pick = (id: number) => setParams({ item: String(id) }, { replace: true });
-  const pickRock = (name: string) => setParams({ rock: short(name) }, { replace: true });
-  // material -> regolith sources (first hop only)
-  const sources = useMemo(() => {
-    const m = new Map<number, { regolith: Item; per: number; of: number }[]>();
-    for (const r of regoliths.filter(current)) for (const c of conv(r.id)) for (const o of c.outputs) {
-      const list = m.get(o.id) ?? []; if (!list.some((x) => x.regolith.id === r.id)) list.push({ regolith: r, per: o.qty, of: c.inputs[0].qty }); m.set(o.id, list);
-    }
-    return [...m.entries()].sort((a, b) => itemName(a[0]).localeCompare(itemName(b[0])));
-  }, [showUnavailable]);
+  const pick = (id: number) => setParams((p) => { p.set('item', String(id)); return p; }, { replace: true });
+  const pickRock = (name: string) => { setParams((p) => { p.set('rock', short(name)); return p; }, { replace: true }); window.scrollTo({ top: 0, behavior: 'smooth' }); };
   // regoliths nothing refines yet stay behind the "show not in game" toggle
   const usable = regoliths.filter((r) => current(r) && (showUnavailable || conv(r.id).length > 0));
   const families = regolithFamilies.filter((f) => usable.some((r) => r.group === f));
@@ -76,6 +69,7 @@ export function MinePage() {
         )}
       </Section>
 
+      <div id="regolith-detail" className="scroll-mt-24" />
       <Section title="Or start from a regolith, ore, or salvage">
         <Panel className="flex flex-col gap-3">
           <div className="flex flex-col gap-3 md:flex-row md:items-center">
@@ -127,21 +121,7 @@ export function MinePage() {
       </Section>
 
       <Section title="Which regolith to mine for a material">
-        <Panel className="p-0 overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="text-[0.65rem] tracking-[0.16em] uppercase text-muted-foreground"><tr className="border-b border-foreground/10"><th className="text-left font-normal px-4 py-2">Material</th><th className="text-left font-normal px-4 py-2">Mine</th><th className="text-right font-normal px-4 py-2">Best yield</th><th className="text-left font-normal px-4 py-2 hidden md:table-cell">Family</th></tr></thead>
-            <tbody className="divide-y divide-foreground/5">
-              {sources.map(([mat, list]) => list.sort((a, b) => b.per / b.of - a.per / a.of).map((s, i) => (
-                <tr key={`${mat}-${s.regolith.id}`} className="hover:bg-muted/50">
-                  <td className="px-4 py-2">{i === 0 && <ItemLink id={mat} icon className="font-semibold" />}</td>
-                  <td className="px-4 py-2"><button onClick={() => pick(s.regolith.id)} className="inline-flex items-center gap-1.5 text-left hover:text-[var(--color-martian-500)]"><ItemIcon id={s.regolith.id} size={20} />{s.regolith.name}</button></td>
-                  <td className="px-4 py-2 text-right tabular-nums"><Qty n={s.per} /> <span className="text-foreground/75">per {s.of}</span></td>
-                  <td className="px-4 py-2 hidden md:table-cell text-muted-foreground">{s.regolith.group}</td>
-                </tr>
-              )))}
-            </tbody>
-          </table>
-        </Panel>
+        <MineExplorer conv={conv} onRock={(name) => pickRock(name)} onRegolith={(id) => { pick(id); window.setTimeout(() => document.getElementById('regolith-detail')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50); }} />
       </Section>
 
       <Section title={`Regolith atlas · ${shown.length}`} aside={

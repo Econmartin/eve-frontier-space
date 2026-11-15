@@ -5,8 +5,9 @@ import { Badge } from '@/components/ui/badge';
 import { Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
-  buildPlan, builtInSpace, rankRecipes, starterProducts, starterInputs, makeOptions, recipes, valueOf, shownFacilityNames, facilityName, fmtQty, fmtTime, fmtVol, volumeOf, industryItems, itemName, itemOf, producedBy, recipeAvailable, recipeById, summarizePlan, type PlanNode, type Recipe,
+  buildPlan, builtInSpace, fmtFill, parseFill, rankRecipes, starterProducts, starterInputs, makeOptions, recipes, valueOf, shownFacilityNames, facilityName, fmtQty, fmtTime, fmtVol, volumeOf, industryItems, itemName, itemOf, producedBy, recipeAvailable, recipeById, summarizePlan, type PlanNode, type Recipe,
 } from '@/lib/industry';
+import { SlotSelect } from './SlotFill';
 import { Empty, FacilityBadges, IOList, ItemIcon, ItemLink, ItemPicker, NumberField, Panel, Price, Qty, Section, SuggestionChips, addToHold, holdMap, useIndustrySettings, type Holding } from '../parts';
 
 const recipeLabel = (r: Recipe) => `${builtInSpace(r) ? 'Build Mode' : shownFacilityNames(r).join(' / ') || 'unassigned'}${recipeAvailable(r) ? '' : ' (not in game)'} · ${r.inputs.map((i) => `${fmtQty(i.qty, i.id)} ${itemName(i.id)}`).join(', ')}`;
@@ -41,7 +42,10 @@ function ShoppingList() {
     const o = overrides.get(id); if (o) { const r = recipeById.get(o); if (r && visible.includes(r)) return r; }
     return rankRecipes(id, visible)[0];
   }, [overrides, ownedItems, showUnavailable]);
-  const plan = useMemo(() => (target ? buildPlan(target, qty, choose) : undefined), [target, qty, choose]);
+  // materials picked for "Any … material" slots, in the link (the Make tab passes its picks along)
+  const fillParam = params.get('fill'); const fill = useMemo(() => parseFill(fillParam), [fillParam]);
+  const setFill = (slot: number, m: number | undefined) => { const f = new Map(fill); if (m) f.set(slot, m); else f.delete(slot); const p = new URLSearchParams(params); if (f.size) p.set('fill', fmtFill(f)); else p.delete('fill'); setParams(p, { replace: true }); };
+  const plan = useMemo(() => (target ? buildPlan(target, qty, choose, 12, new Set(), fill) : undefined), [target, qty, choose, fill]);
   const summary = useMemo(() => (plan ? summarizePlan(plan) : undefined), [plan]);
 
   const set = (k: string, v: string) => { const p = new URLSearchParams(params); p.set(k, v); setParams(p, { replace: true }); };
@@ -63,7 +67,7 @@ function ShoppingList() {
         <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
           <Section title="Build tree" className="mb-0">
             <Panel className="overflow-x-auto">
-              <PlanTree node={plan} depth={0} overrides={overrides} owned={ownedItems}
+              <PlanTree node={plan} depth={0} overrides={overrides} owned={ownedItems} onFill={setFill}
                 onRecipe={(id, rid) => setOverrides((m) => new Map(m).set(id, rid))}
                 onOwned={(id, v) => setOwnedItems((s) => { const n = new Set(s); v ? n.add(id) : n.delete(id); return n; })} />
             </Panel>
@@ -74,7 +78,7 @@ function ShoppingList() {
               <Panel className="p-4"><div className="font-heading text-2xl text-[var(--color-martian-500)] tabular-nums">{fmtTime(summary.serialTime)}</div><div className="text-[0.65rem] tracking-[0.16em] uppercase text-muted-foreground mt-1">serial run time</div></Panel>
               <Panel className="p-4"><div className="font-heading text-2xl tabular-nums">{summary.steps}</div><div className="text-[0.65rem] tracking-[0.16em] uppercase text-muted-foreground mt-1">production steps</div></Panel>
             </div>
-            <Totals title="Base inputs to gather" rows={[...summary.base.entries()]} />
+            <Totals title="Base inputs to gather" rows={[...summary.base.entries()]} onFill={setFill} />
             {summary.intermediates.size > 0 && <Totals title="Intermediates to print" rows={[...summary.intermediates.entries()].map(([id, v]) => [id, v.qty] as [number, number])} />}
             {summary.byproducts.size > 0 && <Totals title="Byproducts left over" rows={[...summary.byproducts.entries()]} muted />}
             <Panel className="p-4">
@@ -95,7 +99,7 @@ function ShoppingList() {
   );
 }
 
-function Totals({ title, rows, muted }: { title: string; rows: [number, number][]; muted?: boolean }) {
+function Totals({ title, rows, muted, onFill }: { title: string; rows: [number, number][]; muted?: boolean; onFill?: (slot: number, m: number | undefined) => void }) {
   const vol = rows.reduce((s, [id, q]) => s + volumeOf(id, q), 0);
   return (
     <Panel className="p-4">
@@ -103,7 +107,7 @@ function Totals({ title, rows, muted }: { title: string; rows: [number, number][
       <ul className="divide-y divide-foreground/5 text-sm">
         {rows.sort((a, b) => b[1] - a[1]).map(([id, q]) => (
           <li key={id} className={cn('py-1.5 flex items-center justify-between gap-3', muted && 'text-muted-foreground')}>
-            <ItemLink id={id} icon className={muted ? 'text-muted-foreground' : ''} /><Qty n={q} id={id} />
+            {id < 0 && onFill ? <SlotSelect slot={id} onChange={(m) => onFill(id, m)} className="min-w-0 max-w-[230px]" /> : <ItemLink id={id} icon className={muted ? 'text-muted-foreground' : ''} />}<Qty n={q} id={id} />
           </li>
         ))}
       </ul>
@@ -111,7 +115,7 @@ function Totals({ title, rows, muted }: { title: string; rows: [number, number][
   );
 }
 
-function PlanTree({ node, depth, overrides, owned, onRecipe, onOwned }: { node: PlanNode; depth: number; overrides: Map<number, number>; owned: Set<number>; onRecipe: (id: number, rid: number) => void; onOwned: (id: number, v: boolean) => void }) {
+function PlanTree({ node, depth, overrides, owned, onRecipe, onOwned, onFill }: { node: PlanNode; depth: number; overrides: Map<number, number>; owned: Set<number>; onRecipe: (id: number, rid: number) => void; onOwned: (id: number, v: boolean) => void; onFill: (slot: number, m: number | undefined) => void }) {
   const [open, setOpen] = useState(depth < 2);
   const { showUnavailable } = useIndustrySettings();
   const options = (producedBy.get(node.item) ?? []).filter((r) => showUnavailable || recipeAvailable(r));
@@ -123,7 +127,10 @@ function PlanTree({ node, depth, overrides, owned, onRecipe, onOwned }: { node: 
           <button onClick={() => setOpen((o) => !o)} className="text-muted-foreground hover:text-foreground" aria-label={open ? 'collapse' : 'expand'}>{open ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}</button>
         ) : <span className="inline-block size-4" />}
         <Qty n={node.qty} id={node.item} />
-        <ItemLink id={node.item} icon className={cn(!node.recipe && !isOwned && 'text-muted-foreground')} />
+        {/* an "Any … material" slot: pick the material, and the tree plans that material from here down */}
+        {node.slot !== undefined || node.item < 0
+          ? <>{node.slot !== undefined && <ItemLink id={node.item} icon />}<SlotSelect slot={node.slot ?? node.item} value={node.slot !== undefined ? node.item : undefined} onChange={(m) => onFill(node.slot ?? node.item, m)} /></>
+          : <ItemLink id={node.item} icon className={cn(!node.recipe && !isOwned && 'text-muted-foreground')} />}
         {node.recipe ? (
           <>
             <span className="text-xs text-foreground/75 tabular-nums">{node.runs} run{node.runs === 1 ? '' : 's'}{node.recipe.time ? ` · ${fmtTime(node.runs * node.recipe.time)}` : ''}</span>
@@ -139,7 +146,7 @@ function PlanTree({ node, depth, overrides, owned, onRecipe, onOwned }: { node: 
           <label className="text-xs text-muted-foreground flex items-center gap-1 cursor-pointer"><input type="checkbox" checked={isOwned} onChange={(e) => onOwned(node.item, e.target.checked)} className="accent-[var(--color-martian-500)]" /> have it</label>
         )}
       </div>
-      {open && node.children.map((c, i) => <PlanTree key={`${c.item}-${i}`} node={c} depth={depth + 1} overrides={overrides} owned={owned} onRecipe={onRecipe} onOwned={onOwned} />)}
+      {open && node.children.map((c, i) => <PlanTree key={`${c.slot ?? c.item}-${i}`} node={c} depth={depth + 1} overrides={overrides} owned={owned} onRecipe={onRecipe} onOwned={onOwned} onFill={onFill} />)}
     </div>
   );
 }

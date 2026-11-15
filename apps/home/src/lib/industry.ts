@@ -301,17 +301,28 @@ export function starterInputs(limit = 10, showUnavailable = false): Item[] {
 // ---------------- Build planner ----------------
 export interface PlanNode {
   item: number; qty: number; recipe?: Recipe; runs: number; produced: number; children: PlanNode[]; cycle?: boolean;
+  /** the "Any … material" slot (stand-in id) this node fills, when a material was picked for it */
+  slot?: number;
 }
+/** Materials picked for "Any … material" slots: stand-in id -> material id. Kept in the URL as fill=-85:96711,-154:97996. */
+export type SlotFill = Map<number, number>;
+export const parseFill = (s: string | null): SlotFill =>
+  new Map((s ?? '').split(',').map((x) => x.split(':').map(Number)).filter(([a, b]) => a < 0 && b > 0 && items.has(b)) as [number, number][]);
+export const fmtFill = (m: SlotFill) => [...m].map(([a, b]) => `${a}:${b}`).join(',');
 export type RecipeChoice = (itemId: number, options: Recipe[]) => Recipe | undefined;
 
-export function buildPlan(target: number, qty: number, choose: RecipeChoice, maxDepth = 12, trail: Set<number> = new Set()): PlanNode {
+export function buildPlan(target: number, qty: number, choose: RecipeChoice, maxDepth = 12, trail: Set<number> = new Set(), fill?: SlotFill): PlanNode {
   const options = producedBy.get(target) ?? [];
   const recipe = options.length && trail.size < maxDepth && !trail.has(target) ? choose(target, options) : undefined;
   if (!recipe) return { item: target, qty, runs: 0, produced: qty, children: [], cycle: trail.has(target) && options.length > 0 };
   const per = outputQty(recipe, target) || 1;
   const runs = Math.ceil(qty / per);
   const next = new Set(trail).add(target);
-  const children = recipe.inputs.map((i) => buildPlan(i.id, i.qty * runs, choose, maxDepth, next));
+  // an "Any … material" slot with a material picked plans that material instead
+  const children = recipe.inputs.map((i) => {
+    const m = i.id < 0 ? fill?.get(i.id) : undefined;
+    return m ? { ...buildPlan(m, i.qty * runs, choose, maxDepth, next, fill), slot: i.id } : buildPlan(i.id, i.qty * runs, choose, maxDepth, next, fill);
+  });
   return { item: target, qty, recipe, runs, produced: runs * per, children };
 }
 
