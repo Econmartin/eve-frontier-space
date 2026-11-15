@@ -13,13 +13,14 @@ export function SlotSelect({ slot, value, onChange, className, variant }: { slot
   return (
     <select id={`slot${slot}`} aria-label={`${itemName(slot)}: pick a material`} value={value ?? ''} onChange={(e) => onChange(e.target.value ? Number(e.target.value) : undefined)}
       title="Pick the material that goes in this slot"
-      className={cn('max-w-full truncate cursor-pointer',
+      className={cn('max-w-full truncate cursor-pointer dark:[color-scheme:dark]',
         variant === 'title'
           ? 'w-full -mx-1 px-1 h-6 rounded-md bg-transparent text-sm font-medium leading-tight ring-1 ring-transparent hover:ring-foreground/20 focus:ring-[var(--color-martian-500)] outline-none'
           : 'h-7 rounded-lg bg-background ring-1 ring-foreground/15 px-2 text-sm',
         value === undefined && 'text-[var(--color-martian-500)]', className)}>
-      <option value="">{itemName(slot)}</option>
-      {slotOptions(slot).map((c) => <option key={c.id} value={c.id}>{itemName(c.id)}{c.fit === 'sometimes' ? ' (some stacks fit)' : ''}</option>)}
+      {/* the list opens on the page's own colours, not the transparent, tinted field's */}
+      <option value="" className="bg-background text-muted-foreground">{itemName(slot)}</option>
+      {slotOptions(slot).map((c) => <option key={c.id} value={c.id} className="bg-background text-foreground">{itemName(c.id)}{c.fit === 'sometimes' ? ' (some stacks fit)' : ''}</option>)}
     </select>
   );
 }
