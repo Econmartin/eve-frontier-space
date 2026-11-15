@@ -22,7 +22,7 @@ export default {
 
     // Game-derived assets live in D1, not in the public repo (see scripts/game-data/upload_assets.py)
     if (url.pathname === '/api/industry-data') return handleGameAsset('industry-data', env, 300);
-    const icon = url.pathname.match(/^\/industry\/icons\/(\d{1,12})\.png$/);
+    const icon = url.pathname.match(/^\/industry\/icons\/(\d{1,12}|asteroid-[a-z]-type)\.png$/);
     if (icon) {
       const stat = await env.ASSETS.fetch(request); // icons that are in the repo are plain static files
       return stat.status !== 404 ? stat : handleGameAsset(`icon/${icon[1]}`, env, 86400);

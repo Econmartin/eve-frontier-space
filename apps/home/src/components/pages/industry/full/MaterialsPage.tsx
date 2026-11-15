@@ -1,118 +1,78 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { computeYield, conversionsFor, FAMILY_HINTS, facilityName, shownFacilityNames, fmtTime, industryItems, isBaseInput, itemName, itemOf, recipeAvailable, regolithFamilies, regoliths, reprocessing, rockFor, rocks, compositeMaterials, compositeRocks, composites, rocksWith, CLASS_RANK, CLASS_LABEL, priceOf, valueOf, type QtyClass, type Item } from '@/lib/industry';
+import { computeYield, conversionsFor, FAMILY_HINTS, facilityName, shownFacilityNames, fmtTime, industryItems, isBaseInput, itemName, itemOf, recipeAvailable, regolithFamilies, regoliths, reprocessing, asteroidKinds, minedNow, ABUNDANCE_LABEL, priceOf, valueOf, type Item } from '@/lib/industry';
 import { Empty, FacilityBadges, IOList, ItemIcon, ItemLink, ItemPicker, NumberField, Panel, Price, Qty, Section, SuggestionChips, useIndustrySettings } from '../parts';
 
 /** Step 1: pick a rock, see what comes out of it. */
 export function MinePage() {
   const [params, setParams] = useSearchParams();
-  // ?rock= is a composite asteroid name (Flint, Mire…); ?item= is a regolith / salvage
-  const comp = params.get('rock') ? compositeRocks.find((r) => r.name === params.get('rock')) : undefined;
+  // ?rock= is an asteroid kind by name (Marrow, Char…); ?item= is a regolith / salvage
+  const short = (name: string) => name.replace(/\s*\(.*\)$/, '');
+  const kind = params.get('rock') ? asteroidKinds.find((a) => short(a.name).toLowerCase() === params.get('rock')!.toLowerCase() || a.kind === params.get('rock')) : undefined;
   const rock = params.get('item') ? Number(params.get('item')) : undefined;
-  const legacyIcon = (name: string, materials: { id: number }[]) => rocks.find((r) => itemOf(r.id).name === name)?.id ?? materials[0]?.id;
-  const clsStyle: Record<QtyClass, string> = { L: 'bg-[var(--color-martian-500)] text-black', S: 'bg-[var(--color-martian-500)]/25 text-foreground', T: 'bg-foreground/10 text-muted-foreground' };
+  // Dominant and Major stand out, Moderate is plain, Minor and Trace fade
+  const abundanceStyle = (a: number) => (a >= 4 ? 'bg-[var(--color-martian-500)] text-black' : a === 3 ? 'bg-[var(--color-martian-500)]/25 text-foreground' : 'bg-foreground/10 text-muted-foreground');
+  const kindsHolding = (id: number) => asteroidKinds.map((k) => ({ k, a: k.holds.find(([r]) => r === id)?.[1] })).filter((x): x is { k: typeof asteroidKinds[number]; a: number } => x.a !== undefined).sort((x, y) => y.a - x.a);
   const [qty, setQty] = useState(1000);
   const [family, setFamily] = useState<string>('all');
   const { showUnavailable } = useIndustrySettings();
   const conv = (id: number) => conversionsFor(id).filter((r) => showUnavailable || recipeAvailable(r));
-  const minable = useMemo(() => industryItems.filter((i) => isBaseInput(i.id) && conv(i.id).length > 0), [showUnavailable]);
+  // regoliths no asteroid holds any more (before 0.7.6.0) stay behind the "show not in game" toggle
+  const current = (i: Item) => !i.regolith || minedNow.has(i.id) || showUnavailable;
+  const minable = useMemo(() => industryItems.filter((i) => isBaseInput(i.id) && conv(i.id).length > 0 && current(i)), [showUnavailable]);
   const rockConv = rock ? conv(rock) : [];
   const pick = (id: number) => setParams({ item: String(id) }, { replace: true });
-  const pickRock = (name: string) => setParams({ rock: name }, { replace: true });
-  // community clears submitted through "My rocks" (optional; absent when the API is not deployed)
-  type RockSummary = { samples: number; units: number; prefixes: Record<string, number>; regoliths: Record<string, { seen: number; units: number; share: number; presence: number; min: number; max: number }> };
-  const [community, setCommunity] = useState<Record<string, RockSummary> | null>(null);
-  useEffect(() => { fetch(`/api/mining-sessions/summary?cycle=${encodeURIComponent(composites.cycle)}`, { cache: 'no-store' }).then((r) => (r.ok ? r.json() : null)).then((j) => setCommunity(j?.rocks ?? null)).catch(() => setCommunity(null)); }, []);
-
+  const pickRock = (name: string) => setParams({ rock: short(name) }, { replace: true });
   // material -> regolith sources (first hop only)
   const sources = useMemo(() => {
     const m = new Map<number, { regolith: Item; per: number; of: number }[]>();
-    for (const r of regoliths) for (const c of conv(r.id)) for (const o of c.outputs) {
+    for (const r of regoliths.filter(current)) for (const c of conv(r.id)) for (const o of c.outputs) {
       const list = m.get(o.id) ?? []; if (!list.some((x) => x.regolith.id === r.id)) list.push({ regolith: r, per: o.qty, of: c.inputs[0].qty }); m.set(o.id, list);
     }
     return [...m.entries()].sort((a, b) => itemName(a[0]).localeCompare(itemName(b[0])));
   }, [showUnavailable]);
   // regoliths nothing refines yet stay behind the "show not in game" toggle
-  const usable = regoliths.filter((r) => showUnavailable || conv(r.id).length > 0);
+  const usable = regoliths.filter((r) => current(r) && (showUnavailable || conv(r.id).length > 0));
   const families = regolithFamilies.filter((f) => usable.some((r) => r.group === f));
   const shown = usable.filter((r) => family === 'all' || r.group === family);
 
   return (
     <div className="flex flex-col gap-2">
       <Section title="Which rock did you find?">
-        <div className="grid gap-2 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-8">
-          {compositeRocks.map((r) => { const on = comp?.name === r.name; return (
-            <button key={r.name} onClick={() => pickRock(r.name)} aria-pressed={on}
+        <div className="grid gap-2 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
+          {asteroidKinds.map((a) => { const on = kind?.kind === a.kind; return (
+            <button key={a.kind} onClick={() => pickRock(a.name)} aria-pressed={on}
               className={cn('text-left rounded-xl p-2.5 ring-1 flex items-center gap-2.5 transition-colors', on ? 'bg-[var(--color-martian-500)] text-black ring-transparent' : 'bg-card ring-foreground/10 hover:bg-muted')}>
-              <ItemIcon id={legacyIcon(r.name, r.materials)} size={36} className="rounded-lg" />
+              <img src={a.icon} alt="" width={40} height={40} loading="lazy" className="size-10 shrink-0 object-contain" />
               <div className="min-w-0">
-                <div className="font-heading leading-tight">{r.name}</div>
-                <div className={cn('text-[0.6rem] uppercase tracking-wider truncate', on ? 'text-black/70' : 'text-muted-foreground')}>{r.materials.length} regolith{r.materials.length === 1 ? '' : 's'}</div>
+                <div className="font-heading leading-tight">{short(a.name)}</div>
+                <div className={cn('text-[0.6rem] uppercase tracking-wider truncate', on ? 'text-black/70' : 'text-muted-foreground')}>{a.kind} · {a.holds.length} regolith{a.holds.length === 1 ? '' : 's'}</div>
               </div>
             </button>
           ); })}
         </div>
-        <p className="text-xs text-muted-foreground font-sans mt-2">Composite asteroids as named in game, with what they contain, from the community list for {composites.cycle}, updated with real clears from My rocks (last updated {composites.seen?.updated}). Percentages are estimates from those clears; large, small, and trace are the community's call where nobody has cleared one yet; exact numbers depend on the rock's voxel layers. Mined one? <Link to="/industry/rocks" className="text-[var(--color-martian-500)]">Add your log in My rocks</Link> and the averages here grow.</p>
+        <p className="text-xs text-muted-foreground font-sans mt-2">The asteroid kinds in game since 0.7.6.0 and what each one holds, from the client's own Mined From table: Dominant, Major, Moderate, Minor or Trace. How much of each you get from one rock depends on its layers and where you cut. Mined one? <Link to="/industry/rocks" className="text-[var(--color-martian-500)]">Add your log in My rocks</Link>.</p>
 
-        {comp && (
-          <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(0,1fr)_340px]">
-            <Panel className="p-4 flex flex-col gap-3">
-              <div className="flex items-center gap-3"><ItemIcon id={legacyIcon(comp.name, comp.materials)} size={48} className="rounded-lg" /><div><div className="text-xs tracking-[0.16em] uppercase text-muted-foreground">composite asteroid</div><h3 className="font-heading text-2xl leading-none">{comp.name}</h3></div></div>
-              <div className="text-[0.65rem] tracking-[0.16em] uppercase text-muted-foreground">Contains</div>
-              <ul className="grid gap-2 sm:grid-cols-2">
-                {comp.materials.map((mat) => { const c = conv(mat.id)[0]; return (
-                  <li key={mat.id} className="rounded-xl ring-1 ring-foreground/10 p-3 flex flex-col gap-1.5">
-                    <div className="flex items-center justify-between gap-2">
-                      <button onClick={() => pick(mat.id)} className="inline-flex items-center gap-2 text-left hover:text-[var(--color-martian-500)] min-w-0"><ItemIcon id={mat.id} size={26} /><span className="text-sm truncate">{itemName(mat.id)}</span></button>
-                      <span className={cn('shrink-0 rounded-full px-2 h-5 inline-flex items-center text-[0.6rem] uppercase tracking-wider', clsStyle[mat.cls])}>{mat.share != null ? `est. ${Math.round(mat.share)}%` : CLASS_LABEL[mat.cls]}</span>
-                    </div>
-                    <div className="text-[0.65rem] text-muted-foreground">
-                      {mat.share == null
-                        ? (comp.seen ? 'On the community list, not found in a clear yet' : 'From the community list')
-                        : <>{comp.seen?.clears && mat.presence != null ? `Found in ${mat.presence} of ${comp.seen.clears} clears` : 'Found in small samples'}
-                          {!mat.tableCls ? <span className="text-[var(--color-martian-500)]"> · new find</span>
-                            : mat.tableCls !== mat.cls ? ` · ${CLASS_RANK[mat.cls] < CLASS_RANK[mat.tableCls] ? 'more' : 'less'} than the community list says`
-                            : ' · matches the community list'}</>}
-                    </div>
-                    {c ? <div className="text-xs text-foreground/75">{c.inputs[0].qty} → {c.outputs.map((o) => `${o.qty} ${itemName(o.id)}`).join(', ')}</div> : <div className="text-xs text-muted-foreground">no refine recipe yet</div>}
-                    {priceOf(mat.id) != null && <div className="text-xs"><Price n={priceOf(mat.id)!} per="unit raw" /></div>}
-                  </li>
-                ); })}
-              </ul>
-              {comp.seen ? (
-                <div className="text-xs text-foreground/75 font-sans">
-                  {comp.seen.clears ? `Estimated from ${comp.seen.clears} clear${comp.seen.clears === 1 ? '' : 's'} of 100+ voxels` : `Estimated from ${comp.seen.samples} small sample${comp.seen.samples === 1 ? '' : 's'}, so treat them as rough`} · {comp.seen.voxels.toLocaleString()} voxels · {comp.seen.pilots} pilot{comp.seen.pilots === 1 ? '' : 's'}.{(comp.seen.clears < 3 || comp.seen.pilots < 2) ? ' Early numbers, likely to move.' : ''}
-                  {comp.seen.variants && <ul className="mt-2 flex flex-col gap-1">{Object.entries(comp.seen.variants).map(([v, x]) => <li key={v}><span className="capitalize font-semibold">{v}</span> ({x.clears} clears): {Object.entries(x.shares).filter(([, pct]) => pct >= 3).map(([id, pct]) => `${itemName(Number(id))} est. ${Math.round(pct)}%`).join(', ')}</li>)}</ul>}
-                </div>
-              ) : <div className="text-xs text-muted-foreground font-sans">No clears of this rock yet, so this is the community list only. Add yours in My rocks.</div>}
-              {community?.[comp.name] && (() => { const c = community[comp.name]; const rows = Object.entries(c.regoliths).map(([id, g]) => ({ id: Number(id), ...g })).sort((a, b) => b.share - a.share); return (
-                <div className="pt-3 border-t border-foreground/10">
-                  <div className="flex items-baseline justify-between gap-2 mb-2"><div className="text-[0.65rem] tracking-[0.16em] uppercase text-muted-foreground">Community clears · {c.samples} sample{c.samples === 1 ? '' : 's'}</div><span className="text-xs text-foreground/75 tabular-nums">{c.units.toLocaleString()} units logged</span></div>
-                  <ul className="flex flex-col gap-1.5">{rows.map((g) => (
-                    <li key={g.id} className="text-sm"><div className="flex items-center justify-between gap-2"><button onClick={() => pick(g.id)} className="inline-flex items-center gap-1.5 hover:text-[var(--color-martian-500)] min-w-0"><ItemIcon id={g.id} size={18} /><span className="truncate">{itemName(g.id)}</span></button><span className="tabular-nums shrink-0 text-xs"><span className="font-semibold">{Math.round(100 * g.share)}%</span> <span className="text-foreground/75">avg · {Math.round(100 * g.min)}–{Math.round(100 * g.max)}% · in {Math.round(100 * g.presence)}% of clears</span></span></div><div className="h-1 rounded-full bg-foreground/10 mt-1"><div className="h-1 rounded-full bg-[var(--color-ocean-500)]" style={{ width: `${100 * g.share}%` }} /></div></li>
-                  ))}</ul>
-                  {Object.keys(c.prefixes).length > 0 && <div className="text-xs text-muted-foreground mt-2">prefixes seen: {Object.entries(c.prefixes).map(([p, n]) => `${p} ×${n}`).join(', ')}</div>}
-                </div>
-              ); })()}
-              {composites.observed.filter((o) => o.name === comp.name).map((o) => { const total = Object.values(o.yields).reduce((a, b) => a + b, 0); return (
-                <div key={o.variant ?? o.name} className="pt-3 border-t border-foreground/10">
-                  <div className="flex items-baseline justify-between gap-2 mb-2"><div className="text-[0.65rem] tracking-[0.16em] uppercase text-muted-foreground">Recorded clear{o.variant ? ` · ${o.variant}` : ''}</div><span className="text-xs text-foreground/75 tabular-nums">{total.toLocaleString()} units</span></div>
-                  <ul className="flex flex-col gap-1.5">{Object.entries(o.yields).map(([id, q]) => ({ id: Number(id), q })).sort((a, b) => b.q - a.q).map(({ id, q }) => (
-                    <li key={id} className="text-sm"><div className="flex items-center justify-between gap-2"><button onClick={() => pick(id)} className="inline-flex items-center gap-1.5 hover:text-[var(--color-martian-500)] min-w-0"><ItemIcon id={id} size={18} /><span className="truncate">{itemName(id)}</span></button><span className="tabular-nums shrink-0"><Qty n={q} /> <span className="text-foreground/75">· {Math.round((100 * q) / total)}%</span></span></div><div className="h-1 rounded-full bg-foreground/10 mt-1"><div className="h-1 rounded-full bg-[var(--color-martian-500)]" style={{ width: `${(100 * q) / total}%` }} /></div></li>
-                  ))}</ul>
-                  {o.note && <div className="text-xs text-muted-foreground font-sans mt-2">{o.note}</div>}
-                </div>
+        {kind && (
+          <Panel className="mt-3 p-4 flex flex-col gap-3">
+            <div className="flex items-center gap-3"><img src={kind.icon} alt="" width={56} height={56} className="size-14 object-contain" /><div><div className="text-xs tracking-[0.16em] uppercase text-muted-foreground">{kind.kind} asteroid</div><h3 className="font-heading text-2xl leading-none">{short(kind.name)}</h3></div></div>
+            {kind.description && <p className="text-xs text-muted-foreground font-sans leading-relaxed max-w-3xl">{kind.description}</p>}
+            <div className="text-[0.65rem] tracking-[0.16em] uppercase text-muted-foreground">Holds</div>
+            <ul className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+              {kind.holds.map(([id, a]) => { const c = conv(id)[0]; return (
+                <li key={id} className="rounded-xl ring-1 ring-foreground/10 p-3 flex flex-col gap-1.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <button onClick={() => pick(id)} className="inline-flex items-center gap-2 text-left hover:text-[var(--color-martian-500)] min-w-0"><ItemIcon id={id} size={26} /><span className="text-sm truncate">{itemName(id)}</span></button>
+                    <span className={cn('shrink-0 rounded-full px-2 h-5 inline-flex items-center text-[0.6rem] uppercase tracking-wider', abundanceStyle(a))}>{ABUNDANCE_LABEL[a]}</span>
+                  </div>
+                  {c ? <div className="text-xs text-foreground/75">refines to {c.outputs.map((o) => itemName(o.id)).join(', ')}</div> : <div className="text-xs text-muted-foreground">no refining schema yet</div>}
+                  {priceOf(id) != null && <div className="text-xs"><Price n={priceOf(id)!} per="unit raw" /></div>}
+                </li>
               ); })}
-            </Panel>
-            <Panel className="p-4 flex flex-col gap-3 self-start">
-              <div className="text-[0.65rem] tracking-[0.16em] uppercase text-muted-foreground">How composites work</div>
-              <p className="text-xs text-muted-foreground font-sans leading-relaxed">A composite asteroid is a voxel body generated from a server-side recipe: a shape, a prefix such as hollow or shocked, and layers of up to eight materials placed by depth. Mining removes voxels, so the mix you get is the materials you cut through. The server names them and picks the mix, so the client files cannot list them; this catalog is player knowledge.</p>
-              <div className="text-[0.65rem] tracking-[0.16em] uppercase text-muted-foreground">The eight material slots</div>
-              <ul className="text-xs flex flex-col gap-1">{compositeMaterials.map((mm) => <li key={mm.material} className="flex items-center justify-between gap-2"><span className="text-muted-foreground">{mm.material}</span><button onClick={() => pick(mm.regolith)} className="inline-flex items-center gap-1.5 hover:text-[var(--color-martian-500)]"><ItemIcon id={mm.regolith} size={18} />{itemName(mm.regolith)}</button></li>)}</ul>
-            </Panel>
-          </div>
+            </ul>
+          </Panel>
         )}
       </Section>
 
@@ -131,13 +91,13 @@ export function MinePage() {
               {itemOf(rock).volume != null && <div className="text-xs text-foreground/75 tabular-nums">{qty.toLocaleString()} × {itemOf(rock).volume} m³ = {(qty * (itemOf(rock).volume ?? 0)).toLocaleString(undefined, { maximumFractionDigits: 0 })} m³ of hold</div>}
               {itemOf(rock).regolith && <Badge variant="outline">{itemOf(rock).group.replace(' Regoliths', '')} family</Badge>}
               {priceOf(rock) != null && <div className="text-sm">NPC trade value <Price n={priceOf(rock)!} per="unit" /> · {qty.toLocaleString()} units ≈ <Price n={priceOf(rock)! * qty} /></div>}
-              {rocksWith(rock).length > 0 && (
+              {kindsHolding(rock).length > 0 && (
                 <div className="pt-3 border-t border-foreground/10 flex flex-col gap-2">
                   <div className="text-[0.65rem] tracking-[0.16em] uppercase text-muted-foreground">Found in</div>
-                  <div className="flex flex-wrap gap-1.5">{rocksWith(rock).map(({ rock: r, cls }) => <button key={r.name} onClick={() => pickRock(r.name)} className={cn('rounded-full px-2.5 h-6 text-xs inline-flex items-center gap-1', clsStyle[cls])}>{r.name}<span className="opacity-70">· {CLASS_LABEL[cls]}</span></button>)}</div>
-                  {rockFor(rock) && itemOf(rockFor(rock)!.id).description && <p className="text-xs text-muted-foreground font-sans leading-relaxed">{itemOf(rockFor(rock)!.id).description}</p>}
+                  <div className="flex flex-wrap gap-1.5">{kindsHolding(rock).map(({ k, a }) => <button key={k.kind} onClick={() => pickRock(k.name)} className={cn('rounded-full px-2.5 h-6 text-xs inline-flex items-center gap-1', abundanceStyle(a))}>{short(k.name)}<span className="opacity-70">· {ABUNDANCE_LABEL[a]}</span></button>)}</div>
                 </div>
               )}
+              {itemOf(rock).regolith && !minedNow.has(rock) && <div className="text-xs text-muted-foreground">No asteroid holds this one since 0.7.6.0.</div>}
             </Panel>
             <div className="grid gap-3 sm:grid-cols-2">
               {rockConv.length ? rockConv.map((r) => { const y = computeYield(rock, qty, r); return (
@@ -195,7 +155,7 @@ export function MinePage() {
             return (
               <Panel key={r.id} className={cn('p-4 flex flex-col gap-2', !c.length && 'opacity-70')}>
                 <div className="flex items-start justify-between gap-2"><button onClick={() => pick(r.id)} className="font-heading leading-tight text-left inline-flex items-center gap-2 hover:text-[var(--color-martian-500)]"><ItemIcon id={r.id} size={28} />{r.name}</button><Badge variant="outline" className="shrink-0">{r.group.replace(' Regoliths', '')}</Badge></div>
-                {rocksWith(r.id).length > 0 && <div className="text-xs text-foreground/75">in {rocksWith(r.id).map((x) => x.rock.name).join(', ')}</div>}
+                {kindsHolding(r.id).length > 0 && <div className="text-xs text-foreground/75">in {kindsHolding(r.id).map((x) => `${short(x.k.name)} (${ABUNDANCE_LABEL[x.a].toLowerCase()})`).join(', ')}</div>}
                 {c.length ? (
                   <ul className="text-sm flex flex-col gap-1">
                     {c.map((x) => <li key={x.id} className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5"><span className="text-xs text-foreground/70 w-full">{[...new Set(x.facilities.map((f) => facilityName(f.id)))].join(' / ')} · {x.inputs[0].qty} in</span>{x.outputs.map((o) => <span key={o.id}><Qty n={o.qty} /> <ItemLink id={o.id} /></span>)}</li>)}
@@ -223,8 +183,7 @@ export function MinePage() {
       <Section title="Where belts come in">
         <Empty>
           Belt sites in the client carry tags such as <code>carbonaceous</code>, <code>icy</code>, <code>rocky</code>, belt temperature, and star chemistry.
-          The server's spawn rules turn those into a weighted mix of the five families, so a tag is a hint about which regoliths to expect, not a guarantee.
-          Only 8 of the 64 regoliths refine today; the rest are defined but unused, which usually means more are on the way.
+          The server's spawn rules turn those into a weighted mix of asteroid kinds, so a tag is a hint about which rocks to expect, not a guarantee.
         </Empty>
       </Section>
     </div>

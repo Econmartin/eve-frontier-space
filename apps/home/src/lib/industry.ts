@@ -43,7 +43,9 @@ export interface Property { name: string; kind: 'physical' | 'specification'; mi
 export interface Facility { id: number; name: string; blueprints: number[] }
 export interface Reprocessing { id: number; portionSize: number | null; materials: RecipeIO[] }
 export interface Rock { id: number; output: number; belt: 'inner' | 'outer' | null }
-interface IndustryData { clientVersion: string; items: Record<string, Item>; recipes: Recipe[]; facilities: Facility[]; reprocessing: Reprocessing[]; rocks?: Rock[]; consumedBy?: Record<string, number[]>; traits?: Record<string, Trait>; properties?: Record<string, Property> }
+/** an asteroid kind from the game's presence table (Marrow (A-type)…): the regoliths it holds, 5 Dominant … 1 Trace */
+export interface AsteroidKind { kind: string; name: string; description?: string | null; icon: string; holds: [number, number][] }
+interface IndustryData { asteroids?: AsteroidKind[]; clientVersion: string; items: Record<string, Item>; recipes: Recipe[]; facilities: Facility[]; reprocessing: Reprocessing[]; rocks?: Rock[]; consumedBy?: Record<string, number[]>; traits?: Record<string, Trait>; properties?: Record<string, Property> }
 
 export interface ChangeBrief { id: number; product: string; time: number; inputs: string[]; outputs: string[]; facilities: string[] }
 export interface ChangeEntry { version: string; date: string; note?: string; counts: Record<string, number>; added: ChangeBrief[]; removed: ChangeBrief[]; changed: { id: number; product: string; before: ChangeBrief; after: ChangeBrief; fields: string[] }[] }
@@ -90,6 +92,11 @@ export const volumeOf = (id: number, qty: number) => {
 export const fmtQty = (n: number, id?: number) => `${n.toLocaleString(undefined, { maximumFractionDigits: n < 10 ? 2 : 0 })}${id !== undefined && items.get(id)?.unit === 'kg' ? ' kg' : ''}`;
 /** The asteroid bodies you scan in space (Char, Slag, …) and the regolith each one yields. */
 export const rocks: Rock[] = data.rocks ?? [];
+/** the asteroid kinds you mine since 0.7.6.0, as the client lists them */
+export const asteroidKinds: AsteroidKind[] = data.asteroids ?? [];
+/** regoliths some asteroid kind holds today; the rest are from before 0.7.6.0 */
+export const minedNow = new Set(asteroidKinds.flatMap((a) => a.holds.map(([id]) => id)));
+export const ABUNDANCE_LABEL: Record<number, string> = { 5: 'Dominant', 4: 'Major', 3: 'Moderate', 2: 'Minor', 1: 'Trace' };
 export const rockFor = (regolithId: number) => rocks.find((r) => r.output === regolithId);
 /** NPC roaming-trade base price per unit, where the client defines one. */
 export const priceOf = (id: number): number | undefined => items.get(id)?.price;

@@ -31,7 +31,7 @@ attributes = {k: text(v.get("displayNameID")) for k, v in json.load(open(os.path
 
 if "res:/resource_substrate/regolith_presence.json" in index:
     pres = json.load(open(os.path.join(res, index["res:/resource_substrate/regolith_presence.json"])))
-    json.dump({"ores": pres.get("ores", {}), "asteroids": {k: {"name": v.get("name"), "regoliths": v.get("regoliths", [])} for k, v in pres.get("asteroids", {}).items()}},
+    json.dump({"ores": pres.get("ores", {}), "asteroids": {k: {"name": v.get("name"), "description": v.get("description"), "regoliths": v.get("regoliths", [])} for k, v in pres.get("asteroids", {}).items()}},
               open(os.path.join(d, "regolith_presence.json"), "w"), indent=0)
     print(f"regolith presence: {len(pres.get('ores', {}))} regoliths in {len(pres.get('asteroids', {}))} asteroid kinds")
 

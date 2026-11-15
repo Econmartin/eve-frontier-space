@@ -169,6 +169,9 @@ refined = {i["id"] for r in recipes if r["kind"] == "reprocessing" for i in r["i
 def category(tid): return cats.get(str(groups.get(str(types.get(str(tid), {}).get("groupID")), {}).get("categoryID")), {}).get("categoryName")
 legacy = {i for i in refined if i not in made and i not in used and i not in regolith_ids and types.get(str(i), {}).get("typeName") not in STILL_DROPS
           and (category(i) == "Material" or types.get(str(i), {}).get("typeName") in RETIRED_EXTRA)}
+# regoliths no asteroid holds since 0.7.6.0 (the client's presence table): they still refine, but you can only have old stock
+mined_now = {int(t) for t in PRES.get("ores", {})}
+if mined_now: legacy |= {i for i in refined if i in regolith_ids and i not in mined_now and i not in made and i not in used}
 for r in recipes:
     if r["kind"] == "reprocessing" and any(i["id"] in legacy for i in r["inputs"]): r["legacy"] = True
 
@@ -246,7 +249,12 @@ if os.path.exists(ini):
     version = f"version = {kv.get('version')}, build = {kv.get('build')}, codename = {kv.get('codename')}, branch = {kv.get('branch')}"
 else:
     version = open(cv).read().strip().replace("\n", ", ") if os.path.exists(cv) else "?"
-data = {"clientVersion": version, "items": items, "recipes": recipes, "facilities": facilities, "reprocessing": reprocessing, "rocks": rocks,
+# the asteroid kinds that hold regoliths since 0.7.6.0 (Marrow, Char…), from the client's presence table
+asteroids = sorted(({"kind": k, "name": v.get("name") or k, "description": v.get("description") or None,
+                     "icon": f"/industry/icons/asteroid-{k.lower()}.png",
+                     "holds": sorted(([int(t), a] for t, a in v.get("regoliths", []) if str(t) in items), key=lambda x: (-x[1], items[str(x[0])]["name"]))}
+                    for k, v in PRES.get("asteroids", {}).items()), key=lambda a: a["name"])
+data = {"clientVersion": version, "asteroids": asteroids, "items": items, "recipes": recipes, "facilities": facilities, "reprocessing": reprocessing, "rocks": rocks,
         "traits": traits, "properties": properties, "consumedBy": {str(k): v for k, v in consumers.items() if str(k) in items}}
 with open(out, "w", encoding="utf-8") as fh:
     json.dump(data, fh, ensure_ascii=False, separators=(",", ":"))

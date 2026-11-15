@@ -29,4 +29,10 @@ for it in ind["items"].values():
             if key in r: src = idx[r[key]]; break
     if not src: missing += 1; continue
     shutil.copyfile(os.path.join(res, src), os.path.join(out, f"{tid}.png")); copied += 1
+# asteroid kinds (Marrow, Char…) have their own pictures, named by kind rather than by type id
+pres = os.path.join(d, "regolith_presence.json")
+for kind in (json.load(open(pres)).get("asteroids", {}) if os.path.exists(pres) else {}):
+    f = f"res:/ui/texture/icons/frontier/asteroid/frontier_asteroid_{kind.lower()}.png"
+    if f in idx: shutil.copyfile(os.path.join(res, idx[f]), os.path.join(out, f"asteroid-{kind.lower()}.png")); copied += 1
+    else: missing += 1
 print(f"icons: copied {copied}, missing {missing} -> {out}")
