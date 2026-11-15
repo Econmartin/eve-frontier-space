@@ -107,7 +107,7 @@ export function MinePage() {
                   <IOList list={r.outputs} />
                   <div className="mt-1 pt-2 border-t border-foreground/10 text-xs text-foreground/75">
                     <div className="text-[0.65rem] tracking-[0.16em] uppercase text-muted-foreground mb-1">From your {qty.toLocaleString()} · {y.runs} runs · {fmtTime(y.runs * r.time)}</div>
-                    <ul className="flex flex-col gap-0.5">{y.outputs.map((o) => <li key={o.id} className="flex justify-between gap-2"><Link to={`/industry/materials?item=${o.id}`} className="no-underline text-foreground hover:text-[var(--color-martian-500)]">{itemName(o.id)} →</Link><Qty n={o.qty} /></li>)}</ul>
+                    <ul className="flex flex-col gap-0.5">{y.outputs.map((o) => <li key={o.id} className="flex justify-between gap-2"><Link to={`/industry/materials?item=${o.id}`} className="no-underline text-foreground hover:text-[var(--color-martian-500)]">{itemName(o.id)} →</Link><Qty n={o.qty} id={o.id} /></li>)}</ul>
                     {y.leftover > 0 && <div className="text-muted-foreground mt-1">{y.leftover.toLocaleString()} left over</div>}
                     {(() => { const vo = valueOf(y.outputs); const vi = priceOf(rock); return vo.priced > 0 ? <div className="mt-1 flex justify-between gap-2"><span className="text-muted-foreground">outputs' trade value{vo.priced < y.outputs.length ? ' (partial)' : ''}</span><span><Price n={vo.total} />{vi ? <span className="text-muted-foreground"> vs raw {Math.round((100 * vo.total) / (vi * y.used))}%</span> : null}</span></div> : null; })()}
                   </div>
@@ -158,7 +158,7 @@ export function MinePage() {
                 {kindsHolding(r.id).length > 0 && <div className="text-xs text-foreground/75">in {kindsHolding(r.id).map((x) => `${short(x.k.name)} (${ABUNDANCE_LABEL[x.a].toLowerCase()})`).join(', ')}</div>}
                 {c.length ? (
                   <ul className="text-sm flex flex-col gap-1">
-                    {c.map((x) => <li key={x.id} className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5"><span className="text-xs text-foreground/70 w-full">{[...new Set(x.facilities.map((f) => facilityName(f.id)))].join(' / ')} · {x.inputs[0].qty} in</span>{x.outputs.map((o) => <span key={o.id}><Qty n={o.qty} /> <ItemLink id={o.id} /></span>)}</li>)}
+                    {c.map((x) => <li key={x.id} className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5"><span className="text-xs text-foreground/70 w-full">{[...new Set(x.facilities.map((f) => facilityName(f.id)))].join(' / ')} · {x.inputs[0].qty} in</span>{x.outputs.map((o) => <span key={o.id}><Qty n={o.qty} id={o.id} /> <ItemLink id={o.id} /></span>)}</li>)}
                   </ul>
                 ) : <div className="text-xs text-muted-foreground font-sans">Defined in the client as a mineable block, but no facility accepts it yet.</div>}
               </Panel>

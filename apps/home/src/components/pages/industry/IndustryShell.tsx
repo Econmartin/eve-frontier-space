@@ -37,7 +37,7 @@ export function IndustryShell() {
 
   useEffect(() => {
     const prev = document.title;
-    const tab = ALL.find((t) => ('end' in t && t.end ? pathname === t.to : pathname.startsWith(t.to))) ?? (pathname.startsWith('/industry/item') ? REFERENCE[1] : undefined);
+    const tab = ALL.find((t) => ('end' in t && t.end ? pathname === t.to : pathname.startsWith(t.to))) ?? (pathname.startsWith('/industry/item') ? REFERENCE.find((t) => t.label === 'Browse') : undefined);
     document.title = `${tab ? `${tab.label} · ` : ''}Industry | EVE Frontier Community`;
     return () => { document.title = prev; };
   }, [pathname]);

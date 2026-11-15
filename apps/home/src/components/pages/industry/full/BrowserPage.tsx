@@ -4,7 +4,7 @@ import { Search } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import {
-  categories, consumedBy, conversionsFor, facilityKind, facilityLive, facilityName, fmtQty, fmtTime, fmtVol, industryItems, isBaseInput, itemAvailable, itemName, itemOf, priceOf, producedBy, propertyOf, recipeAvailable, recipes, searchItems, starterProducts, traitOf, usedIn,
+  categories, consumedBy, conversionsFor, facilityKind, facilityLive, facilityName, fmtQty, fmtTime, fmtVol, industryItems, isBaseInput, itemAvailable, itemName, itemOf, priceOf, producedBy, propertyOf, recipeAvailable, recipes, searchItems, starterProducts, traitOf, usedIn, usedViaTrait, slotFor,
 } from '@/lib/industry';
 import { fmtProp } from '@/lib/chem';
 import { Empty, FacilityBadge, FacilityBadges, IOList, ItemAvailabilityBadge, ItemIcon, ItemLink, Panel, Price, Qty, RecipeCard, Section, Select, SuggestionChips, useIndustrySettings, useVisible } from '../parts';
@@ -80,7 +80,8 @@ function Overview() {
 export function ItemDetail({ id }: { id: number }) {
   const it = itemOf(id);
   const { showUnavailable } = useIndustrySettings();
-  const madeAll = producedBy.get(id) ?? [], usesAll = usedIn.get(id) ?? [], convAll = conversionsFor(id);
+  const madeAll = producedBy.get(id) ?? [], usesAll = [...new Set([...(usedIn.get(id) ?? []), ...(usedViaTrait.get(id) ?? [])])], // by name, or through an "Any … material" slot it fits
+    convAll = conversionsFor(id);
   const made = useVisible(madeAll), uses = useVisible(usesAll), conv = useVisible(convAll);
   const hidden = (all: unknown[], shown: unknown[]) => (all.length > shown.length ? <span className="text-xs text-muted-foreground normal-case tracking-normal">{all.length - shown.length} more not in game this cycle</span> : null);
   // one badge per facility name; where legacy and current types share a name, prefer the one players can build
@@ -154,10 +155,10 @@ export function ItemDetail({ id }: { id: number }) {
             <table className="w-full text-sm">
               <thead className="text-[0.65rem] tracking-[0.16em] uppercase text-muted-foreground"><tr className="border-b border-foreground/10"><th className="text-left font-normal px-4 py-2">Product</th><th className="text-right font-normal px-4 py-2">Needs</th><th className="text-left font-normal px-4 py-2 hidden sm:table-cell">Facility</th><th className="text-right font-normal px-4 py-2">Time</th></tr></thead>
               <tbody className="divide-y divide-foreground/5">
-                {uses.sort((a, b) => a.inputs.find((x) => x.id === id)!.qty - b.inputs.find((x) => x.id === id)!.qty).map((r) => (
+                {uses.sort((a, b) => (slotFor(a, id)?.qty ?? 0) - (slotFor(b, id)?.qty ?? 0)).map((r) => (
                   <tr key={r.id} className="hover:bg-muted/50">
                     <td className="px-4 py-2"><ItemLink id={r.product} icon /> <span className="text-foreground/75">× {fmtQty(r.outputs.find((o) => o.id === r.product)?.qty ?? 1, r.product)}</span></td>
-                    <td className="px-4 py-2 text-right"><Qty n={r.inputs.find((x) => x.id === id)!.qty} id={id} /></td>
+                    <td className="px-4 py-2 text-right"><Qty n={slotFor(r, id)?.qty ?? 0} id={id} />{(slotFor(r, id)?.id ?? id) !== id && <div className="text-[0.65rem] text-muted-foreground">as {itemName(slotFor(r, id)!.id)}</div>}</td>
                     <td className="px-4 py-2 hidden sm:table-cell"><FacilityBadges recipe={r} /></td>
                     <td className="px-4 py-2 text-right tabular-nums text-foreground/75">{fmtTime(r.time)}</td>
                   </tr>

@@ -140,7 +140,8 @@ export function buildItemGraph(root: number, o: GraphOptions) {
     }
     const k = `r${r.id}`;
     if (!nodes.has(k)) nodes.set(k, { id: k, type: 'recipe', position: { x: 0, y: 0 }, className: 'cursor-default!', data: { recipe: r } });
-    for (const i of r.inputs) if (!inputFilter || inputFilter(i.id)) addEdge({ id: `${k}<${i.id}`, source: addItem(i.id), target: k, label: fmtQty(i.qty, i.id), ...EDGE_LABEL, style: IN_STYLE });
+    const feeds = from !== undefined ? [slotFor(r, from)].filter((x): x is RecipeIO => !!x).map((x) => ({ ...x, id: from })) : r.inputs.filter((i) => !inputFilter || inputFilter(i.id));
+    for (const i of feeds) addEdge({ id: `${k}<${i.id}`, source: addItem(i.id), target: k, label: fmtQty(i.qty, i.id), ...EDGE_LABEL, style: IN_STYLE });
     for (const out of r.outputs) addEdge({ id: `${k}>${out.id}`, source: k, target: addItem(out.id), label: fmtQty(out.qty, out.id), ...EDGE_LABEL, style: OUT_STYLE, animated: out.id === root });
   };
   addItem(root, true);
@@ -156,7 +157,7 @@ export function buildItemGraph(root: number, o: GraphOptions) {
     // schemas that name it, and since 0.7.6.0 mostly the ones whose "Any … material" slot it fits
     const uses = [...new Set([...(usedIn.get(id) ?? []), ...(usedViaTrait.get(id) ?? [])])];
     for (const r of vis(uses).slice(0, perItem)) {
-      if (o.productsOnly) addRecipe(r, undefined, id); else addRecipe(r, (iid) => iid === id || iid === slotFor(r, id)?.id);
+      addRecipe(r, undefined, id);
       if (d > 1) for (const out of r.outputs) if (out.id !== id) expandDown(out.id, d - 1);
     }
   };
